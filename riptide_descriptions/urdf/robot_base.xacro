@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!-- All coordinates in file must follow ROS conventions: x forward, z up -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+  <xacro:include filename="$(find riptide_descriptions2)/urdf/snippets.xacro" />
+  <xacro:include filename="$(find riptide_descriptions2)/urdf/robot.gazebo.xacro" />
+
+  <xacro:macro name="robot_base"
+    params="namespace config inertial_reference_frame">
+
+    <!-- Due to uuv_sim, base_link must be near center of vehicle -->
+    <link name="${namespace}/base_link"/>
+
+    <!-- Origin to define all coordinates relative to -->
+    <link name="${namespace}/origin">
+      <xacro:dummy_inertia/>
+
+      <visual>
+        <geometry>
+          <mesh filename="${body_file}" scale="1 1 1"/>
+        </geometry>
+      </visual>
+
+      <collision>
+        <geometry>
+          <mesh filename="${body_file}" scale="1 1 1"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${namespace}/origin_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/origin"/>
+      <origin xyz="${-config['base_link'][0]} ${-config['base_link'][1]} ${-config['base_link'][2]}" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${namespace}/base_inertia">
+      <inertial>
+        <mass value="${config['mass']}"/>
+        <inertia ixx="${config['inertia'][0]}" ixy="0.0" ixz="0.0" 
+                 iyy="${config['inertia'][1]}" iyz="0.0" 
+                 izz="${config['inertia'][2]}"/>
+      </inertial>
+    </link>
+    <joint name="${namespace}/inertia_joint" type="fixed">
+      <parent link="${namespace}/origin"/>
+      <child link="${namespace}/base_inertia"/>
+      <origin xyz="${config['com'][0]} ${config['com'][1]} ${config['com'][2]}" rpy="0 0 0"/>
+    </joint>
+
+    <xacro:include filename="$(find riptide_descriptions2)/urdf/robot_sensors.xacro" />
+    <xacro:include filename="$(find riptide_descriptions2)/urdf/robot_actuators.xacro" />
+
+  </xacro:macro>
+</robot>

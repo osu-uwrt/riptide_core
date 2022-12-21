@@ -1,0 +1,23 @@
+/**:
+  ros__parameters:
+    path: Robot Diagnostics
+    electronics_group:
+      type: diagnostic_aggregator/AnalyzerGroup
+      path: Electronics
+      analyzers:
+        voltages:
+          type: diagnostic_aggregator/GenericAnalyzer
+          path: Voltages and Currents
+          find_and_remove_prefix: [ "voltage_monitor" ]
+        devices:
+          type: diagnostic_aggregator/GenericAnalyzer
+          path: Devices
+          find_and_remove_prefix: [ "electrical_monitor" ]
+        sensors:
+          type: diagnostic_aggregator/GenericAnalyzer
+          path: Sensors
+          find_and_remove_prefix: [ "sensor_monitor" ]
+    computers:
+      type: diagnostic_aggregator/GenericAnalyzer
+      path: Computers
+      find_and_remove_prefix: [ "computer_monitor" ]

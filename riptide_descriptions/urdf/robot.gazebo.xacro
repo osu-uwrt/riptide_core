@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- All hydro parameters for any links that have them -->
+    <xacro:macro name="puddles_hydro_model" params="namespace">
+        <link name="${namespace}/base_link">
+        </link>
+    </xacro:macro>
+</robot>

@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+<!-- Copyright (c) 2016 The UUV Simulator Authors.
+     All rights reserved.
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+  <!-- Macro makes any number of thrusters from config -->
+  <xacro:macro name="thrusters_macro" params="namespace config thrusters index">
+    <xacro:if value="${thrusters != []}">
+      <xacro:property name="thruster" value="${thrusters[0]}"/>
+      <xacro:thruster_macro 
+        namespace="${namespace}"
+        thruster_id="${index}"
+        mesh_filename="${prop_file}">
+        <origin xyz="${thruster['pose'][0]} ${thruster['pose'][1]} ${thruster['pose'][2]}" 
+                rpy="${thruster['pose'][3]} ${thruster['pose'][4]} ${thruster['pose'][5]}"/>
+      </xacro:thruster_macro>
+      <xacro:thrusters_macro 
+        namespace="${namespace}"
+        config="${config}"
+        thrusters="${thrusters[1:]}"
+        index="${index+1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="claw_macro" params="namespace config">
+    <xacro:property name="claw" value="${config['claw']}"/>
+    <joint name="${namespace}/claw_joint" type="fixed">
+      <origin xyz="${claw['pose'][0]} ${claw['pose'][1]} ${claw['pose'][2]}"
+              rpy="${claw['pose'][3]} ${claw['pose'][4]} ${claw['pose'][5]}"/>
+      <parent link="${namespace}/origin"/>
+      <child link="${namespace}/claw_link"/>
+    </joint>
+
+    <link name="${namespace}/claw_link">
+      <xacro:dummy_inertia />
+      <xacro:no_collision />
+
+      <visual>
+        <geometry>
+          <box size="0.2 0.05 0.05"/>
+        </geometry>
+      </visual>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="torpedo_macro" params="namespace config">
+    <xacro:property name="torpedo" value="${config['torpedos']}"/>
+    <joint name="${namespace}/torpedo_joint" type="fixed">
+      <origin xyz="${torpedo['pose'][0]} ${torpedo['pose'][1]} ${torpedo['pose'][2]}"
+              rpy="${torpedo['pose'][3]} ${torpedo['pose'][4]} ${torpedo['pose'][5]}" />
+      <parent link="${namespace}/origin"/>
+      <child link="${namespace}/torpedo_link"/>
+    </joint>
+
+    <link name="${namespace}/torpedo_link">
+      <xacro:dummy_inertia />
+      <xacro:no_collision />
+
+      <visual>
+        <geometry>
+          <box size="0.25 0.05 0.05"/>
+        </geometry>
+      </visual>
+    </link>
+  </xacro:macro>
+
+  <xacro:macro name="dropper_macro" params="namespace config">
+    <xacro:property name="dropper" value="${config['droppers']}"/>
+    <joint name="${namespace}/dropper_joint" type="fixed">
+      <origin xyz="${dropper['pose'][0]} ${dropper['pose'][1]} ${dropper['pose'][2]}"
+              rpy="${dropper['pose'][3]} ${dropper['pose'][4]} ${dropper['pose'][5]}" />
+      <parent link="${namespace}/origin"/>
+      <child link="${namespace}/droppers_link"/>
+    </joint>
+
+    <link name="${namespace}/droppers_link">
+      <xacro:dummy_inertia />
+      <xacro:no_collision />
+
+      <visual>
+        <geometry>
+          <box size="0.025 0.025 0.1"/>
+        </geometry>
+      </visual>
+    </link>
+  </xacro:macro>
+  
+  <xacro:thrusters_macro 
+        namespace="${namespace}"
+        config="${config['thruster']}"
+        thrusters="${config['thrusters']}"
+        index="0"/>
+  
+  <xacro:claw_macro
+        namespace="${namespace}"
+        config="${config}"/>
+
+  <xacro:torpedo_macro
+        namespace="${namespace}"
+        config="${config}"/>
+
+  <xacro:dropper_macro
+        namespace="${namespace}"
+        config="${config}"/>
+</robot>

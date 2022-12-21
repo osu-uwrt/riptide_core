@@ -1,0 +1,9 @@
+#request
+float32 currentdistance #meters
+float32 goaldistance #meters
+int64 timeoutms #milliseconds
+---
+#result
+geometry_msgs/Vector3 coords
+---
+#feedback
