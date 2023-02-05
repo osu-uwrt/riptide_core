@@ -1,5 +1,5 @@
 #goal definition
-geometry_msgs/pose[] path_points
+geometry_msgs/Pose[] path_points
 ---
 #result definition
 uint8 error_code
