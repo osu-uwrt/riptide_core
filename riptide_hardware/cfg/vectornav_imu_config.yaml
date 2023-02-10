@@ -1,4 +1,4 @@
-/tempest/vectornav:
+/**/vectornav:
   ros__parameters:
     # rest of the node params
     baud: 230400

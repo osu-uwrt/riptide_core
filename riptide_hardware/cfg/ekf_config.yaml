@@ -1,5 +1,5 @@
 # Configuartion file for robot_localization's ekf_localization_node
-/tempest/ekf_localization_node:
+/**/ekf_localization_node:
   ros__parameters:
     world_frame: odom
     odom_frame: odom
