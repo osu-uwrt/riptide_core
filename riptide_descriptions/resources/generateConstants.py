@@ -6,8 +6,8 @@ import yaml
 class GenerateConstants:
 
     # Path variables to important files
-    PATH_TO_SIMULINK = os.path.join(os.path.dirname(__file__), "..", "..", "riptide_simulink")
-    PATH_TO_TEMPEST = os.path.join(os.path.dirname(__file__), "config", "tempest.yaml")
+    PATH_TO_SIMULINK = os.path.join(os.path.dirname(__file__), "..", "..", "..", "riptide_simulink")
+    PATH_TO_TEMPEST = os.path.join(os.path.dirname(__file__), "..", "config", "tempest.yaml")
     PATH_TO_WRITE = os.path.join(PATH_TO_SIMULINK, "Models", "Simple_3_Model", "Constants", "RobotConstants.m")
 
     constants_needed = ["height", "volume", "com", "cob", "inertia", "thrusters", "coefficients"]
@@ -40,7 +40,6 @@ class GenerateConstants:
 
         with open(self.PATH_TO_TEMPEST, "r") as data:
             self.DATA = yaml.safe_load(data)
-        print(self.DATA)
     
     def readConstant(self, constant):
 
