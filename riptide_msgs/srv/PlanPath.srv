@@ -1,8 +1,10 @@
 #request definition
-geometry_msgs/Pose[] path_points
+geometry_msgs/PoseStamped[] path_points
 
 ---
 #result definition
+TrajPoint[] traj_points
+
 uint8 error_code
 string error_msg
 
