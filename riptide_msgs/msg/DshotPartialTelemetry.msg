@@ -1,0 +1,4 @@
+bool escs_powered
+float32 vcc_voltage
+uint8 start_thruster_num
+riptide_msgs2/DshotSingleTelemetry[4] esc_telemetry
