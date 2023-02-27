@@ -24,14 +24,13 @@
   <exec_depend>diagnostic_updater</exec_depend>
   <exec_depend>diagnostic_aggregator</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>mynteye_ros2_wrapper</exec_depend>
-  <exec_depend>microstrain_inertial</exec_depend>
   <exec_depend>nortek_dvl</exec_depend>
   <exec_depend>riptide_msgs2</exec_depend>
-  <exec_depend>image_view</exec_depend>
-  <exec_depend>image_publisher</exec_depend>
-  <exec_depend>image_proc</exec_depend>
+  <exec_depend>vectornav</exec_depend>
   <exec_depend>joint_state_publisher</exec_depend>
+
+
+
 
   <export>
     <build_type>ament_python</build_type>
