@@ -83,34 +83,37 @@ def generate_launch_description():
             LC("robot")
         ),
 
-             # Publish world and odom as same thing until we get SLAM
-        # This is here so we can compare ground truth from sim to odom
-        Node(
-            name="odom_to_world_broadcaster",
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
-        ),
+        launch.actions.GroupAction([
 
-        # start robot_localization Extended Kalman filter (EKF)
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            # type='ekf_localization_node',
-            name='ekf_localization_node',
-            output='screen',
-            #arguments=['--ros-args', '--log-level', 'DEBUG'],
-            parameters=[config,
-            {                
-                'reset_on_time_jump': True,
-            }
-            ]),
-            
-        Node(
-            package='riptide_hardware2',
-            executable='depth_converter',
-            name='depth_converter',
-        ),
+                # Publish world and odom as same thing until we get SLAM
+            # This is here so we can compare ground truth from sim to odom
+            Node(
+                name="odom_to_world_broadcaster",
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
+            ),
+
+            # start robot_localization Extended Kalman filter (EKF)
+            Node(
+                package='robot_localization',
+                executable='ekf_node',
+                # type='ekf_localization_node',
+                name='ekf_localization_node',
+                output='screen',
+                #arguments=['--ros-args', '--log-level', 'DEBUG'],
+                parameters=[config,
+                {                
+                    'reset_on_time_jump': True,
+                }
+                ]),
+                
+            Node(
+                package='riptide_hardware2',
+                executable='depth_converter',
+                name='depth_converter',
+            ),
+        ], scoped=True),
 
         # Publish robot model for Sensor locations
         OpaqueFunction(function=evaluate_xacro),

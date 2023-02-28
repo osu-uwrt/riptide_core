@@ -6,7 +6,8 @@ import launch_ros.actions
 def generate_launch_description():
 
     return launch.LaunchDescription([
-        launch_ros.actions.Node(package='image_transport', node_executable='republish', arguments=[ 
+        launch.actions.GroupAction([
+            launch_ros.actions.Node(package='image_transport', node_executable='republish', arguments=[ 
                 'raw',
                 '--ros-args',
                 '-r in:=/image_raw',
@@ -14,4 +15,5 @@ def generate_launch_description():
                 '-r out:=/image'
             ],
             output='screen', node_name='republish')
+        ], scoped=True),
     ])

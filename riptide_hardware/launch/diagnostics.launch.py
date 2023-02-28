@@ -1,5 +1,5 @@
 from launch.launch_description import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, GroupAction
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
@@ -62,9 +62,11 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robot', default_value="tempest", description="Name of the vehicle"),
 
-        electrical_monitor_node,
-        voltage_monitor_node,
-        sensor_monitor_node,
-        computer_monitor_node,
-        aggregator
+        GroupAction([
+            electrical_monitor_node,
+            voltage_monitor_node,
+            sensor_monitor_node,
+            computer_monitor_node,
+            aggregator
+        ], scoped = True),
     ])

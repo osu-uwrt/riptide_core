@@ -1,5 +1,6 @@
 from launch.launch_description import LaunchDescription
 from launch_ros.actions import Node
+import launch.actions
 
 copro_agent = Node(
     package='micro_ros_agent',
@@ -13,5 +14,7 @@ copro_agent = Node(
 
 def generate_launch_description():
     return LaunchDescription([
-        copro_agent,
+        launch.actions.GroupAction([
+            copro_agent,
+        ], scoped=True),
     ])

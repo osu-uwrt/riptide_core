@@ -83,29 +83,30 @@ def generate_launch_description():
             LC("robot")
         ),
 
-
-             # Publish world and odom as same thing until we get SLAM
-        # This is here so we can compare ground truth from sim to odom
-        Node(
-            name="odom_to_world_broadcaster",
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
-        ),
-        
-        Node(
-            name="odom_to_tempest",
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            arguments=["0", "0", "0", "0", "0", "0", "odom", launch.substitutions.PathJoinSubstitution( [ LC("robot"), "base_link" ] )]
-        ),
-        
-        Node(
-            name="fake_ekf_node",
-            package="riptide_hardware2",
-            executable="fake_ekf",
-            output='screen',
-        ),
+        launch.actions.GroupAction([
+                # Publish world and odom as same thing until we get SLAM
+            # This is here so we can compare ground truth from sim to odom
+            Node(
+                name="odom_to_world_broadcaster",
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
+            ),
+            
+            Node(
+                name="odom_to_tempest",
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                arguments=["0", "0", "0", "0", "0", "0", "odom", launch.substitutions.PathJoinSubstitution( [ LC("robot"), "base_link" ] )]
+            ),
+            
+            Node(
+                name="fake_ekf_node",
+                package="riptide_hardware2",
+                executable="fake_ekf",
+                output='screen',
+            ),
+        ], scoped=True),
         
         
         # Publish robot model for Sensor locations

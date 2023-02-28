@@ -61,5 +61,5 @@ def generate_launch_description():
 
             # delay the recorder start
             TimerAction(period=3.0, actions=[video_recorder_node,])
-        ])
+        ],scoped=True)
     ])
