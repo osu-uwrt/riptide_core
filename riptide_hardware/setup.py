@@ -29,8 +29,8 @@ setup(
             'voltage_monitor = riptide_hardware2.voltage_monitor:VoltageMonitor.main',
             'sensor_monitor = riptide_hardware2.sensor_monitor:main',
             'computer_monitor = riptide_hardware2.computer_monitor:main',
-            'depth_converter = riptide_localization2.depth_converter:main',
-            'fake_ekf = riptide_localization2.fake_ekf:main'
+            'depth_converter = riptide_hardware2.depth_converter:main',
+            'fake_ekf = riptide_hardware2.fake_ekf:main'
         ],
     },
 )

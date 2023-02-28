@@ -7,8 +7,8 @@ volt_cur_thresholds:
     warn: 30
     fuse: 35
   thruster_current:
-    warn: 7
-    fuse: 10
+    warn: 12
+    fuse: 15
   five_volt:
     warn_voltage_min: 4.7
     warn_voltage_max: 5.7
@@ -32,7 +32,8 @@ computer_monitor_thresholds:
   gpu_warning_percentage: 90
   computer_error_temp_c: 60
   temp_warning_percentage: 90
-
+sensor_monitor_thresholds:
+  depth_max_normal: 0.5
 
 # Lifetime of expiring message before it is marked as stale
-ros_message_lifetime: 1
+ros_message_lifetime: 2.5

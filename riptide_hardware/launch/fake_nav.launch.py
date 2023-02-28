@@ -60,7 +60,7 @@ def generate_launch_description():
 
     # declare the launch args to read for this file
     config = os.path.join(
-        get_package_share_directory('riptide_localization2'),
+        get_package_share_directory('riptide_hardware2'),
         'params',
         'ekf_config.yaml'
     )

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import math
 import rclpy
 import socket
 import yaml
@@ -22,14 +23,14 @@ class BatteryVoltageTask(diagnostic_updater.DiagnosticTask):
 
     def run(self, stat):
         electrical_reading = self._electrical_readings_msg.get_value()
-        
+
         if electrical_reading is None:
             stat.summary(DiagnosticStatus.STALE, "No data available from copro")
             return stat
 
         port_voltage = electrical_reading.port_voltage
         stbd_voltage = electrical_reading.stbd_voltage
-        
+
         stat.add("Port Battery", "{:.2f}V".format(port_voltage))
         stat.add("Starboard Battery", "{:.2f}V".format(stbd_voltage))
         stat.add("Thruster Shutoff Voltage", "{}V".format(self._error_voltage))
@@ -82,14 +83,14 @@ class BatteryCurrentTask(diagnostic_updater.DiagnosticTask):
 
     def run(self, stat):
         electrical_reading = self._electrical_readings_msg.get_value()
-        
+
         if electrical_reading is None:
             stat.summary(DiagnosticStatus.STALE, "No data available from copro")
             return stat
-        
+
         port_current = electrical_reading.port_current
         stbd_current = electrical_reading.stbd_current
-        
+
         stat.add("Port Battery", "{:.2f}A".format(port_current))
         stat.add("Starboard Battery", "{:.2f}A".format(stbd_current))
 
@@ -182,7 +183,7 @@ class ThrusterCurrentTask(diagnostic_updater.DiagnosticTask):
             elif len(warning_thrusters) > 0:
                 warning_message = self.generateThrusterList(warning_thrusters, thruster_currents)
                 stat.summary(DiagnosticStatus.WARN, "{} above nominal ESC current ({}A) (Total Current: {:.2f}A)".format(warning_message, self._warning_current, current_total))
-            
+
 
             # TODO: Fix kill switch detection
 
@@ -229,7 +230,7 @@ class FiveVoltMonitorTask(diagnostic_updater.DiagnosticTask):
         if electrical_reading is None:
             stat.summary(DiagnosticStatus.STALE, "No data available from copro")
             return stat
-        
+
         rail_voltage = electrical_reading.five_volt_voltage
         rail_current = electrical_reading.five_volt_current
 
@@ -302,12 +303,12 @@ class BalancedVoltageMonitorTask(diagnostic_updater.DiagnosticTask):
         electrical_reading = self._electrical_readings_msg.get_value()
 
         if electrical_reading is None:
-            stat.summary(DiagnosticStatus.STALE, "No data available from copro")
+            stat.summary(DiagnosticStatus.STALE, "No data available")
             return stat
-        
+
         rail_voltage = electrical_reading.balanced_voltage
 
-        if rail_voltage == ElectricalReadings.NO_READING:
+        if math.isnan(rail_voltage):
             stat.summary(DiagnosticStatus.ERROR, "Unable to read V+ rail voltage")
         else:
             stat.add("V+ Rail Voltage", "{:.2f}V".format(rail_voltage))
@@ -332,7 +333,7 @@ class VoltageMonitor:
         node = rclpy.create_node('voltage_monitor')
         node.declare_parameter('robot', rclpy.Parameter.Type.STRING)
         node.declare_parameter('diag_thresholds_file', rclpy.Parameter.Type.STRING)
-        
+
         current_robot = node.get_parameter('robot').value
 
         # Load config file

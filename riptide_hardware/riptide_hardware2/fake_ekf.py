@@ -17,7 +17,7 @@ class fakeEkf(Node):
 
         self.namespace = self.get_namespace()[1:]
         if self.namespace is None:
-            self.namespace = 'tempest'
+            self.namespace = 'talos'
 
         self.timer = self.create_timer(0.01, self.tick)
 
