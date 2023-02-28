@@ -9,7 +9,7 @@
   <!-- Read the config -->
   <xacro:property name="yaml_file" value="$(find riptide_descriptions2)/config/talos.yaml" />
   <xacro:property name="config" value="${load_yaml(yaml_file)}"/>
-  <xacro:property name="body_file" value="package://riptide_descriptions2/meshes/Tempest.dae"/>
+  <xacro:property name="body_file" value="package://riptide_descriptions2/meshes/Talos.dae"/>
   <xacro:property name="prop_file" value="package://riptide_descriptions2/meshes/Propeller.dae"/>
 
   <!-- Create robot -->

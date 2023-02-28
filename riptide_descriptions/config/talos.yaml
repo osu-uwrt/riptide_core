@@ -2,7 +2,7 @@
 # Pose is xyzrpy with rpy in radians
 
 # Point which represents robot position. Must be near center
-base_link: [-0.146, 0.02, -0.08]
+base_link: [-0.14, 0.03, -0.09]
 
 # Vehicle mass properties
 mass: 32.3214 #kg
@@ -57,7 +57,7 @@ depth:
   # topic: depth/pressure
   rate: 20 # Hz
   sigma: 0.003 # Stdev in m. Used by gazebo
-  pose: [ -0.527, 0.254, -0.0912, 0, 0, 0]
+  pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
 
 imu:
   # topic: /imu/imu/data
@@ -106,34 +106,34 @@ thruster:
 #  - third letter:  lateral position  (Port/Starboard)
 thrusters: [
   {
-    name: "VUS", #thruster 1
-    type: 1,
-    pose: [-0.134, -0.369, 0.242, 0.0, 0.0, 0.0]
-  },
-  {
-    name: "VUP", #thruster 2
-    type: 0,
-    pose: [-0.134, 0.438, 0.242, 0.0, 0.0, 0.0]
-  },
-  {
     name: "HUS", #thruster 3
     type: 1,
-    pose: [-0.140, -0.260, 0.141, -0.785, 0.0, 1.571]
+    pose: [-0.140, -0.260, 0.141, 0.0, -0.785, 1.571]
   },
   {
     name: "HUP", #thruster 4
     type: 0,
-    pose: [-0.140, 0.328, 0.141, 0.785, 0.0, -1.571] 
+    pose: [-0.140, 0.328, 0.141, 0.0, -0.785, -1.571] 
+  },
+  {
+    name: "VUS", #thruster 1
+    type: 0,
+    pose: [-0.134, -0.369, 0.242, 0.0, 0.0, 0.0]
+  },
+  {
+    name: "VUP", #thruster 2 
+    type: 1,
+    pose: [-0.134, 0.438, 0.242, 0.0, 0.0, 0.0]
   },
   {
     name: "HLS", #thruster 5
     type: 0,
-    pose: [-0.140, -0.260, -0.141, 0.785, 0.0, 1.571]
+    pose: [-0.140, -0.260, -0.141, 0.0, 0.785, 1.571]
   },
   {
     name: "HLP", #thruster 6
-    type: 0,
-    pose: [-0.140, 0.328, -0.141, -0.785, 0.0, -1.571]
+    type: 1,
+    pose: [-0.140, 0.328, -0.141, 0.0, 0.785, -1.571]
   },
   {
     name: "VLS", #thruster 7
@@ -142,7 +142,7 @@ thrusters: [
   },
   {
     name: "VLP", #thruster 8
-    type: 1,
+    type: 0,
     pose: [-0.134, 0.440, -0.244, 0.0, 0.0, 0.0]
   }
 ]
