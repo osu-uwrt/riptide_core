@@ -87,17 +87,17 @@ thruster:
   rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
   max_force: 22 # Newtons. Thrusters draw about 8A here
   MIN_THRUST: 0.2
-  STARTUP_THRUST: 1.5
-  SU_THRUST:
-    POS_SLOPE: 22.500000
-    POS_YINT: 1520
-    NEG_SLOPE: 28.600000
-    NEG_YINT: 1477
+  STARTUP_THRUST: 1.5 # 
+  SU_THRUST: #Start Up Thrust
+    POS_SLOPE: 71.538
+    POS_YINT: -14.307
+    NEG_SLOPE: 80.0
+    NEG_YINT: 7.0
   THRUST:
-    POS_SLOPE: 6.66
-    POS_YINT: 1552
-    NEG_SLOPE: 8.54
-    NEG_YINT: 1444
+    POS_SLOPE: 17.951
+    POS_YINT: 66.073
+    NEG_SLOPE: 22.920
+    NEG_YINT: -78.609
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 thrusters: [
