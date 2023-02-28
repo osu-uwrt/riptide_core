@@ -8,7 +8,8 @@ from diagnostic_msgs.msg import DiagnosticStatus
 from nortek_dvl_msgs.msg import DvlStatus
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import TwistWithCovarianceStamped
-from diagnostic_updater import DiagnosticTask, Updater
+from riptide_msgs2.msg import Depth
+from diagnostic_updater import DiagnosticStatusWrapper, DiagnosticTask, Updater
 
 from .common import ExpiringMessage
 
@@ -24,13 +25,13 @@ class DVLSensorTask(DiagnosticTask):
 
     def dvl_status_callback(self, msg):
         self._dvl_status.update_value(msg)
-    
+
     def dvl_twist_callback(self, msg):
         self._dvl_twist.update_value(True)
 
-    def run(self, stat):
-        dvl_status = self._dvl_status.get_value()
-        dvl_twist = self._dvl_twist.get_value()
+    def run(self, stat: 'DiagnosticStatusWrapper'):
+        dvl_status: 'DvlStatus' = self._dvl_status.get_value()
+        dvl_twist: 'TwistWithCovarianceStamped' = self._dvl_twist.get_value()
 
         if dvl_status is None:
             stat.summary(DiagnosticStatus.ERROR, "Not Connected")
@@ -78,12 +79,12 @@ class IMUSensorTask(DiagnosticTask):
 
         self._imu_status = ExpiringMessage(node.get_clock(), msg_lifetime)
 
-        node.create_subscription(Imu, 'imu/imu/data', self.imu_callback, qos_profile_sensor_data)
+        node.create_subscription(Imu, 'vectornav/imu', self.imu_callback, qos_profile_sensor_data)
 
     def imu_callback(self, msg):
         self._imu_status.update_value(True)
 
-    def run(self, stat):
+    def run(self, stat: 'DiagnosticStatusWrapper'):
         imu_status = self._imu_status.get_value()
 
         if imu_status is None:
@@ -93,6 +94,31 @@ class IMUSensorTask(DiagnosticTask):
 
         return stat
 
+class DepthSensorTask(DiagnosticTask):
+    def __init__(self, node: 'rclpy.Node', msg_lifetime, max_nominal):
+        DiagnosticTask.__init__(self, "Depth Sensor")
+
+        self.max_nominal = max_nominal
+
+        self._depth_status = ExpiringMessage(node.get_clock(), msg_lifetime)
+        node.create_subscription(Depth, 'depth/raw', self.depth_callback, qos_profile_sensor_data)
+
+    def depth_callback(self, msg: 'Depth'):
+        self._depth_status.update_value(msg.depth)
+
+    def run(self, stat: 'DiagnosticStatusWrapper'):
+        depth_raw = self._depth_status.get_value()
+
+        if depth_raw is None:
+            stat.summary(DiagnosticStatus.ERROR, "Not Connected")
+            return stat
+
+        if depth_raw > self.max_nominal:
+            stat.summary(DiagnosticStatus.WARN, "Depth ({:.2f}) abnormally high".format(depth_raw))
+        else:
+            stat.summary(DiagnosticStatus.OK, "Connected")
+
+        return stat
 
 def main():
     hostname = socket.gethostname()
@@ -102,12 +128,14 @@ def main():
     with open(node.get_parameter('diag_thresholds_file').value, 'r') as stream:
         thresholds_file = yaml.safe_load(stream)
     message_lifetime = float(thresholds_file["ros_message_lifetime"])
+    max_nominal_depth = float(thresholds_file["sensor_monitor_thresholds"]["depth_max_normal"])
 
     updater = Updater(node)
     updater.setHardwareID(hostname)
 
     updater.add(DVLSensorTask(node, message_lifetime))
     updater.add(IMUSensorTask(node, message_lifetime))
+    updater.add(DepthSensorTask(node, message_lifetime, max_nominal_depth))
 
     updater.force_update()
 
