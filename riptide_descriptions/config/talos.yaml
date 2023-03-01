@@ -5,21 +5,23 @@
 base_link: [-0.14, 0.03, -0.09]
 
 # Vehicle mass properties
-mass: 32.3214 #kg
-com: [-0.418, 0.357, -0.11]
-inertia: [0.9978, 1.6934, 2.1284] # kg*m^2
+mass: 29.942 #kg
+com: [-0.157, 0.037, -0.022]
+inertia: [1.493, 0.549, 1.399] # kg*m^2
 
 # Vehicle bouyancy properties
-volume: 0.0331 # m^3
-cob: [-0.400001, 0.35511, -0.10810]
+volume: 0.0305 # m^3
+cob: [-0.157, 0.037, -0.022]
 
 # Controller parameters
 controller:
   linear:
     # linear damping coeficients
     damping:
-      linear: [-17.0, -17.0, -35.0]
-      quadratic: [-180.0, -180.0, -460.0]
+      # linear: [-17.0, -17.0, -35.0]
+      # quadratic: [-180.0, -180.0, -460.0]
+      linear: [0.0, 0.0, 0.0]
+      quadratic: [0.0, 0.0, 0.0]
 
     # physical maximums for each linear axis
     max:
@@ -34,8 +36,10 @@ controller:
   angular:
     # angular damping coeficients
     damping:
-      linear: [-2.0, -4.5, -2.5]
-      quadratic: [-6.0, -12.0, -12.0]
+      # linear: [-2.0, -4.5, -2.5]
+      # quadratic: [-6.0, -12.0, -12.0]
+      linear: [0.0, 0.0, 0.0]
+      quadratic: [0.0, 0.0, 0.0]
 
     # physical maximums for each rotational axis
     max:
@@ -88,16 +92,16 @@ thruster:
   max_force: 22 # Newtons. Thrusters draw about 8A here
   MIN_THRUST: 0.2
   STARTUP_THRUST: 1.5
-  SU_THRUST:
-    POS_SLOPE: 22.500000
-    POS_YINT: 1520
-    NEG_SLOPE: 28.600000
-    NEG_YINT: 1477
+  SU_THRUST: #Start Up Thrust
+    POS_SLOPE: 71.538
+    POS_YINT: -14.307
+    NEG_SLOPE: 80.0
+    NEG_YINT: 7.0
   THRUST:
-    POS_SLOPE: 6.66
-    POS_YINT: 1552
-    NEG_SLOPE: 8.54
-    NEG_YINT: 1444
+    POS_SLOPE: 17.951
+    POS_YINT: 66.073
+    NEG_SLOPE: 22.920
+    NEG_YINT: -78.609
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:
