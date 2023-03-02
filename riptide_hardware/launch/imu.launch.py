@@ -39,7 +39,7 @@ start_vectornav_sensor_msgs_cmd = Node(
 )
 
 robot_arg = DeclareLaunchArgument('robot', default_value="tempest", description="Name of the vehicle")
-serial_arg = DeclareLaunchArgument('serial_port', default_value="/dev/imu_vectornav")
+serial_arg = DeclareLaunchArgument('serial_port', default_value="/dev/ttyTHS0")
 frame_id_arg = DeclareLaunchArgument('imu_frame_id', default_value=[LC('robot'), "/imu_link"])
 
 def generate_launch_description():

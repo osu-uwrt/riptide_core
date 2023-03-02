@@ -5,12 +5,12 @@ from launch.substitutions import LaunchConfiguration as LC
 import os
 import xacro
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, GroupAction
-from launch_ros.actions import Node
+from launch_ros.actions import Node, PushRosNamespace
 import traceback
 
 # evaluates LaunchConfigurations in context for use with xacro.process_file(). Returns a list of launch actions to be included in launch description
 def evaluate_xacro(context, *args, **kwargs):
-    robot = LC('namespace').perform(context)
+    robot = LC('robot').perform(context)
     debug = LC('debug').perform(context)
 
     modelPath = launch.substitutions.PathJoinSubstitution([
@@ -68,7 +68,7 @@ def generate_launch_description():
     return launch.LaunchDescription([ 
         # Read in the vehicle's namespace through the command line or use the default value one is not provided
         DeclareLaunchArgument(
-            "namespace", 
+            "robot", 
             default_value="tempest",
             description="Namespace of the vehicle",
         ),
@@ -77,6 +77,10 @@ def generate_launch_description():
             "debug", 
             default_value="False",
             description="enable xacro debug of the vehicle",
+        ),
+
+        PushRosNamespace(
+            LC("robot")
         ),
 
              # Publish world and odom as same thing until we get SLAM

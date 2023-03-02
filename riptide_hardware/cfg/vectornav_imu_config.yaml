@@ -59,7 +59,7 @@
       gps2Field: 0x0000              # GPSGROUP_NONE
     
 
-/tempest/vn_sensor_msgs:
+/**/vn_sensor_msgs:
   ros__parameters:
     orientation_covariance: [0.01,  0.0,   0.0,
                             0.0,   0.01,  0.0,
