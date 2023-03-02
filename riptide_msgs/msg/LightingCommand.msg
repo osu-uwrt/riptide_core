@@ -1,2 +1,0 @@
-uint8 light_1_brightness_percentage
-uint8 light_2_brightness_percentage
