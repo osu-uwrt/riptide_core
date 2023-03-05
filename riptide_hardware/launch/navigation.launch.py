@@ -2,6 +2,7 @@ import launch
 import launch.actions
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
+from launch.substitutions import PathJoinSubstitution
 import os
 import xacro
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, GroupAction
@@ -13,7 +14,7 @@ def evaluate_xacro(context, *args, **kwargs):
     robot = LC('robot').perform(context)
     debug = LC('debug').perform(context)
 
-    modelPath = launch.substitutions.PathJoinSubstitution([
+    modelPath = PathJoinSubstitution([
         get_package_share_directory('riptide_descriptions2'),
         'robots',
         robot + '.xacro'
@@ -57,13 +58,12 @@ def evaluate_xacro(context, *args, **kwargs):
     return []
 
 def generate_launch_description():
-
     # declare the launch args to read for this file
-    config = os.path.join(
+    config = PathJoinSubstitution([
         get_package_share_directory('riptide_hardware2'),
         'cfg',
-        'ekf_config.yaml'
-    )
+        LC("robot_ekf_config")
+    ])
 
     return launch.LaunchDescription([ 
         # Read in the vehicle's namespace through the command line or use the default value one is not provided
@@ -77,6 +77,12 @@ def generate_launch_description():
             "debug", 
             default_value="False",
             description="enable xacro debug of the vehicle",
+        ),
+
+        DeclareLaunchArgument(
+            "robot_ekf_config", 
+            default_value=[LC("robot"), '_ekf.yaml'],
+            description="EKF yaml file for the vehicle",
         ),
 
         PushRosNamespace(

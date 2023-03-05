@@ -6,6 +6,8 @@ from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.actions import IncludeLaunchDescription
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
+from launch.substitutions import PythonExpression
+from launch.conditions.if_condition import IfCondition
 
 import os
 
@@ -58,7 +60,10 @@ def generate_launch_description():
             AnyLaunchDescriptionSource(dvl_launch_file),
             launch_arguments=[
                 ('robot', LC('robot')),
-            ]
+            ],
+            condition=IfCondition(
+                PythonExpression(["'", LC("robot"), "' == 'talos'"])
+            )
         ),
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(imu_launch_file),

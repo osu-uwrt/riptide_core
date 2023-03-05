@@ -57,14 +57,6 @@ def evaluate_xacro(context, *args, **kwargs):
     return []
 
 def generate_launch_description():
-
-    # declare the launch args to read for this file
-    config = os.path.join(
-        get_package_share_directory('riptide_hardware2'),
-        'params',
-        'ekf_config.yaml'
-    )
-
     return launch.LaunchDescription([ 
         # Read in the vehicle's namespace through the command line or use the default value one is not provided
         DeclareLaunchArgument(
@@ -94,7 +86,7 @@ def generate_launch_description():
         ),
         
         Node(
-            name="odom_to_tempest",
+            name="odom_to_robot",
             package="tf2_ros",
             executable="static_transform_publisher",
             arguments=["0", "0", "0", "0", "0", "0", "odom", launch.substitutions.PathJoinSubstitution( [ LC("robot"), "base_link" ] )]
