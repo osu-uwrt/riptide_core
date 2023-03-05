@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<robot name="talos" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+  <xacro:arg name="debug" default="0"/>
+  <xacro:arg name="namespace" default="talos"/>
+  <xacro:arg name="inertial_reference_frame" default="world"/>
+  <!-- Include the Robot macro file -->
+  <xacro:include filename="$(find riptide_descriptions2)/urdf/robot_base.xacro"/>
+
+  <!-- Read the config -->
+  <xacro:property name="yaml_file" value="$(find riptide_descriptions2)/config/talos.yaml" />
+  <xacro:property name="config" value="${load_yaml(yaml_file)}"/>
+  <xacro:property name="body_file" value="package://riptide_descriptions2/meshes/Talos.dae"/>
+  <xacro:property name="prop_file" value="package://riptide_descriptions2/meshes/Propeller.dae"/>
+
+  <!-- Create robot -->
+  <xacro:robot_base
+    namespace="$(arg namespace)"
+    config="${config}"
+    inertial_reference_frame="$(arg inertial_reference_frame)"/>
+
+</robot>

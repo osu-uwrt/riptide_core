@@ -38,6 +38,10 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robot', default_value="tempest", description="Name of the vehicle"),
 
+        PushRosNamespace(
+            LC("robot")
+        ),
+
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(copro_agent_launch_file),
             launch_arguments=[

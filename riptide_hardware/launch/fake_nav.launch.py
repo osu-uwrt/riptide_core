@@ -10,7 +10,7 @@ import traceback
 
 # evaluates LaunchConfigurations in context for use with xacro.process_file(). Returns a list of launch actions to be included in launch description
 def evaluate_xacro(context, *args, **kwargs):
-    robot = LC('namespace').perform(context)
+    robot = LC('robot').perform(context)
     debug = LC('debug').perform(context)
 
     modelPath = launch.substitutions.PathJoinSubstitution([
@@ -20,7 +20,7 @@ def evaluate_xacro(context, *args, **kwargs):
     ]).perform(context)
     
     try:
-        xacroData = xacro.process_file(modelPath,  mappings={'debug': debug, 'namespace': robot, 'inertial_reference_frame':'world'}).toxml()
+        xacroData = xacro.process_file(modelPath,  mappings={'debug': debug, 'robot': robot, 'inertial_reference_frame':'world'}).toxml()
 
         robot_state_publisher = Node(
             name = 'robot_state_publisher',
@@ -60,7 +60,7 @@ def generate_launch_description():
 
     # declare the launch args to read for this file
     config = os.path.join(
-        get_package_share_directory('riptide_localization2'),
+        get_package_share_directory('riptide_hardware2'),
         'params',
         'ekf_config.yaml'
     )
@@ -68,7 +68,7 @@ def generate_launch_description():
     return launch.LaunchDescription([ 
         # Read in the vehicle's namespace through the command line or use the default value one is not provided
         DeclareLaunchArgument(
-            "namespace", 
+            "robot", 
             default_value="tempest",
             description="Namespace of the vehicle",
         ),
@@ -78,16 +78,9 @@ def generate_launch_description():
             default_value="False",
             description="enable xacro debug of the vehicle",
         ),
-
-        DeclareLaunchArgument(
-            "apply_namespace",
-            default_value="False",
-            description="Override the vehicle namespace when not included"
-        ),
         
         PushRosNamespace(
-            LC("namespace"),
-            condition=IfCondition(LC('apply_namespace'))
+            LC("robot")
         ),
 
 
@@ -104,7 +97,7 @@ def generate_launch_description():
             name="odom_to_tempest",
             package="tf2_ros",
             executable="static_transform_publisher",
-            arguments=["0", "0", "0", "0", "0", "0", "odom", "tempest/base_link"]
+            arguments=["0", "0", "0", "0", "0", "0", "odom", launch.substitutions.PathJoinSubstitution( [ LC("robot"), "base_link" ] )]
         ),
         
         Node(
@@ -117,5 +110,4 @@ def generate_launch_description():
         
         # Publish robot model for Sensor locations
         OpaqueFunction(function=evaluate_xacro),
-
     ])

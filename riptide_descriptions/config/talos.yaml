@@ -1,0 +1,152 @@
+# Positions are in meters from back left foot. ENU convention
+# Pose is xyzrpy with rpy in radians
+
+# Point which represents robot position. Must be near center
+base_link: [-0.14, 0.03, -0.09]
+
+# Vehicle mass properties
+mass: 29.942 #kg
+com: [-0.157, 0.037, -0.022]
+inertia: [1.493, 0.549, 1.399] # kg*m^2
+
+# Vehicle bouyancy properties
+volume: 0.0305 # m^3
+cob: [-0.157, 0.037, -0.022]
+
+# Controller parameters
+controller:
+  linear:
+    # linear damping coeficients
+    damping:
+      # linear: [-17.0, -17.0, -35.0]
+      # quadratic: [-180.0, -180.0, -460.0]
+      linear: [0.0, 0.0, 0.0]
+      quadratic: [0.0, 0.0, 0.0]
+
+    # physical maximums for each linear axis
+    max:
+      velocity: [.45, .4, .2]
+      acceleration: [1.0, 1.0, 1.0]
+
+    # linear controller proportional gains
+    p_gains:
+      position: [0.8, 0.5, 1.0]
+      velocity: [4.7, 3.5, 6.0]
+
+  angular:
+    # angular damping coeficients
+    damping:
+      # linear: [-2.0, -4.5, -2.5]
+      # quadratic: [-6.0, -12.0, -12.0]
+      linear: [0.0, 0.0, 0.0]
+      quadratic: [0.0, 0.0, 0.0]
+
+    # physical maximums for each rotational axis
+    max:
+      velocity: [1.0, 1.0, 2.0]
+      acceleration: [2.0, 2.0, 2.0]
+
+    # Angular controller proportional gains
+    p_gains:
+      position: [600.0, 600.0, 600.0]
+      velocity: [2.5, 3.0, 3.5]
+
+dvl:
+  # topic: dvl
+  rate: 8 # Hz
+  sigma: 0.001 # Stdev in m/s. Used by gazebo
+  pose: [-0.119, 0.034, -0.250, 0, 0, -0.7853981]
+
+depth:
+  # topic: depth/pressure
+  rate: 20 # Hz
+  sigma: 0.003 # Stdev in m. Used by gazebo
+  pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
+
+imu:
+  # topic: /imu/imu/data
+  rate: 100 #Hz
+  pose: [-0.141, -0.147, 0.025, 3.141, 0.0, 3.141]
+
+claw:
+  pose: [-0.35, 0.82, -0.066, 0, 0, 1.507]
+
+torpedos: 
+  pose: [-0.1143, 0.7112, 0.03175, 0, 0, 0]
+
+droppers:
+  pose: [-0.35, 0, 0.05, 0, 0, 0]
+
+cameras: [
+  {
+    type: stereo, 
+    name: stereo,
+    model: zed2,
+    baseline: 0.12, # m. Distance between cameras (manually measured) 
+    pose: [-0.242, 0.283, -0.066, 0, 0, 0]
+  }
+]
+
+thruster: 
+  rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
+  max_force: 22 # Newtons. Thrusters draw about 8A here
+  MIN_THRUST: 0.2
+  STARTUP_THRUST: 1.5
+  SU_THRUST: #Start Up Thrust
+    POS_SLOPE: 71.538
+    POS_YINT: -14.307
+    NEG_SLOPE: 80.0
+    NEG_YINT: 7.0
+  THRUST:
+    POS_SLOPE: 17.951
+    POS_YINT: 66.073
+    NEG_SLOPE: 22.920
+    NEG_YINT: -78.609
+
+# Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
+# Thruster naming convention:
+#  - first letter:  direction         (Heave/Vector)
+#  - second letter: vertical position (Upper/Lower)
+#  - third letter:  lateral position  (Port/Starboard)
+thrusters: [
+  {
+    name: "HUS", #thruster 3
+    type: 1,
+    pose: [-0.140, -0.260, 0.141, 0.0, -0.785, 1.571]
+  },
+  {
+    name: "HUP", #thruster 4
+    type: 0,
+    pose: [-0.140, 0.328, 0.141, 0.0, -0.785, -1.571] 
+  },
+  {
+    name: "VUS", #thruster 1
+    type: 0,
+    pose: [-0.134, -0.369, 0.242, 0.0, 0.0, 0.0]
+  },
+  {
+    name: "VUP", #thruster 2 
+    type: 1,
+    pose: [-0.134, 0.438, 0.242, 0.0, 0.0, 0.0]
+  },
+  {
+    name: "HLS", #thruster 5
+    type: 0,
+    pose: [-0.140, -0.260, -0.141, 0.0, 0.785, 1.571]
+  },
+  {
+    name: "HLP", #thruster 6
+    type: 1,
+    pose: [-0.140, 0.328, -0.141, 0.0, 0.785, -1.571]
+  },
+  {
+    name: "VLS", #thruster 7
+    type: 1,
+    pose: [-0.134, -0.372, -0.244, 0.0, 0.0, 0.0]
+  },
+  {
+    name: "VLP", #thruster 8
+    type: 0,
+    pose: [-0.134, 0.440, -0.244, 0.0, 0.0, 0.0]
+  }
+]
