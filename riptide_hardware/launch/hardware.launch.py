@@ -3,7 +3,7 @@ from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch_ros.actions import PushRosNamespace
 from launch.launch_description_sources import AnyLaunchDescriptionSource
-from launch.actions import IncludeLaunchDescription
+from launch.actions import GroupAction, IncludeLaunchDescription
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
 
@@ -38,38 +38,40 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robot', default_value="tempest", description="Name of the vehicle"),
 
-        PushRosNamespace(
-            LC("robot")
-        ),
+        GroupAction([
+            PushRosNamespace(
+                LC("robot")
+            ),
 
-        IncludeLaunchDescription(
-            AnyLaunchDescriptionSource(copro_agent_launch_file),
-            launch_arguments=[
-                ('robot', LC('robot')),
-            ]
-        ),
-        IncludeLaunchDescription(
-            AnyLaunchDescriptionSource(diagnostics_launch_file),
-            launch_arguments=[
-                ('robot', LC('robot')),
-            ]
-        ),
-        IncludeLaunchDescription(
-            AnyLaunchDescriptionSource(dvl_launch_file),
-            launch_arguments=[
-                ('robot', LC('robot')),
-            ]
-        ),
-        IncludeLaunchDescription(
-            AnyLaunchDescriptionSource(imu_launch_file),
-            launch_arguments=[
-                ('robot', LC('robot')),
-            ]
-        )
-        # IncludeLaunchDescription(
-        #     AnyLaunchDescriptionSource(mynt_camera_launch_file),
-        #     launch_arguments=[
-        #         ('robot', LC('robot')),
-        #     ]
-        # )
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(copro_agent_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(diagnostics_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(dvl_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(imu_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            )
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(mynt_camera_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # )
+        ], scoped = True)
     ])
