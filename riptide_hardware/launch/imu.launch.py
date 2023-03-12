@@ -24,7 +24,6 @@ start_vectornav_cmd = Node(
         }
     ],
     respawn=True,
-    # namespace=LC("robot")
 )
 
 start_vectornav_sensor_msgs_cmd = Node(
@@ -35,7 +34,6 @@ start_vectornav_sensor_msgs_cmd = Node(
         imu_config_file,
     ],
     respawn=True,
-    # namespace=LC("robot")
 )
 
 robot_arg = DeclareLaunchArgument('robot', default_value="tempest", description="Name of the vehicle")

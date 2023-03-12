@@ -3,7 +3,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
 import os
 import xacro
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, GroupAction
 from launch.conditions import IfCondition
 from launch_ros.actions import Node, PushRosNamespace
 import traceback
@@ -70,36 +70,36 @@ def generate_launch_description():
             default_value="False",
             description="enable xacro debug of the vehicle",
         ),
-        
-        PushRosNamespace(
-            LC("robot")
-        ),
 
+        GroupAction([
+            PushRosNamespace(
+                LC("robot")
+            ),
 
-             # Publish world and odom as same thing until we get SLAM
-        # This is here so we can compare ground truth from sim to odom
-        Node(
-            name="odom_to_world_broadcaster",
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
-        ),
-        
-        Node(
-            name="odom_to_robot",
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            arguments=["0", "0", "0", "0", "0", "0", "odom", launch.substitutions.PathJoinSubstitution( [ LC("robot"), "base_link" ] )]
-        ),
-        
-        Node(
-            name="fake_ekf_node",
-            package="riptide_hardware2",
-            executable="fake_ekf",
-            output='screen',
-        ),
-        
-        
-        # Publish robot model for Sensor locations
-        OpaqueFunction(function=evaluate_xacro),
+            # Publish world and odom as same thing until we get SLAM
+            # This is here so we can compare ground truth from sim to odom
+            Node(
+                name="odom_to_world_broadcaster",
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
+            ),
+            
+            Node(
+                name="odom_to_robot",
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                arguments=["0", "0", "0", "0", "0", "0", "odom", launch.substitutions.PathJoinSubstitution( [ LC("robot"), "base_link" ] )]
+            ),
+            
+            Node(
+                name="fake_ekf_node",
+                package="riptide_hardware2",
+                executable="fake_ekf",
+                output='screen',
+            ),
+            
+            # Publish robot model for Sensor locations
+            OpaqueFunction(function=evaluate_xacro),
+        ], scoped=True)
     ])
