@@ -2,7 +2,7 @@
 # Pose is xyzrpy with rpy in radians
 
 # Point which represents robot position. Must be near center
-base_link: [0.397, -0.205, 0.17]
+base_link: [-0.3556, 0.0, 0.0]
 
 # Vehicle mass properties
 mass: 31.437 #kg
@@ -57,12 +57,11 @@ depth:
   # topic: depth/pressure
   rate: 20 # Hz
   sigma: 0.003 # Stdev in m. Used by gazebo
-  pose: [0.43815, -0.1397, 0.13335, 0, 0, 0] # TODO WRONG!
+  pose: [-0.40, 0, 0.0361, 0, 0, 0] # TODO WRONG!
 
 imu:
-  # topic: /imu/imu/data
   rate: 100 #Hz
-  pose: [-0.205, 0.175, -0.063, 0, 0, 0]
+  pose: [-0.049, 0.0, 0.221, 3.1415, 0, 0]
 
 claw:
   pose: [-0.35, 0.82, -0.066, 0, 0, 1.507]
@@ -79,7 +78,7 @@ cameras: [
     name: stereo,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
-    pose: [0.087, 0.0, 0.168, 0, 0, 0]
+    pose: [-0.0254, 0.06, 0.168, 0, 0, 0]
   }
 ]
 
