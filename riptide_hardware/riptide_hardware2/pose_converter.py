@@ -15,28 +15,31 @@ class poseConverter(Node):
     def __init__(self):
         super().__init__('pose_converter')
         self.sub = self.create_subscription(
-            PoseWithCovarianceStamped, "/zed2i/zed_node/pose_with_covariance", self.poseCb, qos_profile_sensor_data)
+            PoseWithCovarianceStamped, "zed_node/pose_with_covariance", self.poseCb, qos_profile_sensor_data)
         self.pub = self.create_publisher(
             PoseWithCovarianceStamped, "vio/pose", qos_profile_sensor_data)
         self.z2bTransformTimer = self.create_timer(1.0, self.transformCb)
         self.namespace = self.get_namespace()[1:]
         self.tfBuffer = tf2_ros.Buffer()
+        self.tfListener = tf2_ros.TransformListener(self.tfBuffer, self)
 
-    def transformCb(self, msg):
+    def transformCb(self):
         try:
+            toFrame = self.namespace+'/base_link'
+            fromFrame = self.namespace+'/zed2i_base_link'
             self.z2bTransform = self.tfBuffer.lookup_transform(
-                self.namespace+'/base_link', 'zed2i_base_link', Time()).transform
+                toFrame, fromFrame, Time())
 
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as ex:
-            self.get_logger().warning(str(ex))
+            self.get_logger().warning(f"{type(ex)} encountered while looking up transform from {fromFrame} to {toFrame}: {str(ex)}")
             return
 
         self.z2bTransformTimer.cancel()
 
     def poseCb(self, msg):
-        if not self.z2bTransformTimer.is_canceled():
+        if self.z2bTransformTimer.is_canceled():
             transformedMsg = tf2_geometry_msgs.do_transform_pose_with_covariance_stamped(
-                msg, self.z2bTransformTimer)
+                msg, self.z2bTransform)
 
             # Publish pose from base_link to odom
             outMsg = PoseWithCovarianceStamped()

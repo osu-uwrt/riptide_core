@@ -103,15 +103,15 @@ def generate_launch_description():
             Node(
                 package='robot_localization',
                 executable='ekf_node',
-                # type='ekf_localization_node',
                 name='ekf_localization_node',
                 output='screen',
-                #arguments=['--ros-args', '--log-level', 'DEBUG'],
-                parameters=[config,
-                {                
-                    'reset_on_time_jump': True,
-                }
-                ]),
+                parameters=[
+                    config,
+                    {
+                        'reset_on_time_jump': True,
+                    }
+                ]
+            ),
                 
             Node(
                 package='riptide_hardware2',

@@ -55,15 +55,26 @@
     <xacro:if value="${cameras != []}">
       <xacro:property name="camera" value="${cameras[0]}"/>
 
+      <link name="${namespace}/${camera['name']}_base_link">
+        <xacro:dummy_inertia/>
+        <xacro:no_collision/>
+      </link>
+
+      <joint name="${namespace}/${camera['name']}_joint" type="fixed">
+        <parent link="${namespace}/origin"/>
+        <child link="${namespace}/${camera['name']}_base_link"/>
+        <origin xyz="${camera['pose'][0]} ${camera['pose'][1]} ${camera['pose'][2]}" 
+                rpy="${camera['pose'][3]} ${camera['pose'][4]} ${camera['pose'][5]}"/>
+      </joint>
+
       <!-- Stereo Camera(s) -->
       <xacro:if value="${camera['type'] == 'stereo'}">
         <xacro:stereo_macro
           namespace="${namespace}"
-          parent_link="${namespace}/origin" 
+          parent_link="${namespace}/${camera['name']}_base_link" 
           name="${camera['name']}"
           baseline="${camera['baseline']}">
-          <origin xyz="${camera['pose'][0]} ${camera['pose'][1]} ${camera['pose'][2]}" 
-                  rpy="${camera['pose'][3]} ${camera['pose'][4]} ${camera['pose'][5]}"/>
+          <origin xyz="0 ${camera['baseline'] / 2} 0" />
         </xacro:stereo_macro>
       </xacro:if>
 

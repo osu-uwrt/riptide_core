@@ -31,9 +31,9 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
-mynt_camera_launch_file = os.path.join(
+zed_launch_file = os.path.join(
     get_package_share_directory('riptide_hardware2'),
-    "launch", "mynt_camera.launch.py"
+    "launch", "zed.launch.py"
 )
 
 def generate_launch_description():
@@ -70,12 +70,9 @@ def generate_launch_description():
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
-            )
+            ),
             # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(mynt_camera_launch_file),
-            #     launch_arguments=[
-            #         ('robot', LC('robot')),
-            #     ]
+            #     AnyLaunchDescriptionSource(zed_launch_file),
             # )
         ], scoped=True)
     ])
