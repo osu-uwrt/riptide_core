@@ -13,7 +13,8 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch*')),
-        (os.path.join('share', package_name, 'cfg'), glob('cfg/*'))
+        (os.path.join('share', package_name, 'cfg'), glob('cfg/*')),
+        (os.path.join('share', package_name, 'weights'), glob('weights/*'))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -30,7 +31,8 @@ setup(
             'sensor_monitor = riptide_hardware2.sensor_monitor:main',
             'computer_monitor = riptide_hardware2.computer_monitor:main',
             'depth_converter = riptide_hardware2.depth_converter:main',
-            'fake_ekf = riptide_hardware2.fake_ekf:main'
+            'fake_ekf = riptide_hardware2.fake_ekf:main',
+            'pose_converter = riptide_hardware2.pose_converter:main'
         ],
     },
 )

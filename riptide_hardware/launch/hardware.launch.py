@@ -6,6 +6,8 @@ from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.actions import GroupAction, IncludeLaunchDescription
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
+from launch.substitutions import PythonExpression
+from launch.conditions.if_condition import IfCondition
 
 import os
 
@@ -29,9 +31,9 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
-mynt_camera_launch_file = os.path.join(
+zed_launch_file = os.path.join(
     get_package_share_directory('riptide_hardware2'),
-    "launch", "mynt_camera.launch.py"
+    "launch", "zed.launch.py"
 )
 
 def generate_launch_description():
@@ -42,7 +44,6 @@ def generate_launch_description():
             PushRosNamespace(
                 LC("robot")
             ),
-
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(copro_agent_launch_file),
                 launch_arguments=[
@@ -59,19 +60,19 @@ def generate_launch_description():
                 AnyLaunchDescriptionSource(dvl_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
-                ]
+                ],
+                condition=IfCondition(
+                    PythonExpression(["'", LC("robot"), "' == 'talos'"])
+                )
             ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(imu_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
-            )
+            ),
             # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(mynt_camera_launch_file),
-            #     launch_arguments=[
-            #         ('robot', LC('robot')),
-            #     ]
+            #     AnyLaunchDescriptionSource(zed_launch_file),
             # )
-        ], scoped = True)
+        ], scoped=True)
     ])

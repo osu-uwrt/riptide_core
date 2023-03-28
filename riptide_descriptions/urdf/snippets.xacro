@@ -56,7 +56,7 @@
     </xacro:macro>
 
     <xacro:macro name="stereo_macro" params="namespace parent_link name baseline *origin">
-        <xacro:camera_macro namespace="${namespace}/${name}" name="left" parent_link="${namespace}/origin">
+        <xacro:camera_macro namespace="${namespace}/${name}" name="left" parent_link="${parent_link}">
             <xacro:insert_block name="origin" />
         </xacro:camera_macro>
 

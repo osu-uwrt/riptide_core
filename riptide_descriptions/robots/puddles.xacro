@@ -9,8 +9,8 @@
   <!-- Read the config -->
   <xacro:property name="yaml_file" value="$(find riptide_descriptions2)/config/puddles.yaml" />
   <xacro:property name="config" value="${load_yaml(yaml_file)}"/>
-  <xacro:property name="body_file" value="$(find riptide_descriptions2)/meshes/Puddles.dae"/>
-  <xacro:property name="prop_file" value="$(find riptide_descriptions2)/meshes/Propeller.dae"/>
+  <xacro:property name="body_file" value="package://riptide_descriptions2/meshes/Puddles.dae"/>
+  <xacro:property name="prop_file" value="package://riptide_descriptions2/meshes/Propeller.dae"/>
 
   <!-- Create robot -->
   <xacro:robot_base

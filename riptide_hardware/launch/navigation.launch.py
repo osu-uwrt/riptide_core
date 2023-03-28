@@ -2,6 +2,7 @@ import launch
 import launch.actions
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
+from launch.substitutions import PathJoinSubstitution
 import os
 import xacro
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, GroupAction
@@ -13,7 +14,7 @@ def evaluate_xacro(context, *args, **kwargs):
     robot = LC('robot').perform(context)
     debug = LC('debug').perform(context)
 
-    modelPath = launch.substitutions.PathJoinSubstitution([
+    modelPath = PathJoinSubstitution([
         get_package_share_directory('riptide_descriptions2'),
         'robots',
         robot + '.xacro'
@@ -57,13 +58,12 @@ def evaluate_xacro(context, *args, **kwargs):
     return []
 
 def generate_launch_description():
-
     # declare the launch args to read for this file
-    config = os.path.join(
+    config = PathJoinSubstitution([
         get_package_share_directory('riptide_hardware2'),
         'cfg',
-        'ekf_config.yaml'
-    )
+        LC("robot_ekf_config")
+    ])
 
     return launch.LaunchDescription([ 
         # Read in the vehicle's namespace through the command line or use the default value one is not provided
@@ -79,40 +79,47 @@ def generate_launch_description():
             description="enable xacro debug of the vehicle",
         ),
 
-        PushRosNamespace(
-            LC("robot")
+        DeclareLaunchArgument(
+            "robot_ekf_config", 
+            default_value=[LC("robot"), '_ekf.yaml'],
+            description="EKF yaml file for the vehicle",
         ),
 
-             # Publish world and odom as same thing until we get SLAM
-        # This is here so we can compare ground truth from sim to odom
-        Node(
-            name="odom_to_world_broadcaster",
-            package="tf2_ros",
-            executable="static_transform_publisher",
-            arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
-        ),
+        GroupAction([
+            PushRosNamespace(
+                LC("robot")
+            ),
 
-        # start robot_localization Extended Kalman filter (EKF)
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            # type='ekf_localization_node',
-            name='ekf_localization_node',
-            output='screen',
-            #arguments=['--ros-args', '--log-level', 'DEBUG'],
-            parameters=[config,
-            {                
-                'reset_on_time_jump': True,
-            }
-            ]),
-            
-        Node(
-            package='riptide_hardware2',
-            executable='depth_converter',
-            name='depth_converter',
-        ),
+            # Publish world and odom as same thing until we get SLAM
+            # This is here so we can compare ground truth from sim to odom
+            Node(
+                name="odom_to_world_broadcaster",
+                package="tf2_ros",
+                executable="static_transform_publisher",
+                arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
+            ),
 
-        # Publish robot model for Sensor locations
-        OpaqueFunction(function=evaluate_xacro),
+            # start robot_localization Extended Kalman filter (EKF)
+            Node(
+                package='robot_localization',
+                executable='ekf_node',
+                name='ekf_localization_node',
+                output='screen',
+                parameters=[
+                    config,
+                    {
+                        'reset_on_time_jump': True,
+                    }
+                ]
+            ),
+                
+            Node(
+                package='riptide_hardware2',
+                executable='depth_converter',
+                name='depth_converter',
+            ),
 
+            # Publish robot model for Sensor locations
+            OpaqueFunction(function=evaluate_xacro),
+        ], scoped=True)
     ])
