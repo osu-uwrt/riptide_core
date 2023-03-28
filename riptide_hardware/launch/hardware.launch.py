@@ -3,7 +3,7 @@ from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch_ros.actions import PushRosNamespace
 from launch.launch_description_sources import AnyLaunchDescriptionSource
-from launch.actions import IncludeLaunchDescription
+from launch.actions import GroupAction, IncludeLaunchDescription
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
 from launch.substitutions import PythonExpression
