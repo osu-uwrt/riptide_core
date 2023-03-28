@@ -1,0 +1,17 @@
+#goal definition
+geometry_msgs/PoseStamped[] path_points
+---
+#result definition
+uint8 error_code
+string error_msg
+
+uint8 NO_ERROR=0
+uint8 BAD_WYPTS=1
+uint8 MISSING_FRAME_ID=2
+uint8 PROGRESS_FAIL=3
+
+---
+#feedback
+bool has_generated
+float32 current_prog
+float32 expected_prog
