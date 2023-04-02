@@ -10,7 +10,7 @@ class GenerateConstants:
     PATH_TO_TEMPEST = os.path.join(os.path.dirname(__file__), "..", "config", "talos.yaml")
     PATH_TO_WRITE = os.path.join(PATH_TO_SIMULINK, "Models", "Simple_3_Model", "Constants", "RobotConstants.m")
 
-    constants_needed = ["height", "volume", "com", "cob", "inertia", "thrusters", "coefficients"]
+    constants_needed = ["mass", "height", "volume", "com", "cob", "inertia", "thrusters", "coefficients"]
     thrusters_constants_needed = [
         "VUSPos", "VUSDir", 
         "VUPPos", "VUPDir", 
