@@ -8,6 +8,7 @@ float32 pack_voltage
 float32 pack_current
 float32 average_current
 uint16 time_to_dischg
+uint8 soc
 
 # constants
 uint8 DETECT_NONE = 0
