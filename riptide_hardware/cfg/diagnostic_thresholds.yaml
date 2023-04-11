@@ -18,8 +18,8 @@ volt_cur_thresholds:
     warn_voltage_min: 4.7
     warn_voltage_max: 5.7
   twelve_volt:
-    warn_voltage_min: 11
-    warn_voltage_max: 13
+    warn_voltage_min: 14.7
+    warn_voltage_max: 16
   balanced_volt:
     warn_voltage_min: 18.5
     warn_voltage_max: 21.5

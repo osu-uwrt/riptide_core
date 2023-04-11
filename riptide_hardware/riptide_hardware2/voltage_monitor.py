@@ -107,7 +107,7 @@ class ThrusterCurrentTask(diagnostic_updater.DiagnosticTask):
 
             if len(error_thrusters) > 0:
                 error_message = self.generateThrusterList(error_thrusters, thruster_currents)
-                stat.summary(DiagnosticStatus.ERROR, "{} above ESC fuse rating ({}A) (Total Current: {:.2f}A})".format(error_message, self._error_current, current_total))
+                stat.summary(DiagnosticStatus.ERROR, "{} above ESC fuse rating ({}A) (Total Current: {:.2f}A)".format(error_message, self._error_current, current_total))
             elif len(warning_thrusters) > 0:
                 warning_message = self.generateThrusterList(warning_thrusters, thruster_currents)
                 stat.summary(DiagnosticStatus.WARN, "{} above nominal ESC current ({}A) (Total Current: {:.2f}A)".format(warning_message, self._warning_current, current_total))
@@ -191,7 +191,7 @@ class VoltageMonitor:
 
         # updater.add(BatteryVoltageTask(self.electrical_readings_msg, thresholds["battery_volt"]))
         if current_robot == "puddles":
-            updater.add(ThrusterCurrentTask(self.electrical_readings_msg, thresholds["puddles_thruster_current"]))
+            ... # updater.add(ThrusterCurrentTask(self.electrical_readings_msg, thresholds["puddles_thruster_current"]))
         else:
             updater.add(BatteryVoltageTask("Port", self.port_batt_status, thresholds["battery_volt"], thresholds["battery_current"]))
             updater.add(BatteryVoltageTask("Starboard", self.stbd_batt_status, thresholds["battery_volt"], thresholds["battery_current"]))

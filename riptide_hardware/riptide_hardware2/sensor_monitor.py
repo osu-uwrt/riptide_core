@@ -125,6 +125,8 @@ def main():
     rclpy.init()
     node = rclpy.create_node("sensor_monitor")
     node.declare_parameter('diag_thresholds_file', rclpy.Parameter.Type.STRING)
+    node.declare_parameter('robot', rclpy.Parameter.Type.STRING)
+    current_robot = node.get_parameter('robot').value
     with open(node.get_parameter('diag_thresholds_file').value, 'r') as stream:
         thresholds_file = yaml.safe_load(stream)
     message_lifetime = float(thresholds_file["ros_message_lifetime"])
@@ -133,7 +135,8 @@ def main():
     updater = Updater(node)
     updater.setHardwareID(hostname)
 
-    updater.add(DVLSensorTask(node, message_lifetime))
+    if current_robot == "talos":
+        updater.add(DVLSensorTask(node, message_lifetime))
     updater.add(IMUSensorTask(node, message_lifetime))
     updater.add(DepthSensorTask(node, message_lifetime, max_nominal_depth))
 

@@ -17,7 +17,7 @@ from .common import ExpiringMessage
 class Mk2Board(enum.Enum):
     def __new__(cls, client_id: int, board_name: str, friendly_name: str) -> 'Mk2Board':
         obj = object.__new__(cls)
-        obj._value_ = client_id
+        obj._value_ = friendly_name + "-" + str(client_id)
         obj._board_name_ = board_name
         obj._client_id_ = client_id
         obj._friendly_name_ = friendly_name
@@ -427,7 +427,7 @@ class PuddlesCoproMonitor(FirmwareMonitor):
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
-        super().__init__(node, message_lifetime, asserting_kill, Mk2Board.PUDDLES_BACKPLANE)
+        super().__init__(node, message_lifetime, asserting_kill, Mk2Board.PUDDLES_BACKPLANE, kill_switch_special=True)
 
 class ElectricalMonitor:
     def firmware_state_cb(self, msg):
@@ -471,13 +471,14 @@ class ElectricalMonitor:
                 SmartBatteryMonitor(node, message_lifetime, self.asserting_kill_msg, 1),
                 KillSwitchTask(node, message_lifetime, self.asserting_kill_msg, Mk2Board.POWER_BOARD),
             ]
+        
+            updater.add(ESCMonitorTask(node, message_lifetime, thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["warn"], thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["fuse"]))
         else:
             self.firmware_state_listeners = [
                 PuddlesCoproMonitor(node, message_lifetime, self.asserting_kill_msg),
                 KillSwitchTask(node, message_lifetime, self.asserting_kill_msg, Mk2Board.PUDDLES_BACKPLANE),
             ]
 
-        updater.add(ESCMonitorTask(node, message_lifetime, thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["warn"], thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["fuse"]))
         updater.add(WaterTemperatureTask(node, message_lifetime, thresholds["water_low_warn_temp"], thresholds["water_high_warn_temp"]))
         #updater.add(RobotTemperatureTask(self.robot_state_msg, self.firmware_state_msg, thresholds["temp_over_target_warn"]))
         for listener in self.firmware_state_listeners:

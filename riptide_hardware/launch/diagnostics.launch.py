@@ -45,6 +45,7 @@ sensor_monitor_node = Node(
     output='screen',
     parameters=[
         {"diag_thresholds_file": thresholds_file},
+        {"robot": LC('robot')},
     ]
 )
 
