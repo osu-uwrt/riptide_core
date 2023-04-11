@@ -46,10 +46,10 @@
 
     pose1: vio/pose
     pose1_config: [true, true, false,
-                  false, false, false,
-                  false, false, false,
-                  false, false, false,
-                  false, false, false]
+                    false, false, false,
+                    false, false, false,
+                    false, false, false,
+                    false, false, false]
 
 
     # This covariance was not calculated. This is just default with low XYZ noise
