@@ -36,9 +36,11 @@ zed_launch_file = os.path.join(
     "launch", "zed.launch.py"
 )
 
+
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('robot', default_value="tempest", description="Name of the vehicle"),
+        DeclareLaunchArgument('robot', default_value="tempest",
+                              description="Name of the vehicle"),
 
         GroupAction([
             PushRosNamespace(
@@ -71,8 +73,8 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(zed_launch_file),
-            # )
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(zed_launch_file),
+            )
         ], scoped=True)
     ])

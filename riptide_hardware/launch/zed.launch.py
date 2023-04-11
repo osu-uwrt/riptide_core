@@ -6,21 +6,24 @@ from launch.substitutions import LaunchConfiguration as LC
 from ament_index_python import get_package_share_directory
 import os
 
-zed_launch_file = os.path.join(get_package_share_directory("zed_wrapper"), "launch", "zed2i.launch.py")
-vision_model_path = os.path.join(get_package_share_directory("riptide_hardware2"), "weights", "best.onnx")
+zed_launch_file = os.path.join(get_package_share_directory(
+    "zed_wrapper"), "launch", "zed2i.launch.py")
+vision_model_path = os.path.join(get_package_share_directory(
+    "riptide_hardware2"), "weights", "best.onnx")
+
 
 def generate_launch_description():
     # Create the launch description and populate
     return LaunchDescription([
-        #start the zed
+        # start the zed
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(zed_launch_file),
-            # launch_arguments={
-            #     'onnx_weights_path' : vision_model_path
-            # }.items()
+            launch_arguments={
+                'onnx_weights_path': vision_model_path
+            }.items()
         ),
 
-        #start the zed pose converter
+        # start the zed pose converter
         Node(
             package='riptide_hardware2',
             executable='pose_converter',
