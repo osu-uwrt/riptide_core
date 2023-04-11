@@ -40,6 +40,10 @@ class Mk2Board(enum.Enum):
     ESC_BOARD_1 = 3, "mk2_esc_board", "ESC Board 1"
     CAMERA_CAGE_BB = 4, "mk2_camera_cage_bb", "Camera Cage BB"
     ACTUATOR_BOARD = 5, "mk2_actuator_board", "Actuator Board"
+    SBH_MCU_0 = 9, "sbh_mcu", "Smart Battery Housing 1"
+    SBH_MCU_1 = 10, "sbh_mcu", "Smart Battery Housing 2"
+
+    PUDDLES_BACKPLANE = 1, "puddles_backplane", "Puddles Backplane"
 
 
 class FirmwareMonitor(diagnostic_updater.DiagnosticTask):
@@ -281,23 +285,15 @@ class KillSwitchTask(diagnostic_updater.DiagnosticTask):
 
         self._firmware_status.update_value(msg)
 
-    # def lookup_kill_switch(self, switch_id):
-    #     if switch_id == KillSwitchReport.KILL_SWITCH_PHYSICAL:
-    #         return "Physical"
-    #     elif switch_id == KillSwitchReport.KILL_SWITCH_RQT_CONTROLLER:
-    #         return "RQT Controller"
-    #     elif switch_id == KillSwitchReport.KILL_SWITCH_TOPSIDE_BUTTON:
-    #         return "Topside Button"
-    #     elif switch_id == KillSwitchReport.KILL_SWITCH_DEBUG:
-    #         return "Debug"
-    #     else:
-    #         return "Unknown ID {0}".format(switch_id)
-
     def lookup_kill_switch(self, switch_id):
-        if switch_id == 1:
+        if switch_id == KillSwitchReport.KILL_SWITCH_PHYSICAL:
             return "Physical"
-        elif switch_id == 2:
-            return "Software Kill"
+        elif switch_id == KillSwitchReport.KILL_SWITCH_RQT_CONTROLLER:
+            return "RQT Controller"
+        elif switch_id == KillSwitchReport.KILL_SWITCH_TOPSIDE_BUTTON:
+            return "Topside Button"
+        elif switch_id == KillSwitchReport.KILL_SWITCH_DEBUG:
+            return "Debug"
         else:
             return "Unknown ID {0}".format(switch_id)
 
@@ -370,7 +366,9 @@ class PowerBoardMonitor(FirmwareMonitor):
         "FAULT_CAN_INTERNAL_ERROR",
         "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
-        "FAULT_TIMER_MISSED"
+        "FAULT_TIMER_MISSED",
+        "FAULT_ROS_BAD_COMMAND",
+        "FAULT_ADC_ERROR",
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
@@ -390,6 +388,46 @@ class CameraCageBBMonitor(FirmwareMonitor):
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
         super().__init__(node, message_lifetime, asserting_kill, Mk2Board.CAMERA_CAGE_BB)
+
+class ActuatorBoardMonitor(FirmwareMonitor):
+    ERROR_DESCRIPTIONS = [
+        "FAULT_WATCHDOG_RESET",
+        "FAULT_CAN_INTERNAL_ERROR",
+        "FAULT_CAN_RECV_ERROR",
+    ]
+
+    def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
+        super().__init__(node, message_lifetime, asserting_kill, Mk2Board.ACTUATOR_BOARD)
+
+class SmartBatteryMonitor(FirmwareMonitor):
+    ERROR_DESCRIPTIONS = [
+        "FAULT_WATCHDOG_RESET",
+        "FAULT_WATCHDOG_WARNING",
+        "FAULT_CAN_INTERNAL_ERROR",
+        "FAULT_CAN_RECV_ERROR",
+        "FAULT_ROS_ERROR",
+        "FAULT_TIMER_MISSED"
+    ]
+
+    def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage', board_num: int):
+        super().__init__(node, message_lifetime, asserting_kill, Mk2Board.SBH_MCU_0 if board_num == 0 else Mk2Board.SBH_MCU_1)
+
+class PuddlesCoproMonitor(FirmwareMonitor):
+    ERROR_DESCRIPTIONS = [
+        "FAULT_WATCHDOG_RESET",
+        "FAULT_WATCHDOG_WARNING",
+        "FAULT_CAN_INTERNAL_ERROR",
+        "FAULT_CAN_RECV_ERROR",
+        "FAULT_ROS_ERROR",
+        "FAULT_TIMER_MISSED",
+        "FAULT_ROS_BAD_COMMAND",
+        "FAULT_THRUSTER_TIMEOUT",
+        "FAULT_DEPTH_INIT_ERROR",
+        "FAULT_DEPTH_ERROR",
+    ]
+
+    def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
+        super().__init__(node, message_lifetime, asserting_kill, Mk2Board.PUDDLES_BACKPLANE)
 
 class ElectricalMonitor:
     def firmware_state_cb(self, msg):
@@ -423,15 +461,23 @@ class ElectricalMonitor:
         updater = diagnostic_updater.Updater(node)
         updater.setHardwareID(hostname)
 
-        self.firmware_state_listeners = [
-            PowerBoardMonitor(node, message_lifetime, self.asserting_kill_msg),
-            ESCBoardMonitor(node, message_lifetime, self.asserting_kill_msg, 0),
-            ESCBoardMonitor(node, message_lifetime, self.asserting_kill_msg, 1),
-            CameraCageBBMonitor(node, message_lifetime, self.asserting_kill_msg),
-            KillSwitchTask(node, message_lifetime, self.asserting_kill_msg, Mk2Board.POWER_BOARD),
-        ]
+        if current_robot == "talos":
+            self.firmware_state_listeners = [
+                PowerBoardMonitor(node, message_lifetime, self.asserting_kill_msg),
+                ESCBoardMonitor(node, message_lifetime, self.asserting_kill_msg, 0),
+                ESCBoardMonitor(node, message_lifetime, self.asserting_kill_msg, 1),
+                CameraCageBBMonitor(node, message_lifetime, self.asserting_kill_msg),
+                SmartBatteryMonitor(node, message_lifetime, self.asserting_kill_msg, 0),
+                SmartBatteryMonitor(node, message_lifetime, self.asserting_kill_msg, 1),
+                KillSwitchTask(node, message_lifetime, self.asserting_kill_msg, Mk2Board.POWER_BOARD),
+            ]
+        else:
+            self.firmware_state_listeners = [
+                PuddlesCoproMonitor(node, message_lifetime, self.asserting_kill_msg),
+                KillSwitchTask(node, message_lifetime, self.asserting_kill_msg, Mk2Board.PUDDLES_BACKPLANE),
+            ]
 
-        updater.add(ESCMonitorTask(node, message_lifetime, thresholds_file["volt_cur_thresholds"]["thruster_current"]["warn"], thresholds_file["volt_cur_thresholds"]["thruster_current"]["fuse"]))
+        updater.add(ESCMonitorTask(node, message_lifetime, thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["warn"], thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["fuse"]))
         updater.add(WaterTemperatureTask(node, message_lifetime, thresholds["water_low_warn_temp"], thresholds["water_high_warn_temp"]))
         #updater.add(RobotTemperatureTask(self.robot_state_msg, self.firmware_state_msg, thresholds["temp_over_target_warn"]))
         for listener in self.firmware_state_listeners:

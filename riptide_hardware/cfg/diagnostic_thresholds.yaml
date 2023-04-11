@@ -1,25 +1,28 @@
 volt_cur_thresholds:
   battery_volt:
-    warn: 19.5
-    thruster_cutoff: 18.5
-    diff_warn: 1.5
+    warn: 18.5
+    thruster_cutoff: 17
   battery_current:
-    warn: 30
-    fuse: 35
-  thruster_current:
+    warn: 35
+    fuse: 45
+  puddles_thruster_current:
+    warn: 8
+    fuse: 10
+  talos_thruster_current:
     warn: 12
     fuse: 15
+  three_volt:
+    warn_voltage_min: 3.2
+    warn_voltage_max: 3.4
   five_volt:
     warn_voltage_min: 4.7
     warn_voltage_max: 5.7
-    warn_current_max: 10.0
   twelve_volt:
     warn_voltage_min: 11
     warn_voltage_max: 13
-    warn_current_max: 10.0
   balanced_volt:
     warn_voltage_min: 18.5
-    warn_voltage_max: 22
+    warn_voltage_max: 21.5
 electrical_monitor_thresholds:
   copro_mem_warn_percentage: 90
   temp_over_target_warn: 10
