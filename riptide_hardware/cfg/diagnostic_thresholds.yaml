@@ -31,7 +31,7 @@ electrical_monitor_thresholds:
 computer_monitor_thresholds:
   cpu_warning_percentage: 90
   memory_warning_percentage: 90
-  disk_warning_percentage: 90
+  disk_warning_percentage: 95
   gpu_warning_percentage: 90
   computer_error_temp_c: 60
   temp_warning_percentage: 90
