@@ -5,21 +5,23 @@
 base_link: [-0.3556, 0.0, 0.0]
 
 # Vehicle mass properties
-mass: 31.437 #kg
-com: [-0.360, 0.0, 0.121]
+mass: 31.857 #kg
+com: [-0.343, 0.0, 0.120]
 inertia: [1.32, 2.84, 3.65] # kg*m^2
 
 # Vehicle bouyancy properties
-volume: 0.037655 # m^3
-cob: [-0.340, 0.0, 0.121]
+volume: 0.03101 # m^3
+cob: [-0.343, 0.0, 0.120]
 
 # Controller parameters
 controller:
   linear:
     # linear damping coeficients
     damping:
-      linear: [-51.0, -50.0, -50.0]
-      quadratic: [-23.0, -460.0, -460.0]
+      # linear: [-51.0, -50.0, -50.0]
+      linear: [0.0, 0.0, 0.0]
+      quadratic: [0.0, 0.0, 0.0]
+      #quadratic: [-23.0, -460.0, -460.0]
 
     # physical maximums for each linear axis
     max:
@@ -29,13 +31,16 @@ controller:
     # linear controller proportional gains
     p_gains:
       position: [1.0, 1.0, 1.0]
-      velocity: [4.0, 4.0, 4.0]
+      velocity: [2.0, 2.0, 2.0]
 
   angular:
     # angular damping coeficients
     damping:
-      linear: [-2.0, -4.5, -2.5]
-      quadratic: [-6.0, -12.0, -12.0]
+      #linear: [-2.0, -4.5, -2.5]
+      #quadratic: [-6.0, -12.0, -12.0]
+      linear: [0.0, 0.0, 0.0]
+      quadratic: [0.0, 0.0, 0.0]
+
 
     # physical maximums for each rotational axis
     max:
@@ -45,7 +50,7 @@ controller:
     # Angular controller proportional gains
     p_gains:
       position: [300.0, 300.0, 300.0]
-      velocity: [10.0, 10.0, 10.0]
+      velocity: [4.0, 4.0, 4.0]
 
 dvl:
   # topic: dvl
@@ -116,22 +121,22 @@ thrusters: [
   },
   {
     name: "HPF", #3
-    type: 0,
+    type: 1,
     pose: [0.029, 0.189, 0.040, 0.0, -1.57079, 0.0] 
   },
   {
     name: "HPA", #4
-    type: 1,
+    type: 0,
     pose: [-0.670, 0.189, 0.040, 0.0, -1.57079, 0.0] 
   },
   {
     name: "HSF", #5
-    type: 1,
+    type: 0,
     pose: [0.029, -0.189, 0.040, 0.0, -1.57079, 0.0]
   },
   {
     name: "HSA", #6
-    type: 1,
+    type: 0,
     pose: [-0.670, -0.189, 0.040, 0.0, -1.57079, 0.0]
   },
   {
@@ -141,7 +146,7 @@ thrusters: [
   },
   {
     name: "VSA", #8
-    type: 0,
+    type: 1,
     pose: [-0.719, -0.303, 0.157, 0.0, 0.0, -0.78540]
   } 
 ]
