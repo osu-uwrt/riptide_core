@@ -13,7 +13,7 @@ from .common import ExpiringMessage
 
 class BatteryVoltageTask(diagnostic_updater.DiagnosticTask):
     def __init__(self, side: str, battery_status_msg: ExpiringMessage, voltage_thresholds, current_thresholds):
-        diagnostic_updater.DiagnosticTask.__init__(self, "{} Battery Voltage".format(side))
+        diagnostic_updater.DiagnosticTask.__init__(self, "{} Battery".format(side))
 
         self.side = side
         self._warning_voltage = float(voltage_thresholds["warn"])
@@ -38,10 +38,12 @@ class BatteryVoltageTask(diagnostic_updater.DiagnosticTask):
         stat.add("Serial", "{:04d}".format(battery_status.serial))
         stat.add("Cell Name", battery_status.cell_name)
 
-        if battery_status.pack_current <= self._error_current:
-            stat.summary(DiagnosticStatus.ERROR, "Battery ({:.2f}A) above battery fuse rating ({}A)".format(battery_status.pack_current, self._error_current))
-        elif battery_status.pack_current <= self._warning_current:
-            stat.summary(DiagnosticStatus.WARN, "Battery ({:.2f}A) above nominal current ({}A)".format(battery_status.pack_current, self._warning_current))
+        if battery_status.pack_current > 0:
+            stat.summary(DiagnosticStatus.ERROR, "Battery ({:.2f}A) charging?".format(-battery_status.pack_current))
+        if (-battery_status.pack_current) >= self._error_current:
+            stat.summary(DiagnosticStatus.ERROR, "Battery ({:.2f}A) above battery fuse rating ({}A)".format(-battery_status.pack_current, self._error_current))
+        elif (-battery_status.pack_current) >= self._warning_current:
+            stat.summary(DiagnosticStatus.WARN, "Battery ({:.2f}A) above nominal current ({}A)".format(-battery_status.pack_current, self._warning_current))
         elif battery_status.pack_voltage <= self._error_voltage:
             stat.summary(DiagnosticStatus.ERROR, "Battery ({:.2f}V) below thruster cutoff voltage ({}V)".format(battery_status.pack_voltage, self._error_voltage))
         elif battery_status.pack_voltage <= self._warning_voltage:
