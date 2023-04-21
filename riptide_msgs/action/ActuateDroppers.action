@@ -1,6 +1,0 @@
-#request
-uint8 dropper_id #DropperID (1 or 2)
----
-#result
----
-#feedback
