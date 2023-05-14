@@ -1,7 +1,9 @@
 string board_name
+uint8 bus_id
 uint8 client_id
 uint8 version_major
 uint8 version_minor
+uint8 version_release_type
 uint32 uptime_ms
 uint32 faults
 uint32 kill_switches_enabled

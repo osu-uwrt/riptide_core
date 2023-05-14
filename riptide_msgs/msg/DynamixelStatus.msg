@@ -1,0 +1,10 @@
+uint16 model
+uint8 fw_version
+uint8 id
+uint8 hw_err_status
+bool torque_enable
+bool moving
+uint16 voltage
+uint8 temperature
+int32 position
+int16 load
