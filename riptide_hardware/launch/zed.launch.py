@@ -2,7 +2,8 @@ from launch.launch_description import LaunchDescription
 from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
 from launch_ros.actions import Node, PushRosNamespace
 from launch.launch_description_sources import AnyLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration as LC
+from launch.substitutions import LaunchConfiguration as LC, PythonExpression
+from launch.conditions import IfCondition
 from ament_index_python import get_package_share_directory
 import os
 
@@ -38,6 +39,9 @@ def generate_launch_description():
             executable='pose_converter',
             name='pose_converter',
             output='screen',
-            respawn=True
+            respawn=True,
+            condition=IfCondition(
+                PythonExpression(["'", LC("robot"), "' == 'puddles'"])
+            )
         )
     ])
