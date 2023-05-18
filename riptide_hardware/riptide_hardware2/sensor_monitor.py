@@ -101,7 +101,7 @@ class DepthSensorTask(DiagnosticTask):
         self.max_nominal = max_nominal
 
         self._depth_status = ExpiringMessage(node.get_clock(), msg_lifetime)
-        node.create_subscription(Depth, 'depth/raw', self.depth_callback, qos_profile_sensor_data)
+        node.create_subscription(Depth, 'state/depth/raw', self.depth_callback, qos_profile_sensor_data)
 
     def depth_callback(self, msg: 'Depth'):
         self._depth_status.update_value(msg.depth)

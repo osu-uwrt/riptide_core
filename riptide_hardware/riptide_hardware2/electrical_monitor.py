@@ -172,7 +172,7 @@ class WaterTemperatureTask(diagnostic_updater.DiagnosticTask):
         self._warn_temp_above = float(warn_temp_above)
         self._water_temp = ExpiringMessage(node.get_clock(), message_lifetime)
 
-        node.create_subscription(Float32, "depth/temp", self.get_water_temp, qos_profile_sensor_data)
+        node.create_subscription(Float32, "state/depth/temp", self.get_water_temp, qos_profile_sensor_data)
 
     def get_water_temp(self, msg: 'Float32'):
         self._water_temp.update_value(msg.data)
