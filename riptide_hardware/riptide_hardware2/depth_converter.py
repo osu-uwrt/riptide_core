@@ -15,7 +15,7 @@ class depthConverter(Node):
     def __init__(self):
         super().__init__('depth_converter')
         self.sub = self.create_subscription(
-            Depth, "depth/raw", self.depthCb, qos_profile_sensor_data)
+            Depth, "state/depth/raw", self.depthCb, qos_profile_sensor_data)
         self.pub = self.create_publisher(
             PoseWithCovarianceStamped, "depth/pose", qos_profile_sensor_data)
         self.namespace = self.get_namespace()[1:]

@@ -7,7 +7,7 @@ import socket
 import yaml
 from rclpy.qos import qos_profile_sensor_data
 from datetime import timedelta
-from riptide_msgs2.msg import DshotPartialTelemetry, DshotSingleTelemetry, FirmwareStatus, KillSwitchReport, RobotState
+from riptide_msgs2.msg import DshotPartialTelemetry, DshotSingleTelemetry, DynamixelStatus, FirmwareStatus, KillSwitchReport
 from std_msgs.msg import Bool, Float32
 from diagnostic_msgs.msg import DiagnosticStatus
 
@@ -15,10 +15,11 @@ from .common import ExpiringMessage
 
 # Constants from Firmware
 class Mk2Board(enum.Enum):
-    def __new__(cls, client_id: int, board_name: str, friendly_name: str) -> 'Mk2Board':
+    def __new__(cls, bus_id: int, client_id: int, board_name: str, friendly_name: str) -> 'Mk2Board':
         obj = object.__new__(cls)
         obj._value_ = friendly_name + "-" + str(client_id)
         obj._board_name_ = board_name
+        obj._bus_id_ = bus_id
         obj._client_id_ = client_id
         obj._friendly_name_ = friendly_name
         return obj
@@ -28,6 +29,10 @@ class Mk2Board(enum.Enum):
         return self._client_id_
 
     @property
+    def bus_id(self) -> int:
+        return self._bus_id_
+
+    @property
     def board_name(self) -> str:
         return self._board_name_
 
@@ -35,15 +40,15 @@ class Mk2Board(enum.Enum):
     def friendly_name(self) -> str:
         return self._friendly_name_
 
-    POWER_BOARD = 1, "mk2_power_board", "Power Board"
-    ESC_BOARD_0 = 2, "mk2_esc_board", "ESC Board 0"
-    ESC_BOARD_1 = 3, "mk2_esc_board", "ESC Board 1"
-    CAMERA_CAGE_BB = 4, "mk2_camera_cage_bb", "Camera Cage BB"
-    ACTUATOR_BOARD = 5, "mk2_actuator_board", "Actuator Board"
-    SBH_MCU_0 = 9, "sbh_mcu", "Smart Battery Housing 1"
-    SBH_MCU_1 = 10, "sbh_mcu", "Smart Battery Housing 2"
+    POWER_BOARD = 1, 1, "mk2_power_board", "Power Board"
+    ESC_BOARD_0 = 1, 2, "mk2_esc_board", "ESC Board 0"
+    ESC_BOARD_1 = 1, 3, "mk2_esc_board", "ESC Board 1"
+    CAMERA_CAGE_BB = 1, 4, "mk2_camera_cage_bb", "Camera Cage BB"
+    ACTUATOR_BOARD = 1, 5, "mk2_actuator_board", "Actuator Board"
+    SBH_MCU_0 = 2, 1, "sbh_mcu", "Smart Battery Housing 1"
+    SBH_MCU_1 = 2, 2, "sbh_mcu", "Smart Battery Housing 2"
 
-    PUDDLES_BACKPLANE = 1, "puddles_backplane", "Puddles Backplane"
+    PUDDLES_BACKPLANE = 0, 1, "puddles_backplane", "Puddles Backplane"
 
 
 class FirmwareMonitor(diagnostic_updater.DiagnosticTask):
@@ -72,7 +77,7 @@ class FirmwareMonitor(diagnostic_updater.DiagnosticTask):
         return ", ".join(fault_list)
 
     def refresh_potential_msg(self, msg: 'FirmwareStatus'):
-        if msg.client_id != self.board.client_id:
+        if msg.client_id != self.board.client_id or msg.bus_id != self.board.bus_id:
             return
 
         self._firmware_status.update_value(msg)
@@ -87,13 +92,26 @@ class FirmwareMonitor(diagnostic_updater.DiagnosticTask):
         uptime = timedelta(milliseconds=msg.uptime_ms)
         faults = msg.faults
 
+        # Release type lookup
+        release_type_string = "Unknown ({})".format(msg.version_release_type)
+        if msg.version_release_type == 0:
+            release_type_string = "Debug"
+        elif msg.version_release_type == 1:
+            release_type_string = "Dev"
+        elif msg.version_release_type == 2:
+            release_type_string = "Clean"
+        elif msg.version_release_type == 3:
+            release_type_string = "Tagged"
+
         stat.add("Faults", self.gen_fault_string(faults))
         stat.add("Uptime", str(uptime))
         stat.add("Kill Switch Status", "Killed" if msg.kill_switches_asserting_kill else "Enabled")
         stat.add("Kill Switch Timed Out", "Yes" if msg.kill_switches_timed_out else "No")
         stat.add("Board Name", str(msg.board_name))
+        stat.add("Bus ID", str(msg.bus_id))
         stat.add("Client ID", str(msg.client_id))
         stat.add("FW Version", "{}.{}".format(msg.version_major, msg.version_minor))
+        stat.add("Release Type", release_type_string)
 
         # Unexpected Status
         if msg.board_name != self.board.board_name:
@@ -114,6 +132,10 @@ class FirmwareMonitor(diagnostic_updater.DiagnosticTask):
             # Warn that the kill switch has timed out, but since we checked that asserting kill timed out,
             # it's not a fault
             stat.summary(DiagnosticStatus.WARN, "Kill Switch Timeout")
+        elif msg.version_release_type == 0:
+            # Lowest priority warning, anything else will show over this
+            # But still here to make sure poeple don't try to run debug firmware and get bit by extra latency
+            stat.summary(DiagnosticStatus.WARN, "Running Debug Firmware")
 
         # Normal States
         else:
@@ -121,47 +143,47 @@ class FirmwareMonitor(diagnostic_updater.DiagnosticTask):
 
         return stat
 
-class RobotTemperatureTask(diagnostic_updater.DiagnosticTask):
-    def __init__(self, robot_state, firmware_state, warning_temp_above):
-        diagnostic_updater.DiagnosticTask.__init__(self, "Robot Temperature")
+# class RobotTemperatureTask(diagnostic_updater.DiagnosticTask):
+#     def __init__(self, robot_state, firmware_state, warning_temp_above):
+#         diagnostic_updater.DiagnosticTask.__init__(self, "Robot Temperature")
 
-        self._warning_temp_above = int(warning_temp_above)
-        self._robot_state = robot_state
-        self._firmware_state = firmware_state
+#         self._warning_temp_above = int(warning_temp_above)
+#         self._robot_state = robot_state
+#         self._firmware_state = firmware_state
 
-    def run(self, stat):
-        robot_state = self._robot_state.get_value()
-        firmware_state = self._firmware_state.get_value()
+#     def run(self, stat):
+#         robot_state = self._robot_state.get_value()
+#         firmware_state = self._firmware_state.get_value()
 
-        if robot_state is None or firmware_state is None:
-            stat.summary(DiagnosticStatus.STALE, "No data available from copro")
-            return stat
+#         if robot_state is None or firmware_state is None:
+#             stat.summary(DiagnosticStatus.STALE, "No data available from copro")
+#             return stat
 
-        temperature = robot_state.robot_temperature
-        temp_threshold = firmware_state.peltier_cooling_threshold
-        peltier_power = robot_state.peltier_active
+#         temperature = robot_state.robot_temperature
+#         temp_threshold = firmware_state.peltier_cooling_threshold
+#         peltier_power = robot_state.peltier_active
 
-        stat.add("Cooling Temperature Threshold", str(temp_threshold) + "C")
-        stat.add("Peltier Powered", str(peltier_power))
+#         stat.add("Cooling Temperature Threshold", str(temp_threshold) + "C")
+#         stat.add("Peltier Powered", str(peltier_power))
 
-        if temperature == RobotState.NO_READING:
-            stat.summary(DiagnosticStatus.ERROR, "Unable to read temperature sensor")
-        else:
-            stat.add("Robot Temperature", "{:.2f}C".format(temperature))
+#         if temperature == RobotState.NO_READING:
+#             stat.summary(DiagnosticStatus.ERROR, "Unable to read temperature sensor")
+#         else:
+#             stat.add("Robot Temperature", "{:.2f}C".format(temperature))
 
-            peltier_status_msg = " [Peltier "
-            if peltier_power:
-                peltier_status_msg += "ON"
-            else:
-                peltier_status_msg += "OFF"
-            peltier_status_msg += "]"
+#             peltier_status_msg = " [Peltier "
+#             if peltier_power:
+#                 peltier_status_msg += "ON"
+#             else:
+#                 peltier_status_msg += "OFF"
+#             peltier_status_msg += "]"
 
-            if (temperature - temp_threshold) >= self._warning_temp_above:
-                stat.summary(DiagnosticStatus.WARN, "Temperature ({:.2f}C) is over {}C above cooling threshold".format(temperature, self._warning_temp_above) + peltier_status_msg)
-            else:
-                stat.summary(DiagnosticStatus.OK, "Temperature at {:.2f}C".format(temperature) + peltier_status_msg)
+#             if (temperature - temp_threshold) >= self._warning_temp_above:
+#                 stat.summary(DiagnosticStatus.WARN, "Temperature ({:.2f}C) is over {}C above cooling threshold".format(temperature, self._warning_temp_above) + peltier_status_msg)
+#             else:
+#                 stat.summary(DiagnosticStatus.OK, "Temperature at {:.2f}C".format(temperature) + peltier_status_msg)
 
-        return stat
+#         return stat
 
 
 class WaterTemperatureTask(diagnostic_updater.DiagnosticTask):
@@ -172,7 +194,7 @@ class WaterTemperatureTask(diagnostic_updater.DiagnosticTask):
         self._warn_temp_above = float(warn_temp_above)
         self._water_temp = ExpiringMessage(node.get_clock(), message_lifetime)
 
-        node.create_subscription(Float32, "depth/temp", self.get_water_temp, qos_profile_sensor_data)
+        node.create_subscription(Float32, "state/depth/temp", self.get_water_temp, qos_profile_sensor_data)
 
     def get_water_temp(self, msg: 'Float32'):
         self._water_temp.update_value(msg.data)
@@ -204,7 +226,7 @@ class ESCMonitorTask(diagnostic_updater.DiagnosticTask):
         self.error_current = float(error_current)
         self._esc_0_status = ExpiringMessage(node.get_clock(), message_lifetime)
         self._esc_1_status = ExpiringMessage(node.get_clock(), message_lifetime)
-        node.create_subscription(DshotPartialTelemetry, "thrusters/telemetry", self.esc_telemetry_cb, qos_profile_sensor_data)
+        node.create_subscription(DshotPartialTelemetry, "state/thrusters/telemetry", self.esc_telemetry_cb, qos_profile_sensor_data)
 
     def esc_telemetry_cb(self, msg: 'DshotPartialTelemetry'):
         if msg.start_thruster_num == 0:
@@ -280,7 +302,7 @@ class KillSwitchTask(diagnostic_updater.DiagnosticTask):
         self.authority_board: 'Mk2Board' = authority_board
 
     def refresh_potential_msg(self, msg: 'FirmwareStatus'):
-        if msg.client_id != self.authority_board.client_id:
+        if msg.client_id != self.authority_board.client_id or msg.bus_id != self.authority_board.bus_id:
             return
 
         self._firmware_status.update_value(msg)
@@ -392,8 +414,13 @@ class CameraCageBBMonitor(FirmwareMonitor):
 class ActuatorBoardMonitor(FirmwareMonitor):
     ERROR_DESCRIPTIONS = [
         "FAULT_WATCHDOG_RESET",
+        "FAULT_WATCHDOG_WARNING",
         "FAULT_CAN_INTERNAL_ERROR",
         "FAULT_CAN_RECV_ERROR",
+        "FAULT_ROS_ERROR",
+        "FAULT_TIMER_MISSED",
+        "FAULT_ACTUATOR_FAILURE",
+        "FAULT_ACTUATOR_UNPLUGGED"
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
@@ -406,7 +433,8 @@ class SmartBatteryMonitor(FirmwareMonitor):
         "FAULT_CAN_INTERNAL_ERROR",
         "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
-        "FAULT_TIMER_MISSED"
+        "FAULT_TIMER_MISSED",
+        "FAULT_BQ40_ERROR"
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage', board_num: int):
@@ -424,10 +452,52 @@ class PuddlesCoproMonitor(FirmwareMonitor):
         "FAULT_THRUSTER_TIMEOUT",
         "FAULT_DEPTH_INIT_ERROR",
         "FAULT_DEPTH_ERROR",
+        "FAULT_ADC_ERROR"
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
         super().__init__(node, message_lifetime, asserting_kill, Mk2Board.PUDDLES_BACKPLANE, kill_switch_special=True)
+
+class DynamixelMonitor(diagnostic_updater.DiagnosticTask):
+    def __init__(self, node: 'rclpy.Node', message_lifetime, name, id):
+        diagnostic_updater.DiagnosticTask.__init__(self, name)
+        self.target_id = id
+
+        self._dynamixel_status = ExpiringMessage(node.get_clock(), message_lifetime)
+        node.create_subscription(DynamixelStatus, "state/actuator/dynamixel", self.dynamixel_status_cb, qos_profile_sensor_data)
+
+    def dynamixel_status_cb(self, msg: 'DynamixelStatus'):
+        if msg.id == self.target_id:
+            self._dynamixel_status.update_value(msg)
+
+    def run(self, stat: 'diagnostic_updater.DiagnosticStatusWrapper'):
+        dynamixel_status: 'DynamixelStatus' = self._dynamixel_status.get_value()
+
+        if dynamixel_status is None:
+            stat.summary(DiagnosticStatus.ERROR, "Dynamixel {} Not Connected".format(self.target_id))
+            return stat
+
+        stat.add("Model", str(dynamixel_status.model))
+        stat.add("Firmware Version", str(dynamixel_status.fw_version))
+        stat.add("Hardware Err Status", str(dynamixel_status.hw_err_status))
+        stat.add("Torque Enable", "Enabled" if dynamixel_status.torque_enable else "Disabled")
+        stat.add("Moving", "Yes" if dynamixel_status.moving else "No")
+        stat.add("Voltage", "%.1f V" % (dynamixel_status.voltage / 10))
+        stat.add("Temperature", "%d C" % dynamixel_status.temperature)
+        stat.add("Position", str(dynamixel_status.position))
+        stat.add("Load", str(dynamixel_status.load))
+
+        if dynamixel_status.hw_err_status != 0:
+            stat.summary(DiagnosticStatus.ERROR, "Hardware Error {}".format(dynamixel_status.hw_err_status))
+        else:
+            stat.summary(DiagnosticStatus.OK, "Okay")
+
+        return stat
+
+
+class TorpedoMarkerMonitor(DynamixelMonitor):
+    def __init__(self, node, message_lifetime):
+        super().__init__(node, message_lifetime, "Torpedo/Marker", 2)
 
 class ElectricalMonitor:
     def firmware_state_cb(self, msg):
@@ -467,11 +537,13 @@ class ElectricalMonitor:
                 ESCBoardMonitor(node, message_lifetime, self.asserting_kill_msg, 0),
                 ESCBoardMonitor(node, message_lifetime, self.asserting_kill_msg, 1),
                 CameraCageBBMonitor(node, message_lifetime, self.asserting_kill_msg),
+                ActuatorBoardMonitor(node, message_lifetime, self.asserting_kill_msg),
                 SmartBatteryMonitor(node, message_lifetime, self.asserting_kill_msg, 0),
                 SmartBatteryMonitor(node, message_lifetime, self.asserting_kill_msg, 1),
                 KillSwitchTask(node, message_lifetime, self.asserting_kill_msg, Mk2Board.POWER_BOARD),
             ]
-        
+
+            updater.add(TorpedoMarkerMonitor(node, message_lifetime))
             updater.add(ESCMonitorTask(node, message_lifetime, thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["warn"], thresholds_file["volt_cur_thresholds"]["talos_thruster_current"]["fuse"]))
         else:
             self.firmware_state_listeners = [
