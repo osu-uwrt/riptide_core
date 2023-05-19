@@ -131,22 +131,22 @@ thrusters: [
   },
   {
     name: "HLS", #thruster 5
-    type: 0,
+    type: 1,
     pose: [-0.140, -0.260, -0.141, 0.0, 0.785, 1.571]
   },
   {
     name: "HLP", #thruster 6
-    type: 1,
+    type: 0,
     pose: [-0.140, 0.328, -0.141, 0.0, 0.785, -1.571]
   },
   {
     name: "VLS", #thruster 7
-    type: 1,
+    type: 0,
     pose: [-0.134, -0.372, -0.244, 0.0, 0.0, 0.0]
   },
   {
     name: "VLP", #thruster 8
-    type: 0,
+    type: 8,
     pose: [-0.134, 0.440, -0.244, 0.0, 0.0, 0.0]
   }
 ]

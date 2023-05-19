@@ -71,10 +71,10 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
 
         if error:
             stat.summary(DiagnosticStatus.ERROR,
-                         "Core temp exceeds {:.2f} C".format(max_temp))
+                         "Core temp exceeds {:.2f} C @ {:.2f} C".format(max_temp, average_temp))
         elif warn:
             stat.summary(DiagnosticStatus.WARN,
-                         "Core temp exceeds {:.2f} C".format(max_temp))
+                         "Core temp exceeds {:.2f} C @ {:.2f} C".format(max_temp, average_temp))
         else:
             temps = [x.current for x in core_temps]
             average_temp = sum(temps) / len(temps)
