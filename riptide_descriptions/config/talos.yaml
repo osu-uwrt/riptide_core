@@ -80,7 +80,7 @@ droppers:
 cameras: [
   {
     type: stereo, 
-    name: stereo,
+    name: zed2i,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.242, 0.283, -0.066, 0, 0, 0]
