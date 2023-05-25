@@ -110,32 +110,32 @@ thruster:
 #  - third letter:  lateral position  (Port/Starboard)
 thrusters: [
   {
-    name: "HUS", #thruster 3
+    name: "VUS", #thruster 0
     type: 1,
-    pose: [-0.140, -0.260, 0.141, 0.0, -0.785, 1.571]
-  },
-  {
-    name: "HUP", #thruster 4
-    type: 0,
-    pose: [-0.140, 0.328, 0.141, 0.0, -0.785, -1.571] 
-  },
-  {
-    name: "VUS", #thruster 1
-    type: 0,
     pose: [-0.134, -0.369, 0.242, 0.0, 0.0, 0.0]
   },
   {
-    name: "VUP", #thruster 2 
-    type: 1,
+    name: "VUP", #thruster 1
+    type: 0,
     pose: [-0.134, 0.438, 0.242, 0.0, 0.0, 0.0]
   },
   {
-    name: "HLS", #thruster 5
+    name: "HUS", #thruster 2
+    type: 0,
+    pose: [-0.140, -0.260, 0.141, 0.0, -0.785, 1.571]
+  },
+  {
+    name: "HUP", #thruster 3
+    type: 1,
+    pose: [-0.140, 0.328, 0.141, 0.0, -0.785, -1.571] 
+  },
+  {
+    name: "HLS", #thruster 4
     type: 1,
     pose: [-0.140, -0.260, -0.141, 0.0, 0.785, 1.571]
   },
   {
-    name: "HLP", #thruster 6
+    name: "HLP", #thruster 5
     type: 0,
     pose: [-0.140, 0.328, -0.141, 0.0, 0.785, -1.571]
   },
@@ -146,7 +146,7 @@ thrusters: [
   },
   {
     name: "VLP", #thruster 8
-    type: 8,
+    type: 1,
     pose: [-0.134, 0.440, -0.244, 0.0, 0.0, 0.0]
   }
 ]
