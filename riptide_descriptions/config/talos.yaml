@@ -10,8 +10,8 @@ com: [-0.162, 0.036, -0.051]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
 
 # Vehicle bouyancy properties
-volume: 0.0320942 # m^3
-cob: [-0.157, 0.035, -0.041]
+volume: 0.0309 # m^3
+cob: [-0.156, 0.036, -0.046]
 
 # Controller parameters
 controller:
@@ -43,13 +43,13 @@ controller:
 
     # physical maximums for each rotational axis
     max:
-      velocity: [1.0, 1.0, 2.0]
-      acceleration: [2.0, 2.0, 2.0]
+      velocity: [2.0, 2.0, 2.0]
+      acceleration: [8.0, 8.0, 8.0]
 
     # Angular controller proportional gains
     p_gains:
-      position: [250.0, 500.0, 100.0]
-      velocity: [4.0, 5.0, 8.0]
+      position: [250.0, 450.0, 100.0]
+      velocity: [4.0, 2.2, 8.0]
 
 dvl:
   # topic: dvl
