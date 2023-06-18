@@ -36,14 +36,14 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
     class CoreTempSysfs:
         critical = 80.0
         high = 70.0
-        
+
         def __init__(self, id):
             with open("/sys/class/thermal/thermal_zone%d/temp" % id) as f:
                 self.current = int(f.readline().strip()) / 1000.0
 
             with open("/sys/class/thermal/thermal_zone%d/type" % id) as f:
                 self.label = f.readline().strip()
-            
+
 
     def __init__(self, warning_percentage):
         diagnostic_updater.DiagnosticTask.__init__(self, "Core Temperature")
@@ -51,7 +51,7 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
 
     def run(self, stat):
         #core_temps = psutil.sensors_temperatures()["coretemp"]
-        core_temps = [self.CoreTempSysfs(0), self.CoreTempSysfs(1), self.CoreTempSysfs(5),
+        core_temps = [self.CoreTempSysfs(0), self.CoreTempSysfs(8), self.CoreTempSysfs(5),
                       self.CoreTempSysfs(6), self.CoreTempSysfs(7), self.CoreTempSysfs(9)]
 
         warn = False
@@ -59,7 +59,7 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
         max_temp = 0
         for temp in core_temps:
             stat.add(temp.label, "{:.2f} C".format(temp.current))
-            
+
             if temp.current >= temp.critical * self._warning_percentage / 100.0:
                 max_temp = temp.critical * self._warning_percentage / 100.0
                 error = True
@@ -69,7 +69,6 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
                 warn = True
 
         temps = [x.current for x in core_temps]
-        average_temp = sum(temps) / len(temps)
 
         if error:
             stat.summary(DiagnosticStatus.ERROR,
@@ -78,7 +77,7 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
             stat.summary(DiagnosticStatus.WARN,
                          "Core temp exceeds {:.2f} C @ {:.2f} C".format(max_temp, max(temps)))
         else:
-            stat.summary(DiagnosticStatus.OK, "Average core temp {:.2f} C".format(average_temp))
+            stat.summary(DiagnosticStatus.OK, "Max core temp {:.2f} C".format(max(temps)))
 
         return stat
 
@@ -86,7 +85,7 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
     def has_hardware(cls):
         #return "coretemp" in psutil.sensors_temperatures()
         try:
-            core_temps = [cls.CoreTempSysfs(0), cls.CoreTempSysfs(1), cls.CoreTempSysfs(5),
+            core_temps = [cls.CoreTempSysfs(0), cls.CoreTempSysfs(8), cls.CoreTempSysfs(5),
                       cls.CoreTempSysfs(6), cls.CoreTempSysfs(7), cls.CoreTempSysfs(9)]
             return True
         except:
