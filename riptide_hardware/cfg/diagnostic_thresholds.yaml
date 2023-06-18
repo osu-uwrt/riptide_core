@@ -33,7 +33,7 @@ computer_monitor_thresholds:
   memory_warning_percentage: 90
   disk_warning_percentage: 95
   gpu_warning_percentage: 90
-  computer_error_temp_c: 60
+  computer_error_temp_c: 90
   temp_warning_percentage: 90
 sensor_monitor_thresholds:
   depth_max_normal: 0.5

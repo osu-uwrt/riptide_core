@@ -27,6 +27,17 @@ electrical_monitor_node = Node(
     ]
 )
 
+firmware_monitor_node = Node(
+    name='firmware_monitor',
+    package='riptide_hardware2',
+    executable='firmware_monitor',
+    output='screen',
+    parameters=[
+        {"diag_thresholds_file": thresholds_file},
+        {"robot": LC('robot')},
+    ]
+)
+
 voltage_monitor_node = Node(
     name='voltage_monitor',
     package='riptide_hardware2',
@@ -64,6 +75,7 @@ def generate_launch_description():
         DeclareLaunchArgument('robot', default_value="tempest", description="Name of the vehicle"),
 
         electrical_monitor_node,
+        firmware_monitor_node,
         voltage_monitor_node,
         sensor_monitor_node,
         computer_monitor_node,

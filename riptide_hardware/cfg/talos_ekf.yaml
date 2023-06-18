@@ -4,6 +4,7 @@
     world_frame: odom
     odom_frame: odom
     base_link_frame: talos/base_link
+    
     # The frequency, in Hz, at which the filter will output a position estimate. Note that the filter will not begin
     # computation until it receives at least one message from one of the inputs. It will then run continuously at the
     # frequency specified here, regardless of whether it receives more measurements. Defaults to 30 if unspecified.
@@ -31,7 +32,7 @@
     # Imu comes in faster than the ekf runs so we need a queue
     imu0_queue_size: 4
     imu0_remove_gravitational_acceleration: true
-    gravitational_acceleration: 9.81604
+    gravitational_acceleration: 9.79604
 
     twist0: dvl_twist
     twist0_config: [false, false, false,
