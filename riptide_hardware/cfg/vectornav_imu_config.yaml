@@ -27,7 +27,7 @@
     # Binary output register 1
     BO1:
       asyncMode: 1                   # 232 only
-      rateDivisor:    16              # 50 Hz
+      rateDivisor: 16                # 50 Hz
       commonField: 0x7FFF
       timeField: 0x0000              # TIMEGROUP_NONE
       imuField: 0x0000               # IMUGROUP_NONE

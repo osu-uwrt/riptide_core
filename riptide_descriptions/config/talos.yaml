@@ -10,8 +10,8 @@ com: [-0.162, 0.036, -0.051]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
 
 # Vehicle bouyancy properties
-volume: 0.0320942 # m^3
-cob: [-0.157, 0.035, -0.041]
+volume: 0.0309 # m^3
+cob: [-0.156, 0.036, -0.046]
 
 # Controller parameters
 controller:
@@ -43,13 +43,13 @@ controller:
 
     # physical maximums for each rotational axis
     max:
-      velocity: [1.0, 1.0, 2.0]
-      acceleration: [2.0, 2.0, 2.0]
+      velocity: [2.0, 2.0, 2.0]
+      acceleration: [8.0, 8.0, 8.0]
 
     # Angular controller proportional gains
     p_gains:
-      position: [250.0, 500.0, 100.0]
-      velocity: [4.0, 5.0, 8.0]
+      position: [250.0, 450.0, 100.0]
+      velocity: [4.0, 2.2, 8.0]
 
 dvl:
   # topic: dvl
@@ -80,7 +80,7 @@ droppers:
 cameras: [
   {
     type: stereo, 
-    name: stereo,
+    name: zed2i,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.242, 0.283, -0.066, 0, 0, 0]
@@ -110,43 +110,43 @@ thruster:
 #  - third letter:  lateral position  (Port/Starboard)
 thrusters: [
   {
-    name: "HUS", #thruster 3
+    name: "VUS", #thruster 0
     type: 1,
-    pose: [-0.140, -0.260, 0.141, 0.0, -0.785, 1.571]
-  },
-  {
-    name: "HUP", #thruster 4
-    type: 0,
-    pose: [-0.140, 0.328, 0.141, 0.0, -0.785, -1.571] 
-  },
-  {
-    name: "VUS", #thruster 1
-    type: 0,
     pose: [-0.134, -0.369, 0.242, 0.0, 0.0, 0.0]
   },
   {
-    name: "VUP", #thruster 2 
-    type: 1,
+    name: "VUP", #thruster 1
+    type: 0,
     pose: [-0.134, 0.438, 0.242, 0.0, 0.0, 0.0]
   },
   {
-    name: "HLS", #thruster 5
+    name: "HUS", #thruster 2
     type: 0,
+    pose: [-0.140, -0.260, 0.141, 0.0, -0.785, 1.571]
+  },
+  {
+    name: "HUP", #thruster 3
+    type: 1,
+    pose: [-0.140, 0.328, 0.141, 0.0, -0.785, -1.571] 
+  },
+  {
+    name: "HLS", #thruster 4
+    type: 1,
     pose: [-0.140, -0.260, -0.141, 0.0, 0.785, 1.571]
   },
   {
-    name: "HLP", #thruster 6
-    type: 1,
+    name: "HLP", #thruster 5
+    type: 0,
     pose: [-0.140, 0.328, -0.141, 0.0, 0.785, -1.571]
   },
   {
     name: "VLS", #thruster 7
-    type: 1,
+    type: 0,
     pose: [-0.134, -0.372, -0.244, 0.0, 0.0, 0.0]
   },
   {
     name: "VLP", #thruster 8
-    type: 0,
+    type: 1,
     pose: [-0.134, 0.440, -0.244, 0.0, 0.0, 0.0]
   }
 ]
