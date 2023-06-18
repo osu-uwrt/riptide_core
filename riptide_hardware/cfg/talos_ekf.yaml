@@ -10,6 +10,10 @@
     # frequency specified here, regardless of whether it receives more measurements. Defaults to 30 if unspecified.
     frequency: 30.0
 
+    # Diagnostics must be on or else it'll still publish diagnostics, but never update them causing it to always report error
+    # Also we get cool diagnostics as a side effect
+    print_diagnostics: true
+
     # Config says whether to incorporate sensor data
     # Array is...
     # X  Y  Z
