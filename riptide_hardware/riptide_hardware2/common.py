@@ -63,7 +63,7 @@ class Mk2Board(enum.Enum):
     ESC_BOARD_1 = 1, 3, "mk2_esc_board", "ESC Board 1"
     CAMERA_CAGE_BB = 1, 4, "mk2_camera_cage_bb", "Camera Cage BB"
     ACTUATOR_BOARD = 1, 5, "mk2_actuator_board", "Actuator Board"
-    SBH_MCU_0 = 2, 1, "sbh_mcu", "Smart Battery Housing 1"
-    SBH_MCU_1 = 2, 2, "sbh_mcu", "Smart Battery Housing 2"
+    SBH_MCU_PORT = 2, 1, "sbh_mcu", "Smart Battery Housing Port"  # Note the bus_id actually corresponds to detect id
+    SBH_MCU_STBD = 2, 2, "sbh_mcu", "Smart Battery Housing Stbd"
 
     PUDDLES_BACKPLANE = 0, 1, "puddles_backplane", "Puddles Backplane"
