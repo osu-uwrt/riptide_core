@@ -4,9 +4,9 @@ import rclpy
 import diagnostic_updater
 import socket
 import yaml
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
 from datetime import timedelta
-from riptide_msgs2.msg import FirmwareStatus
+from riptide_msgs2.msg import BatteryStatus, FirmwareStatus
 from std_msgs.msg import Bool
 from diagnostic_msgs.msg import DiagnosticStatus
 
@@ -178,8 +178,21 @@ class SmartBatteryMonitor(FirmwareMonitor):
         "FAULT_BQ40_ERROR"
     ]
 
+    cachedSerialNum = None
+
+    def refresh_potential_msg(self, msg: 'FirmwareStatus'):
+        if msg.client_id != self.cachedSerialNum or msg.bus_id != self.board.bus_id:
+            return  # TODO: Make not has hardcoded for serial to bus id selection
+
+        self._firmware_status.update_value(msg)
+
+    def battery_state_cb(self, msg: 'BatteryStatus'):
+        if msg.detect == self.board.client_id:
+            self.cachedSerialNum = msg.serial
+
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage', board_num: int):
-        super().__init__(node, message_lifetime, asserting_kill, Mk2Board.SBH_MCU_0 if board_num == 0 else Mk2Board.SBH_MCU_1)
+        super().__init__(node, message_lifetime, asserting_kill, Mk2Board.SBH_MCU_PORT if board_num == 0 else Mk2Board.SBH_MCU_STBD)
+        node.create_subscription(BatteryStatus, "state/battery", self.battery_state_cb, qos_profile_system_default)
 
 class PuddlesCoproMonitor(FirmwareMonitor):
     ERROR_DESCRIPTIONS = [
