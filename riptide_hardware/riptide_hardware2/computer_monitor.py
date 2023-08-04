@@ -34,8 +34,6 @@ class CpuTask(diagnostic_updater.DiagnosticTask):
 
 class CoreTempTask(diagnostic_updater.DiagnosticTask):
     class CoreTempSysfs:
-        critical = 80.0
-        high = 70.0
 
         def __init__(self, id):
             with open("/sys/class/thermal/thermal_zone%d/temp" % id) as f:
@@ -45,9 +43,11 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
                 self.label = f.readline().strip()
 
 
-    def __init__(self, warning_percentage):
+    def __init__(self, warning_percentage, error_temp):
         diagnostic_updater.DiagnosticTask.__init__(self, "Core Temperature")
-        self._warning_percentage = int(warning_percentage)
+        self._error_temp = error_temp
+        self._warning_temp = error_temp * (int(warning_percentage) / 100.0)
+
 
     def run(self, stat):
         #core_temps = psutil.sensors_temperatures()["coretemp"]
@@ -60,12 +60,12 @@ class CoreTempTask(diagnostic_updater.DiagnosticTask):
         for temp in core_temps:
             stat.add(temp.label, "{:.2f} C".format(temp.current))
 
-            if temp.current >= temp.critical * self._warning_percentage / 100.0:
-                max_temp = temp.critical * self._warning_percentage / 100.0
+            if temp.current >= self._error_temp:
+                max_temp = self._error_temp
                 error = True
 
-            if temp.current >= temp.high * self._warning_percentage / 100.0:
-                max_temp = temp.high * self._warning_percentage / 100.0
+            elif temp.current >= self._warning_temp:
+                max_temp = self._warning_temp
                 warn = True
 
         temps = [x.current for x in core_temps]
@@ -240,7 +240,7 @@ def main():
     if ComputerTempTask.has_hardware():
         updater.add(ComputerTempTask(thresholds["temp_warning_percentage"], thresholds["computer_error_temp_c"]))
     if CoreTempTask.has_hardware():
-        updater.add(CoreTempTask(thresholds["temp_warning_percentage"]))
+        updater.add(CoreTempTask(thresholds["temp_warning_percentage"], thresholds["computer_error_temp_c"]))
     if GPUTask.has_hardware():
         updater.add(GPUTask(thresholds["gpu_warning_percentage"]))
 
