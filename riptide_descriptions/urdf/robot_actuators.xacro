@@ -36,16 +36,16 @@
     </xacro:if>
   </xacro:macro>
 
-  <xacro:macro name="claw_macro" params="namespace config">
-    <xacro:property name="claw" value="${config['claw']}"/>
-    <joint name="${namespace}/claw_joint" type="fixed">
-      <origin xyz="${claw['pose'][0]} ${claw['pose'][1]} ${claw['pose'][2]}"
-              rpy="${claw['pose'][3]} ${claw['pose'][4]} ${claw['pose'][5]}"/>
+  <xacro:macro name="poker_macro" params="namespace config">
+    <xacro:property name="poker" value="${config['poker']}"/>
+    <joint name="${namespace}/poker_joint" type="fixed">
+      <origin xyz="${poker['pose'][0]} ${poker['pose'][1]} ${poker['pose'][2]}"
+              rpy="${poker['pose'][3]} ${poker['pose'][4]} ${poker['pose'][5]}"/>
       <parent link="${namespace}/origin"/>
-      <child link="${namespace}/claw_link"/>
+      <child link="${namespace}/poker_link"/>
     </joint>
 
-    <link name="${namespace}/claw_link">
+    <link name="${namespace}/poker_link">
       <xacro:dummy_inertia />
       <xacro:no_collision />
     </link>
@@ -87,7 +87,7 @@
         thrusters="${config['thrusters']}"
         index="0"/>
   
-  <xacro:claw_macro
+  <xacro:poker_macro
         namespace="${namespace}"
         config="${config}"/>
 
