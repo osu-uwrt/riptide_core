@@ -31,10 +31,10 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
-zed_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "launch", "zed.launch.py"
-)
+# zed_launch_file = os.path.join(
+#     get_package_share_directory('riptide_hardware2'),
+#     "launch", "zed.launch.py"
+# )
 
 
 def generate_launch_description():
@@ -73,8 +73,8 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(zed_launch_file),
-            )
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(zed_launch_file),
+            # )
         ], scoped=True)
     ])
