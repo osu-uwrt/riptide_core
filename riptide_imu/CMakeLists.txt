@@ -13,6 +13,8 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 #include(vnproglib-1.2.0.0/cpp/CMakeLists.txt)
 add_subdirectory(vnproglib-1.2.0.0/cpp)
@@ -28,6 +30,8 @@ set(deps
   rclcpp
   std_msgs
   sensor_msgs
+  geometry_msgs
+  tf2_geometry_msgs
 )
 
 # Link deps
@@ -49,7 +53,7 @@ install(TARGETS libvncxx
 )
 
 #Install launch files
-install(DIRECTORY launch
+install(DIRECTORY config launch
   DESTINATION share/${PROJECT_NAME}
 )
 

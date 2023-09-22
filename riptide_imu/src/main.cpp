@@ -7,103 +7,281 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
+#include <fcntl.h>
+#include <linux/serial.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+
 using namespace vn::sensors;
 using namespace std::placeholders;
+using namespace std::chrono_literals;
 
-void messageTrampoline(void* userData, vn::protocol::uart::Packet& p, size_t index);
-
-class VNPublisher : public rclcpp::Node {
+class Vectornav : public rclcpp::Node {
   public:
-  VNPublisher(std::string port, uint32_t baud) 
-  : Node("imu_publisher"),
-  vnPort(port), vnBaudrate(baud) {
-    //Used for ms timings
-    using namespace std::chrono_literals;
+  Vectornav() : Node("vectornav") {
+    // Declare parameters used in constructor
+    auto port = declare_parameter<std::string>("port", "/dev/ttyUSB0");
+    auto baud = declare_parameter<int>("baud", 115200);
+    auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
-    publisher = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
-    timer = this->create_wall_timer(1000ms, std::bind(&VNPublisher::queryVN, this));
+    // Declare parameters not used in constructor
+    declare_parameter<int>("AsyncDataOutputType", vn::protocol::uart::VNOFF);
+    declare_parameter<int>("AsyncDataOutputFrequency", 20);
+    declare_parameter<std::string>("frame_id", "vectornav");
+
+
+    imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
+
+    optimizeSerialConnection(port);
+
+    vnConnect(port, baud);
+
+    // Setup spin to monitor connection (since packets are async)
+    reconnectTimer = create_wall_timer(reconnectMS, std::bind(&Vectornav::monitorConnection, this));
   }
 
-  static void parseBinaryAsyncMessage(void* userData, vn::protocol::uart::Packet& p, size_t index) {
-    //Make sure we're reading a binary package
-    if(p.type() != vn::protocol::uart::Packet::TYPE_BINARY)
-      return;
+  // There's no reason this should be used, but just in case
+  ~Vectornav() {
+    // If the reconnectTimer was declared, remove it
+    if(reconnectTimer) {
+      reconnectTimer->cancel();
+      reconnectTimer.reset();
+    }
 
-    //Parse the raw packet into composite data
-    sensor_msgs::msg::Imu msgIMU;
-    CompositeData cd = CompositeData::parse(p);
+    // If VN was connected, unregister packet handlers and disconnect
+    if(vs) {
+      vs->unregisterErrorPacketReceivedHandler();
+      vs->unregisterAsyncPacketReceivedHandler();
 
-    //Extract pos quaternion from composite data
-    vn::math::vec4f quat = cd.quaternion();
-
-    //Update msgIMU with pos quaternion
-    msgIMU.orientation.x = quat[0];
-    msgIMU.orientation.y = quat[1];
-    msgIMU.orientation.z = quat[2];
-    msgIMU.orientation.w = quat[3];
-
-    //Publish the final output
-    //publisher->publish(msgIMU);
-
-    //processedIMU = true;
+      if(vs->isConnected())
+        vs->disconnect();
+      vs.reset();
+    }
   }
 
   private:
-  void attemptConnection() {
-    //Initialize vectornav
-    try {
-      vectornav.connect(vnPort, vnBaudrate);
+  void optimizeSerialConnection(const std::string& port) {
+    // Assumes linux OS
+    const int portFd = open(port.c_str(), O_RDWR | O_NOCTTY);
 
-      //void (VNPublisher::*parserPointer)(void*, vn::protocol::uart::Packet&, size_t) const = parseBinaryAsyncMessage;
-      //vectornav.registerAsyncPacketReceivedHandler(NULL, std::bind(&VNPublisher::parseBinaryAsyncMessage, this, _1, _2, _3));
-    }
-    catch(vn::not_found) {
-      //Complain
-      RCLCPP_INFO(this->get_logger(), "Failed to connect to IMU");
-    }
+    if(portFd == -1)
+      RCLCPP_WARN(get_logger(), "Can't open imu port for optimization");
+
+    struct serial_struct serial;
+    ioctl(portFd, TIOCGSERIAL, &serial);
+    serial.flags |= ASYNC_LOW_LATENCY;
+    ioctl(portFd, TIOCSSERIAL, &serial);
+    close(portFd);
+    RCLCPP_INFO(get_logger(), "Set port to ASYNC_LOW_LATENCY");
   }
 
-  void queryVN() {
-    //Try to connect to the sensor every update in case first attempt fails.
-    //Once connected, stop trying
-    if(!vectornav.verifySensorConnectivity()) {
-      attemptConnection();
-      //Sensor isn't connected, no point checking for data
-      return;
+  bool vnConnect(const std::string& port, const int baud) {
+    // Make sure there isn't an existing instance of the sensor, 
+    // then make a new one
+    if(vs)
+      vs.reset();
+    vs = std::make_shared<VnSensor>();
+
+    // TODO: add callback for error handling
+
+    // Binary packet data callback
+    vs->registerAsyncPacketReceivedHandler(this, Vectornav::asyncPacketReceivedHandler);
+
+    // TODO: Set better response and retransmit times based on testing
+    //vs->setResponseTimeoutMs(1000);  // ms
+    //vs->setRetransmitDelayMs(50);    // ms
+
+    // Get a list of supported baudrates and ensure selected rate is supported
+    auto baudrates = vs->supportedBaudrates();
+    if(std::find(baudrates.begin(), baudrates.end(), baud) == baudrates.end()) {
+      RCLCPP_FATAL(get_logger(), "IMU baudrate not supported: %d", baud);
+      return false;
     }
 
-    //Any data come in?
-    if(processedIMU) {
-      //All good
-      processedIMU = false;
-      return;
+    // Try to connect with the given baudrate but retry all supported
+    baudrates.insert(baudrates.begin(), baud);
+    for(auto b: baudrates) {
+      try {
+        vs->connect(port, b);
+        if(vs->verifySensorConnectivity())
+          // VN successfully connected
+          break;
+        // Connection failed but still passed connectivity check; stop communication
+        vs->disconnect();
+      } catch(...) {
+        // Just catch everything
+        // Doesn't matter what you do with it, loop continues
+      }
+    }
+
+    // If all baudrates failed, throw a fatal
+    if(!vs->verifySensorConnectivity()) {
+      RCLCPP_FATAL(get_logger(), "Unable to connect to IMU over port %s", port.c_str());
+      return false;
+    }
+
+    // Tare
+    vs->reset();
+
+    // Wait one second and make sure VN is still connected, just to be safe
+    rclcpp::Rate threadSleep(1.0);
+    threadSleep.sleep();
+
+    if(!vs->verifySensorConnectivity()) {
+      RCLCPP_ERROR(get_logger(), "Lost IMU connection via %s", port.c_str());
+    }
+
+    // Query the sensor to be ABSOLUTELY SURE it's working
+    std::string mn = vs->readModelNumber();
+    
+    RCLCPP_INFO(get_logger(), "Connected to IMU %s at baud %d over %s", mn.c_str(), vs->baudrate(), vs->port().c_str());
+
+    // Configure data type and frequency
+    auto asyncDataOutputType = static_cast<vn::protocol::uart::AsciiAsync>(get_parameter("AsyncDataOutputType").as_int());
+    vs->writeAsyncDataOutputType(asyncDataOutputType);
+
+    int asyncDataOutputFreq = get_parameter("AsyncDataOutputFrequency").as_int();
+    vs->writeAsyncDataOutputFrequency(asyncDataOutputFreq);
+
+    RCLCPP_INFO(get_logger(), "Set output parameters");
+
+    return vnConfigure();
+  }
+
+  bool vnConfigure() {
+    // Use namespace just for tedious configuration
+    using namespace vn::protocol::uart;
+
+    // Test BOR configuration from vnproglib docs
+    BinaryOutputRegister bor(
+      ASYNCMODE_PORT1,
+      200,
+      COMMONGROUP_TIMESTARTUP | COMMONGROUP_YAWPITCHROLL,
+      TIMEGROUP_NONE,
+      IMUGROUP_NONE,
+      GPSGROUP_NONE,
+      ATTITUDEGROUP_NONE,
+      INSGROUP_NONE,
+      GPSGROUP_NONE
+    );
+
+    vs->writeBinaryOutput1(bor);
+
+    // Successfuly configured
+    return true;
+  }
+
+  static void asyncPacketReceivedHandler(
+    void* nodeptr, vn::protocol::uart::Packet& asyncPacket, size_t packetStartIndex) {
+    // Get a handle to the VectorNav class
+    auto node = reinterpret_cast<Vectornav*>(nodeptr);
+
+    RCLCPP_INFO(node->get_logger(), "Packet intercepted");
+    
+    // Make sure it's a binary output
+    if(asyncPacket.type() == vn::protocol::uart::Packet::TYPE_BINARY) {
+      RCLCPP_INFO(node->get_logger(), "Parsing packet...");
+
+      // Parse into compositedata
+      CompositeData cd = cd.parse(asyncPacket);
+
+      // Parse message data
+
+      auto msg = sensor_msgs::msg::Imu();
+
+      msg.header.stamp = node->getTimeStamp(/*cd*/);
+      msg.header.frame_id = node->get_parameter("frame_id").as_string();
+
+      // Set quaternion data
+      tf2::Quaternion q, q_ned2body;
+      tf2::fromMsg(toMsg(cd.quaternion()), q);
+      q_ned2body.setRPY(M_PI, 0.0, M_PI/2.0);
+      msg.orientation = tf2::toMsg(q_ned2body * q);
+
+      // Set angular velocity data
+      msg.angular_velocity = toMsg(cd.angularRate());
+
+      // Set linear acceleration data
+      vn::math::vec3f acceleration = cd.acceleration();
+      msg.linear_acceleration.x = -acceleration.x;
+      msg.linear_acceleration.y = -acceleration.y;
+      msg.linear_acceleration.z = -acceleration.z;
+
+      // Fill covariance data
+
+      // Publish output
+      node->imuPub->publish(msg);
     }
     else {
-      //Scream and cry about it
-      RCLCPP_INFO(this->get_logger(), "Model Number: %s", vectornav.readModelNumber());
+      RCLCPP_WARN(node->get_logger(), "Incorrect packet format");
     }
   }
 
-  VnSensor vectornav;
-  const std::string vnPort;
-  const uint32_t vnBaudrate;
+  void monitorConnection() {
+    // Check if VN is connected
+    if(vs && vs->verifySensorConnectivity())
+      // All good
+      return;
 
-  rclcpp::TimerBase::SharedPtr timer;
-  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher;
+    RCLCPP_WARN(get_logger(), "IMU disconnected");
 
-  //bool connectionEstablished = false;
-  bool processedIMU = false;
+    try {
+      // Try reconnecting
+      if(vs->isConnected())
+        vs->disconnect();
+
+      std::string port = get_parameter("port").as_string();
+      int baud = get_parameter("baud").as_int();
+
+      // If the reconnect fails, raise the alarm
+      if(!vnConnect(port, baud))
+        RCLCPP_WARN(get_logger(), "Failed a reconnect to IMU. Retyring...");
+
+    } catch(std::exception e) {
+      // Something has gone terribly wrong. Scream and cry about it
+      RCLCPP_ERROR(get_logger(), "Error thrown attemtping to reconnect to IMU: %s", e.what());
+    }
+  }
+
+  rclcpp::Time getTimeStamp(/*vn::sensors::CompositeData& data*/) {
+    const rclcpp::Time t = now();
+    // Function here for comapability for potential future modifications
+    return t;  // Time not adjusted
+  }
+
+   static inline geometry_msgs::msg::Quaternion toMsg(const vn::math::vec4f & rhs) {
+    geometry_msgs::msg::Quaternion lhs;
+    lhs.x = rhs[0];
+    lhs.y = rhs[1];
+    lhs.z = rhs[2];
+    lhs.w = rhs[3];
+    return lhs;
+  }
+
+  static inline geometry_msgs::msg::Vector3 toMsg(const vn::math::vec3f& rhs) {
+    geometry_msgs::msg::Vector3 lhs;
+    lhs.x = rhs[0];
+    lhs.y = rhs[1];
+    lhs.z = rhs[2];
+    return lhs;
+  }
+  
+
+  //
+  // Member variables
+  //
+  std::shared_ptr<VnSensor> vs;
+
+  rclcpp::TimerBase::SharedPtr reconnectTimer;
+
+  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imuPub;
 };
 
-std::shared_ptr<VNPublisher> vectornav = std::make_shared<VNPublisher>("/dev/ttyUSB0", 115200);
-void messageTrampoline(void* userData, vn::protocol::uart::Packet& p, size_t index) {
-  vectornav->parseBinaryAsyncMessage(userData, p, index);
-}
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(vectornav);
+  rclcpp::spin(std::make_shared<Vectornav>());
   rclcpp::shutdown();
   return 0;
 }
