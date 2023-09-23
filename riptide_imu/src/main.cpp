@@ -38,6 +38,22 @@ class Vectornav : public rclcpp::Node {
     declare_parameter<std::vector<double>>(
       "linear_acceleration_covariance", defaultLinearAccelerationCovariance);
 
+    //Binary Output Register 1 parameters
+    declare_parameter<int>("BO1.asyncMode", vn::protocol::uart::AsyncMode::ASYNCMODE_BOTH);
+    declare_parameter<int>("BO1.rateDivisor", 40);  // 20Hz
+    declare_parameter<int>("BO1.commonField", 0x7FFF);
+    declare_parameter<int>("BO1.timeField", vn::protocol::uart::TimeGroup::TIMEGROUP_NONE);
+    declare_parameter<int>("BO1.imuField", vn::protocol::uart::ImuGroup::IMUGROUP_NONE);
+    declare_parameter<int>(
+      "BO1.gpsField",
+      vn::protocol::uart::GpsGroup::GPSGROUP_FIX | vn::protocol::uart::GpsGroup::GPSGROUP_POSU);
+    declare_parameter<int>(
+      "BO1.attitudeField", vn::protocol::uart::AttitudeGroup::ATTITUDEGROUP_NONE);
+    declare_parameter<int>(
+      "BO1.insField", vn::protocol::uart::InsGroup::INSGROUP_POSECEF |
+                        vn::protocol::uart::InsGroup::INSGROUP_VELBODY);
+    declare_parameter<int>("BO1.gps2Field", vn::protocol::uart::GpsGroup::GPSGROUP_NONE);
+
 
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
 
@@ -49,7 +65,7 @@ class Vectornav : public rclcpp::Node {
     reconnectTimer = create_wall_timer(reconnectMS, std::bind(&Vectornav::monitorConnection, this));
   }
 
-  // There's no reason this should be used, but just in case
+  // Clean up nicely once the node quits
   ~Vectornav() {
     // If the reconnectTimer was declared, remove it
     if(reconnectTimer) {
@@ -145,34 +161,30 @@ class Vectornav : public rclcpp::Node {
     
     RCLCPP_INFO(get_logger(), "Connected to IMU %s at baud %d over %s", mn.c_str(), vs->baudrate(), vs->port().c_str());
 
+    return vnConfigure();
+  }
+
+  bool vnConfigure() {
+    vn::sensors::BinaryOutputRegister bor = {
+      (vn::protocol::uart::AsyncMode)get_parameter("BO1.asyncMode").as_int(),
+      static_cast<uint16_t>(get_parameter("BO1.rateDivisor").as_int()),
+      (vn::protocol::uart::CommonGroup)get_parameter("BO1.commonField").as_int(),
+      (vn::protocol::uart::TimeGroup)get_parameter("BO1.timeField").as_int(),
+      (vn::protocol::uart::ImuGroup)get_parameter("BO1.imuField").as_int(),
+      (vn::protocol::uart::GpsGroup)get_parameter("BO1.gpsField").as_int(),
+      (vn::protocol::uart::AttitudeGroup)get_parameter("BO1.attitudeField").as_int(),
+      (vn::protocol::uart::InsGroup)get_parameter("BO1.insField").as_int(),
+      (vn::protocol::uart::GpsGroup)get_parameter("BO1.gps2Field").as_int()
+    };
+
+    vs->writeBinaryOutput1(bor);
+
     // Configure data type and frequency
     auto asyncDataOutputType = static_cast<vn::protocol::uart::AsciiAsync>(get_parameter("AsyncDataOutputType").as_int());
     vs->writeAsyncDataOutputType(asyncDataOutputType);
 
     int asyncDataOutputFreq = get_parameter("AsyncDataOutputFrequency").as_int();
     vs->writeAsyncDataOutputFrequency(asyncDataOutputFreq);
-
-    return vnConfigure();
-  }
-
-  bool vnConfigure() {
-    // Use namespace just for tedious configuration
-    using namespace vn::protocol::uart;
-
-    // Test BOR configuration from vnproglib docs
-    BinaryOutputRegister bor(
-      ASYNCMODE_BOTH,
-      40,
-      2047,
-      TIMEGROUP_NONE,
-      IMUGROUP_NONE,
-      GPSGROUP_NONE,
-      ATTITUDEGROUP_NONE,
-      INSGROUP_NONE,
-      GPSGROUP_NONE
-    );
-
-    vs->writeBinaryOutput1(bor);
 
     // Successfuly configured
     return true;
@@ -237,7 +249,7 @@ class Vectornav : public rclcpp::Node {
       
     }
     else {
-      RCLCPP_WARN(node->get_logger(), "IMU receiving incorrect packet format");
+      RCLCPP_WARN(node->get_logger(), "IMU received incorrect packet format");
     }
   }
 
