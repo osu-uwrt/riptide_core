@@ -35,6 +35,19 @@ riptide_imu:
       attitudeField: 0x000          # ATTITUDEGROUP_NONE
       # set insField directly in source to enforce or condition
       gps2Field: 0x00               # GPSGROUP_NONE
+    VNErrorType: [
+      "hard fault",
+      "serial buffer overflow",
+      "ivalid checksum",
+      "invalid command",
+      "not enough parameters",
+      "too many parameters",
+      "invalid parameter",
+      "invalid register",
+      "unauthorized access",
+      "watchdog reset",
+      "output buffer overflow",
+      "insufficient baud rate"]
     # Covariance data
     orientation_covariance: [0.01,  0.0,   0.0,
                             0.0,   0.01,  0.0,

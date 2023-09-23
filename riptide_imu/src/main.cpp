@@ -31,6 +31,8 @@ class Vectornav : public rclcpp::Node {
     declare_parameter<int>("AsyncDataOutputFrequency", 20);
     declare_parameter<std::string>("frame_id", "vectornav");
 
+    declare_parameter<std::vector<std::string>>("VNErrorType", defaultErrorType);
+
     // Covariance parameters
     declare_parameter<std::vector<double>>("orientation_covariance", defaultOrientationCovariance);
     declare_parameter<std::vector<double>>(
@@ -111,6 +113,9 @@ class Vectornav : public rclcpp::Node {
 
     // Binary packet data callback
     vs->registerAsyncPacketReceivedHandler(this, Vectornav::asyncPacketReceivedHandler);
+
+    // Error packet data callback
+    vs->registerErrorPacketReceivedHandler(this, Vectornav::errorPacketReceivedHandler);
 
     // TODO: Set better response and retransmit times based on testing
     //vs->setResponseTimeoutMs(1000);  // ms
@@ -195,33 +200,29 @@ class Vectornav : public rclcpp::Node {
     // Get a handle to the VectorNav class
     auto node = reinterpret_cast<Vectornav*>(nodeptr);
     
-    //RCLCPP_INFO(node->get_logger(), "Grabbed IMU packet!");
+    // Make sure it's a binary output. If not, complain and return
+    if(!asyncPacket.type() == vn::protocol::uart::Packet::TYPE_BINARY) {
+      RCLCPP_WARN(node->get_logger(), "IMU received incorrect packet format");
+      return;
+    }
 
-    // Make sure it's a binary output
-    if(asyncPacket.type() == vn::protocol::uart::Packet::TYPE_BINARY) {
+    // Forward declare msg so it can be used inside and outside try catch block
+    auto msg = sensor_msgs::msg::Imu();
+
+    try {
       // Parse into compositedata
       CompositeData cd = cd.parse(asyncPacket);
 
-      //RCLCPP_INFO(node->get_logger(), "Packet of correct format and parsed correctly");
-
       // Parse message data
-      auto msg = sensor_msgs::msg::Imu();
-
       msg.header.stamp = node->getTimeStamp(/*cd*/);
       msg.header.frame_id = node->get_parameter("frame_id").as_string();
 
-      //RCLCPP_INFO(node->get_logger(), "Header appended");
-
       // Set quaternion data
       tf2::Quaternion q, q_ned2body;
-      // TODO: SOMETHING IS UP HERE
-      // THIS LINE SPECIFICALLY
       tf2::fromMsg(toMsg(cd.quaternion()), q);
       toMsg(cd.quaternion());
       q_ned2body.setRPY(M_PI, 0.0, M_PI/2.0);
       msg.orientation = tf2::toMsg(q_ned2body * q);
-
-      //RCLCPP_INFO(node->get_logger(), "Quaternion data processed");
 
       // Set angular velocity data
       msg.angular_velocity = toMsg(cd.angularRate());
@@ -232,24 +233,49 @@ class Vectornav : public rclcpp::Node {
       msg.linear_acceleration.y = -acceleration.y;
       msg.linear_acceleration.z = -acceleration.z;
 
-      //RCLCPP_INFO(node->get_logger(), "Angular vel and linear accel parsed");
-
       // Fill covariance data
       node->fillCovarianceFromParam("orientation_covariance", msg.orientation_covariance);
       node->fillCovarianceFromParam("angular_velocity_covariance", msg.angular_velocity_covariance);
       node->fillCovarianceFromParam("linear_acceleration_covariance", msg.linear_acceleration_covariance);
-
-      // Publish output
-      try {
-        node->imuPub->publish(msg);
-        //RCLCPP_INFO(node->get_logger(), "IMU data published!");
-      } catch(std::exception e) {
-        RCLCPP_ERROR(node->get_logger(), "IMU failed to publish: %s", e.what());
-      }
-      
+    } catch (...) {
+      // If at any point 
+      RCLCPP_WARN(node->get_logger(), "Failed to parse binary IMU packet");
+      return;
     }
-    else {
-      RCLCPP_WARN(node->get_logger(), "IMU received incorrect packet format");
+
+    // Publish output
+    try {
+      node->imuPub->publish(msg);
+    } catch(...) {
+      RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
+    }
+      
+  }
+
+  static void errorPacketReceivedHandler(void* nodeptr, vn::protocol::uart::Packet& errorPacket, size_t packetStartIndex) {
+    auto node = reinterpret_cast<Vectornav*>(nodeptr);
+    auto err = errorPacket.parseError();
+    int error = static_cast<int>(err);
+    
+    std::string errorType;
+
+    // SensorError enum from vnproglib header (types.h)
+    // See config.yaml
+    std::vector<std::string> validErrors = node->get_parameter("VNErrorType").as_string_array();
+
+    // Just to be sure there isn't anything weird with the parameter
+    try {
+      // Parse the error enum received
+      if(error == 255)
+        errorType = "general buffer overflow";
+      else if(error <= 12)
+        errorType = validErrors[error - 1];
+      else
+        errorType = "unknown";
+
+      RCLCPP_ERROR(node->get_logger(), "IMU encountered %s error", errorType.c_str());
+    } catch(...) {
+      RCLCPP_ERROR(node->get_logger(), "Unknown error handling IMU error request");
     }
   }
 
@@ -273,9 +299,9 @@ class Vectornav : public rclcpp::Node {
       if(!vnConnect(port, baud))
         RCLCPP_WARN(get_logger(), "Failed a reconnect to IMU. Retyring...");
 
-    } catch(std::exception e) {
+    } catch(...) {
       // Something has gone terribly wrong. Scream and cry about it
-      RCLCPP_ERROR(get_logger(), "Error thrown attemtping to reconnect to IMU: %s", e.what());
+      RCLCPP_ERROR(get_logger(), "Unrecoverable error thrown attemtping to reconnect to IMU");
     }
   }
 
@@ -324,7 +350,11 @@ class Vectornav : public rclcpp::Node {
   const std::vector<double> defaultAngularVelocityCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
                                                                 0.0, 0.0, 0.0, 0.0};
   const std::vector<double> defaultLinearAccelerationCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
-                                                                   0.0, 0.0, 0.0, 0.0};                                                               
+                                                                   0.0, 0.0, 0.0, 0.0};   
+  const std::vector<std::string> defaultErrorType = {"parameterError", "parameterError", "parameterError"
+                                                     "parameterError", "parameterError", "parameterError"
+                                                     "parameterError", "parameterError", "parameterError"
+                                                     "parameterError", "parameterError", "parameterError"};
 };
 
 int main(int argc, char* argv[]) {
