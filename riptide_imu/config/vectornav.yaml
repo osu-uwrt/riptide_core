@@ -26,6 +26,15 @@ riptide_imu:
     errorMode: 1                     # ERRORMODE_SEND
     # Binary output register 1
     
-
+    # Covariance data
+    orientation_covariance: [0.01,  0.0,   0.0,
+                            0.0,   0.01,  0.0,
+                            0.0,   0.0,   0.01]
+    angular_velocity_covariance: [0.01,  0.0,   0.0,
+                         0.0,   0.01,  0.0,
+                         0.0,   0.0,   0.01]
+    linear_acceleration_covariance: [0.01,  0.0,   0.0,
+                         0.0,   0.01,  0.0,
+                         0.0,   0.0,   0.01]
 
     frame_id: "vectornav"

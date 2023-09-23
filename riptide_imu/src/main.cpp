@@ -31,6 +31,13 @@ class Vectornav : public rclcpp::Node {
     declare_parameter<int>("AsyncDataOutputFrequency", 20);
     declare_parameter<std::string>("frame_id", "vectornav");
 
+    // Covariance parameters
+    declare_parameter<std::vector<double>>("orientation_covariance", defaultOrientationCovariance);
+    declare_parameter<std::vector<double>>(
+      "angular_velocity_covariance", defaultAngularVelocityCovariance);
+    declare_parameter<std::vector<double>>(
+      "linear_acceleration_covariance", defaultLinearAccelerationCovariance);
+
 
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
 
@@ -145,8 +152,6 @@ class Vectornav : public rclcpp::Node {
     int asyncDataOutputFreq = get_parameter("AsyncDataOutputFrequency").as_int();
     vs->writeAsyncDataOutputFrequency(asyncDataOutputFreq);
 
-    RCLCPP_INFO(get_logger(), "Set output parameters");
-
     return vnConfigure();
   }
 
@@ -156,9 +161,9 @@ class Vectornav : public rclcpp::Node {
 
     // Test BOR configuration from vnproglib docs
     BinaryOutputRegister bor(
-      ASYNCMODE_PORT1,
-      200,
-      COMMONGROUP_TIMESTARTUP | COMMONGROUP_YAWPITCHROLL,
+      ASYNCMODE_BOTH,
+      40,
+      2047,
       TIMEGROUP_NONE,
       IMUGROUP_NONE,
       GPSGROUP_NONE,
@@ -177,28 +182,34 @@ class Vectornav : public rclcpp::Node {
     void* nodeptr, vn::protocol::uart::Packet& asyncPacket, size_t packetStartIndex) {
     // Get a handle to the VectorNav class
     auto node = reinterpret_cast<Vectornav*>(nodeptr);
-
-    RCLCPP_INFO(node->get_logger(), "Packet intercepted");
     
+    //RCLCPP_INFO(node->get_logger(), "Grabbed IMU packet!");
+
     // Make sure it's a binary output
     if(asyncPacket.type() == vn::protocol::uart::Packet::TYPE_BINARY) {
-      RCLCPP_INFO(node->get_logger(), "Parsing packet...");
-
       // Parse into compositedata
       CompositeData cd = cd.parse(asyncPacket);
 
-      // Parse message data
+      //RCLCPP_INFO(node->get_logger(), "Packet of correct format and parsed correctly");
 
+      // Parse message data
       auto msg = sensor_msgs::msg::Imu();
 
       msg.header.stamp = node->getTimeStamp(/*cd*/);
       msg.header.frame_id = node->get_parameter("frame_id").as_string();
 
+      //RCLCPP_INFO(node->get_logger(), "Header appended");
+
       // Set quaternion data
       tf2::Quaternion q, q_ned2body;
+      // TODO: SOMETHING IS UP HERE
+      // THIS LINE SPECIFICALLY
       tf2::fromMsg(toMsg(cd.quaternion()), q);
+      toMsg(cd.quaternion());
       q_ned2body.setRPY(M_PI, 0.0, M_PI/2.0);
       msg.orientation = tf2::toMsg(q_ned2body * q);
+
+      //RCLCPP_INFO(node->get_logger(), "Quaternion data processed");
 
       // Set angular velocity data
       msg.angular_velocity = toMsg(cd.angularRate());
@@ -209,13 +220,24 @@ class Vectornav : public rclcpp::Node {
       msg.linear_acceleration.y = -acceleration.y;
       msg.linear_acceleration.z = -acceleration.z;
 
+      //RCLCPP_INFO(node->get_logger(), "Angular vel and linear accel parsed");
+
       // Fill covariance data
+      node->fillCovarianceFromParam("orientation_covariance", msg.orientation_covariance);
+      node->fillCovarianceFromParam("angular_velocity_covariance", msg.angular_velocity_covariance);
+      node->fillCovarianceFromParam("linear_acceleration_covariance", msg.linear_acceleration_covariance);
 
       // Publish output
-      node->imuPub->publish(msg);
+      try {
+        node->imuPub->publish(msg);
+        //RCLCPP_INFO(node->get_logger(), "IMU data published!");
+      } catch(std::exception e) {
+        RCLCPP_ERROR(node->get_logger(), "IMU failed to publish: %s", e.what());
+      }
+      
     }
     else {
-      RCLCPP_WARN(node->get_logger(), "Incorrect packet format");
+      RCLCPP_WARN(node->get_logger(), "IMU receiving incorrect packet format");
     }
   }
 
@@ -267,6 +289,12 @@ class Vectornav : public rclcpp::Node {
     lhs.z = rhs[2];
     return lhs;
   }
+
+  void fillCovarianceFromParam(std::string paramName, std::array<double, 9>& arr) const {
+    auto covariance = get_parameter(paramName).as_double_array();
+
+    std::copy(covariance.begin(), covariance.end(), arr.begin());
+  }
   
 
   //
@@ -277,6 +305,14 @@ class Vectornav : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr reconnectTimer;
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imuPub;
+
+  // Default covariance fields
+  const std::vector<double> defaultOrientationCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
+                                                            0.0, 0.0, 0.0, 0.0};
+  const std::vector<double> defaultAngularVelocityCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
+                                                                0.0, 0.0, 0.0, 0.0};
+  const std::vector<double> defaultLinearAccelerationCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
+                                                                   0.0, 0.0, 0.0, 0.0};                                                               
 };
 
 int main(int argc, char* argv[]) {
