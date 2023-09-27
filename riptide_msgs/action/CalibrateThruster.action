@@ -1,0 +1,5 @@
+int32 thruster_num
+---
+int32[] current_dshot
+---
+string results_file_name
