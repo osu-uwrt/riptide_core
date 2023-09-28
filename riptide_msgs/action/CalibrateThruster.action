@@ -1,4 +1,5 @@
 int32 thruster_num
+int32 step_size
 ---
 int32[] current_dshot
 ---
