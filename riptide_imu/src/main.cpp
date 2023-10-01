@@ -20,7 +20,7 @@ using namespace std::chrono_literals;
 
 class Vectornav : public rclcpp::Node {
   public:
-  Vectornav() : Node("vectornav") {
+  Vectornav() : Node("riptide_imu") {
     // Declare parameters used in constructor
     auto port = declare_parameter<std::string>("port", "/dev/ttyUSB0");
     auto baud = declare_parameter<int>("baud", 115200);
@@ -95,10 +95,6 @@ class Vectornav : public rclcpp::Node {
 
     // Error packet data callback
     vs->registerErrorPacketReceivedHandler(this, Vectornav::errorPacketReceivedHandler);
-
-    // TODO: Set better response and retransmit times based on testing
-    //vs->setResponseTimeoutMs(1000);  // ms
-    //vs->setRetransmitDelayMs(50);    // ms
 
     // Get a list of supported baudrates and ensure selected rate is supported
     auto baudrates = vs->supportedBaudrates();
@@ -285,7 +281,7 @@ class Vectornav : public rclcpp::Node {
   void fillCovarianceFromParam(std::string paramName, std::array<double, 9>& arr) const {
     std::vector<double> covarianceData;
     get_parameter(paramName, covarianceData);
-
+    
     std::copy(covarianceData.begin(), covarianceData.end(), arr.begin());
   }
   
