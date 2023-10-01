@@ -27,36 +27,15 @@ class Vectornav : public rclcpp::Node {
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
     // Declare parameters not used in constructor
-    declare_parameter<int>("AsyncDataOutputType", vn::protocol::uart::VNOFF);
-    declare_parameter<int>("AsyncDataOutputFrequency", 20);
     declare_parameter<std::string>("frame_id", "vectornav");
+    declare_parameter("VNErrorType", rclcpp::PARAMETER_STRING_ARRAY);
 
-    declare_parameter<std::vector<std::string>>("VNErrorType", defaultErrorType);
+    // Data Covariance parameters
+    declare_parameter("orientation_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
+    declare_parameter("angular_velocity_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
+    declare_parameter("linear_acceleration_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
 
-    // Covariance parameters
-    declare_parameter<std::vector<double>>("orientation_covariance", defaultOrientationCovariance);
-    declare_parameter<std::vector<double>>(
-      "angular_velocity_covariance", defaultAngularVelocityCovariance);
-    declare_parameter<std::vector<double>>(
-      "linear_acceleration_covariance", defaultLinearAccelerationCovariance);
-
-    //Binary Output Register 1 parameters
-    declare_parameter<int>("BO1.asyncMode", vn::protocol::uart::AsyncMode::ASYNCMODE_BOTH);
-    declare_parameter<int>("BO1.rateDivisor", 40);  // 20Hz
-    declare_parameter<int>("BO1.commonField", 0x7FFF);
-    declare_parameter<int>("BO1.timeField", vn::protocol::uart::TimeGroup::TIMEGROUP_NONE);
-    declare_parameter<int>("BO1.imuField", vn::protocol::uart::ImuGroup::IMUGROUP_NONE);
-    declare_parameter<int>(
-      "BO1.gpsField",
-      vn::protocol::uart::GpsGroup::GPSGROUP_FIX | vn::protocol::uart::GpsGroup::GPSGROUP_POSU);
-    declare_parameter<int>(
-      "BO1.attitudeField", vn::protocol::uart::AttitudeGroup::ATTITUDEGROUP_NONE);
-    declare_parameter<int>(
-      "BO1.insField", vn::protocol::uart::InsGroup::INSGROUP_POSECEF |
-                        vn::protocol::uart::InsGroup::INSGROUP_VELBODY);
-    declare_parameter<int>("BO1.gps2Field", vn::protocol::uart::GpsGroup::GPSGROUP_NONE);
-
-
+    // Create publisher
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
 
     optimizeSerialConnection(port);
@@ -91,8 +70,10 @@ class Vectornav : public rclcpp::Node {
     // Assumes linux OS
     const int portFd = open(port.c_str(), O_RDWR | O_NOCTTY);
 
-    if(portFd == -1)
+    if(portFd == -1) {
       RCLCPP_WARN(get_logger(), "Can't open imu port for optimization");
+      return;
+    }
 
     struct serial_struct serial;
     ioctl(portFd, TIOCGSERIAL, &serial);
@@ -108,8 +89,6 @@ class Vectornav : public rclcpp::Node {
     if(vs)
       vs.reset();
     vs = std::make_shared<VnSensor>();
-
-    // TODO: add callback for error handling
 
     // Binary packet data callback
     vs->registerAsyncPacketReceivedHandler(this, Vectornav::asyncPacketReceivedHandler);
@@ -166,34 +145,9 @@ class Vectornav : public rclcpp::Node {
     
     RCLCPP_INFO(get_logger(), "Connected to IMU %s at baud %d over %s", mn.c_str(), vs->baudrate(), vs->port().c_str());
 
-    return vnConfigure();
-  }
-
-  bool vnConfigure() {
-    vn::sensors::BinaryOutputRegister bor = {
-      (vn::protocol::uart::AsyncMode)get_parameter("BO1.asyncMode").as_int(),
-      static_cast<uint16_t>(get_parameter("BO1.rateDivisor").as_int()),
-      (vn::protocol::uart::CommonGroup)get_parameter("BO1.commonField").as_int(),
-      (vn::protocol::uart::TimeGroup)get_parameter("BO1.timeField").as_int(),
-      (vn::protocol::uart::ImuGroup)get_parameter("BO1.imuField").as_int(),
-      (vn::protocol::uart::GpsGroup)get_parameter("BO1.gpsField").as_int(),
-      (vn::protocol::uart::AttitudeGroup)get_parameter("BO1.attitudeField").as_int(),
-      (vn::protocol::uart::InsGroup)get_parameter("BO1.insField").as_int(),
-      (vn::protocol::uart::GpsGroup)get_parameter("BO1.gps2Field").as_int()
-    };
-
-    vs->writeBinaryOutput1(bor);
-
-    // Configure data type and frequency
-    auto asyncDataOutputType = static_cast<vn::protocol::uart::AsciiAsync>(get_parameter("AsyncDataOutputType").as_int());
-    vs->writeAsyncDataOutputType(asyncDataOutputType);
-
-    int asyncDataOutputFreq = get_parameter("AsyncDataOutputFrequency").as_int();
-    vs->writeAsyncDataOutputFrequency(asyncDataOutputFreq);
-
-    // Successfuly configured
     return true;
   }
+
 
   static void asyncPacketReceivedHandler(
     void* nodeptr, vn::protocol::uart::Packet& asyncPacket, size_t packetStartIndex) {
@@ -201,12 +155,12 @@ class Vectornav : public rclcpp::Node {
     auto node = reinterpret_cast<Vectornav*>(nodeptr);
     
     // Make sure it's a binary output. If not, complain and return
-    if(!asyncPacket.type() == vn::protocol::uart::Packet::TYPE_BINARY) {
+    if(asyncPacket.type() != vn::protocol::uart::Packet::TYPE_BINARY) {
       RCLCPP_WARN(node->get_logger(), "IMU received incorrect packet format");
       return;
     }
 
-    // Forward declare msg so it can be used inside and outside try catch block
+    // Forward define msg so it can be used inside and outside try catch block
     auto msg = sensor_msgs::msg::Imu();
 
     try {
@@ -220,7 +174,6 @@ class Vectornav : public rclcpp::Node {
       // Set quaternion data
       tf2::Quaternion q, q_ned2body;
       tf2::fromMsg(toMsg(cd.quaternion()), q);
-      toMsg(cd.quaternion());
       q_ned2body.setRPY(M_PI, 0.0, M_PI/2.0);
       msg.orientation = tf2::toMsg(q_ned2body * q);
 
@@ -238,12 +191,12 @@ class Vectornav : public rclcpp::Node {
       node->fillCovarianceFromParam("angular_velocity_covariance", msg.angular_velocity_covariance);
       node->fillCovarianceFromParam("linear_acceleration_covariance", msg.linear_acceleration_covariance);
     } catch (...) {
-      // If at any point 
-      RCLCPP_WARN(node->get_logger(), "Failed to parse binary IMU packet");
+      // If at any point packet failed to parse, throw warning
+      RCLCPP_WARN(node->get_logger(), "Failed to parse or fill binary IMU packet");
       return;
     }
 
-    // Publish output
+    // Publish output, throw error if publish failed
     try {
       node->imuPub->publish(msg);
     } catch(...) {
@@ -259,12 +212,13 @@ class Vectornav : public rclcpp::Node {
     
     std::string errorType;
 
-    // SensorError enum from vnproglib header (types.h)
-    // See config.yaml
-    std::vector<std::string> validErrors = node->get_parameter("VNErrorType").as_string_array();
-
-    // Just to be sure there isn't anything weird with the parameter
+    // Just to be sure there isn't anything weird while error handling
     try {
+      // SensorError enum from vnproglib header (types.h)
+      // See config.yaml
+      std::vector<std::string> validErrors;
+      node->get_parameter("VNErrorType", validErrors);
+
       // Parse the error enum received
       if(error == 255)
         errorType = "general buffer overflow";
@@ -311,7 +265,7 @@ class Vectornav : public rclcpp::Node {
     return t;  // Time not adjusted
   }
 
-   static inline geometry_msgs::msg::Quaternion toMsg(const vn::math::vec4f & rhs) {
+  static inline geometry_msgs::msg::Quaternion toMsg(const vn::math::vec4f & rhs) {
     geometry_msgs::msg::Quaternion lhs;
     lhs.x = rhs[0];
     lhs.y = rhs[1];
@@ -329,9 +283,10 @@ class Vectornav : public rclcpp::Node {
   }
 
   void fillCovarianceFromParam(std::string paramName, std::array<double, 9>& arr) const {
-    auto covariance = get_parameter(paramName).as_double_array();
+    std::vector<double> covarianceData;
+    get_parameter(paramName, covarianceData);
 
-    std::copy(covariance.begin(), covariance.end(), arr.begin());
+    std::copy(covarianceData.begin(), covarianceData.end(), arr.begin());
   }
   
 
@@ -343,18 +298,6 @@ class Vectornav : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr reconnectTimer;
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imuPub;
-
-  // Default covariance fields
-  const std::vector<double> defaultOrientationCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
-                                                            0.0, 0.0, 0.0, 0.0};
-  const std::vector<double> defaultAngularVelocityCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
-                                                                0.0, 0.0, 0.0, 0.0};
-  const std::vector<double> defaultLinearAccelerationCovariance = {0.0, 0.0, 0.0, 0.0, 0.0, 
-                                                                   0.0, 0.0, 0.0, 0.0};   
-  const std::vector<std::string> defaultErrorType = {"parameterError", "parameterError", "parameterError"
-                                                     "parameterError", "parameterError", "parameterError"
-                                                     "parameterError", "parameterError", "parameterError"
-                                                     "parameterError", "parameterError", "parameterError"};
 };
 
 int main(int argc, char* argv[]) {
