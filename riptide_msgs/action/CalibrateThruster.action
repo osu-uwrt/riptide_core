@@ -1,0 +1,6 @@
+int32 thruster_num
+int32 step_size
+---
+string results_file_name
+---
+int32 current_dshot
