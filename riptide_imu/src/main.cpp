@@ -1,10 +1,12 @@
 #include <chrono>
+#include <queue>
 
 #include "vn/sensors.h"
 #include "vn/compositedata.h"
 #include "vn/exceptions.h"
 
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 
 #include <fcntl.h>
@@ -14,16 +16,23 @@
 
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
+#include "riptide_msgs2/action/mag_cal.hpp"
+
 using namespace vn::sensors;
 using namespace std::placeholders;
 using namespace std::chrono_literals;
+using namespace std::placeholders;
 
 class Vectornav : public rclcpp::Node {
+  using MagCal = riptide_msgs2::action::MagCal;
+  using MagCalGH = rclcpp_action::ServerGoalHandle<MagCal>;
+
+
   public:
   Vectornav() : Node("riptide_imu") {
     // Declare parameters used in constructor
     auto port = declare_parameter<std::string>("port", "/dev/ttyUSB0");
-    auto baud = declare_parameter<int>("baud", 115200);
+    auto baud = declare_parameter<int>("baud", 230400);
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
     // Declare parameters not used in constructor
@@ -37,6 +46,14 @@ class Vectornav : public rclcpp::Node {
 
     // Create publisher
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
+
+    // Mag cal server
+    magCalServer = rclcpp_action::create_server<MagCal>(
+      this, "vectornav/mag_cal",
+      std::bind(&Vectornav::handleCalGoal, this, _1, _2),
+      std::bind(&Vectornav::handleCalCancel, this, _1),
+      std::bind(&Vectornav::handleCalAccept, this, _1)
+    );
 
     optimizeSerialConnection(port);
 
@@ -284,6 +301,182 @@ class Vectornav : public rclcpp::Node {
     
     std::copy(covarianceData.begin(), covarianceData.end(), arr.begin());
   }
+
+  rclcpp_action::GoalResponse handleCalGoal(const rclcpp_action::GoalUUID& uuid, 
+                                            std::shared_ptr<const MagCal::Goal> goal) {
+    // Make sure there isn't an ongoing calibration
+    if(std::thread::id() == magCalThread.get_id() && vs->verifySensorConnectivity())
+      return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+    
+    // If there is one running, or the sensor isn't connected
+    RCLCPP_WARN(get_logger(), "Mag cal already in progress or sensor not connected, rejecting request");
+    return rclcpp_action::GoalResponse::REJECT;
+  }
+
+  rclcpp_action::CancelResponse handleCalCancel(const std::shared_ptr<MagCalGH> goalHandle) {
+    RCLCPP_INFO(get_logger(), "Recieved request to cancel mag cal");
+    return rclcpp_action::CancelResponse::ACCEPT;
+  }
+
+  void handleCalAccept(const std::shared_ptr<MagCalGH> goalHandle) {
+    // Make the child thread go brrr
+    magCalThread = std::thread(std::bind(&Vectornav::executeMagCal, this, _1), goalHandle);
+    magCalThread.detach();
+  }
+
+  void executeMagCal(const std::shared_ptr<MagCalGH> goalHandle) {
+
+    // Setup a ros rate timer (input is hz)
+    rclcpp::Rate loopRate(4.0);
+
+    // Make the result message in case of early abort
+    auto result = std::make_shared<riptide_msgs2::action::MagCal::Result>();
+
+    // Tell the sensor to reset magcal profile
+    vn::sensors::MagnetometerCalibrationControlRegister magControl = {
+      vn::protocol::uart::HsiMode::HSIMODE_RESET,
+      vn::protocol::uart::HsiOutput::HSIOUTPUT_NOONBOARD,
+      1 // set the convergence rate (1 slow - 5 fast)
+    };
+
+    // Cannot test for this mode as it sets, then changes immediately
+    vs->writeMagnetometerCalibrationControl(magControl);
+
+    // make sure HSI mode is now set to run as reset returns to the previous state
+    magControl.hsiMode = vn::protocol::uart::HsiMode::HSIMODE_RUN;
+    vs->writeMagnetometerCalibrationControl(magControl);
+
+    // test HSI Mode is back to on
+    const auto hsiMode = vs->readMagnetometerCalibrationControl();
+    if(hsiMode.hsiMode != vn::protocol::uart::HsiMode::HSIMODE_RUN){
+      RCLCPP_ERROR_STREAM(get_logger(), "IMU HSI mode did not return to run after reset! returned mode: " << hsiMode.hsiMode);
+      goalHandle->abort(result);
+      return;
+    }
+
+    //
+    // Calibration begins here
+    //
+    RCLCPP_WARN(get_logger(), "Magnetic calibration sampling starting");
+
+    std::deque<vn::math::mat3f> cSamples;
+    std::deque<vn::math::vec3f> bSamples;
+
+    vn::math::mat3f avgMat;
+    vn::math::vec3f avgVec;
+
+    int calSamples = 0;
+
+    // Read current HSI calibration
+    auto lastComp = vs->readCalculatedMagnetometerCalibration();
+
+    // Collect samples until converge
+    while(calSamples < 1000 && !goalHandle->is_canceling()){
+      // Increment the sample counter
+      calSamples ++;
+
+      // Read HSI calibration
+      lastComp = vs->readCalculatedMagnetometerCalibration();
+
+      // Push the newest samples onto a stack
+      // Pop off the ones at the end of the queue
+      cSamples.push_back(lastComp.c);
+      if(cSamples.size() > 10){
+        cSamples.pop_front();
+      }
+      bSamples.push_back(lastComp.b);
+      if(bSamples.size() > 10){
+        bSamples.pop_front();
+      }
+
+      // Create a running average of the difference over 10 samples
+      for(size_t i = 1; i < cSamples.size(); i++){
+        auto diffMat = cSamples.at(i-1) - cSamples.at(i);
+        auto diffVec = bSamples.at(i-1) - bSamples.at(i);
+
+        if(i < 2){
+          avgMat = diffMat;
+          avgVec = diffVec;
+        } else {
+          avgMat = (avgMat + diffMat).div(2);
+          avgVec = (avgVec + diffVec).div(2);
+        }
+      }
+      // Fill feedback message
+      auto feedbackMsg = std::make_shared<riptide_msgs2::action::MagCal::Feedback>();
+      feedbackMsg->samples = calSamples;
+
+      // Populate calibration vector
+      for(size_t i = 0; i < 9; i++){
+        feedbackMsg->curr_calib.at(i) = lastComp.c.e[i];
+      }
+      feedbackMsg->curr_calib.at(9) = lastComp.b.x;
+      feedbackMsg->curr_calib.at(10) = lastComp.b.y;
+      feedbackMsg->curr_calib.at(11) = lastComp.b.z;
+
+      // Populate compensation convergence vector
+      for(size_t i = 0; i < 9; i++){
+        feedbackMsg->curr_avg_dev.at(i) = avgMat.e[i];
+      }
+      feedbackMsg->curr_avg_dev.at(9) = avgVec.x;
+      feedbackMsg->curr_avg_dev.at(10) = avgVec.y;
+      feedbackMsg->curr_avg_dev.at(11) = avgVec.z;
+
+      // Publish feedback to gui
+      goalHandle->publish_feedback(feedbackMsg);
+
+      // If we are in the first few samples, skip this entirely
+      if(calSamples > 20){
+        // Check for convergence with the all_of algorithm and bail out if we are there
+        if(std::all_of(feedbackMsg->curr_avg_dev.cbegin(), feedbackMsg->curr_avg_dev.cend(),
+          [](float i){ return std::fabs(i) < 1e-10; })){
+            RCLCPP_WARN(get_logger(), "Mag cal has converged");
+            break;
+          }
+      }
+
+      // Wait a bit
+      loopRate.sleep();
+    }
+
+    // If we exited normally and are not cancelling
+    if(!goalHandle->is_canceling()){
+      // Turn HSI mode to off to stop sampling
+      // Turn HSI output to enabled
+      magControl.hsiMode = vn::protocol::uart::HsiMode::HSIMODE_OFF;
+      magControl.hsiOutput = vn::protocol::uart::HsiOutput::HSIOUTPUT_USEONBOARD;
+      vs->writeMagnetometerCalibrationControl(magControl);
+
+      // write the settings (new config) to VNmemory
+      vs->writeSettings();
+      RCLCPP_INFO(get_logger(), "Wrote magcal profile to sensor");
+    }
+
+    // Setup final deviation vector
+    for(size_t i = 0; i < 9; i++){
+      result->avg_dev.at(i) = avgMat.e[i];
+    }
+    result->avg_dev.at(9) = avgVec.x;
+    result->avg_dev.at(10) = avgVec.y;
+    result->avg_dev.at(11) = avgVec.z;
+
+    // Setup final calibration vector
+    for(size_t i = 0; i < 9; i++){
+      result->calib.at(i) = lastComp.c.e[i];
+    }
+    result->calib.at(9) = lastComp.b.x;
+    result->calib.at(10) = lastComp.b.y;
+    result->calib.at(11) = lastComp.b.z;
+
+    // If we stopped due to a cancellation
+    if(goalHandle->is_canceling()){
+      // Stopping for cancellation
+      goalHandle->canceled(result);
+    } else {
+      // We did it
+      goalHandle->succeed(result);
+    }
+  }
   
 
   //
@@ -294,6 +487,9 @@ class Vectornav : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr reconnectTimer;
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imuPub;
+
+  rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
+  std::thread magCalThread;
 };
 
 int main(int argc, char* argv[]) {

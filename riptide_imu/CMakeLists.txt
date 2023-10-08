@@ -15,6 +15,8 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(riptide_msgs2 REQUIRED)
+find_package(rclcpp_action REQUIRED)
 
 #include(vnproglib-1.2.0.0/cpp/CMakeLists.txt)
 add_subdirectory(vnproglib-1.2.0.0/cpp)
@@ -32,6 +34,8 @@ set(deps
   sensor_msgs
   geometry_msgs
   tf2_geometry_msgs
+  riptide_msgs2
+  rclcpp_action
 )
 
 # Link deps
