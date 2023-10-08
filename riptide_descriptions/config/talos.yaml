@@ -92,6 +92,7 @@ cameras: [
   }
 ]
 
+#this is for the 2023 solver
 thruster: 
   rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
   max_force: 22 # Newtons. Thrusters draw about 8A here
@@ -107,6 +108,31 @@ thruster:
     POS_YINT: 66.073
     NEG_SLOPE: 22.920
     NEG_YINT: -78.609
+
+#this is for the newly developed solver
+thruster_new:
+  
+  #default weights for the thruster solver
+  default_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+  #power for lower heave thrusters for low downdraft mode
+  low_downdraft_weight: 3.0
+
+  #weight for disabled thrusters
+  disable_weight: 99999.0
+
+  #weight for surfaced thruster
+  surfaced_weight: 4.0
+
+  #the system limit for total thrust (N)
+  system_thrust_limit: 35
+
+  #the limit for an individual thruster
+  individual thrust_limit: 15
+
+
+  
+
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:
