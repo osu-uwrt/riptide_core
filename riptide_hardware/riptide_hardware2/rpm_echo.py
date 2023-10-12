@@ -8,6 +8,7 @@ from riptide_msgs2.msg import DshotRPMFeedback, DshotPartialTelemetry
 #TODO figure out real topic names
 
 SLOW = False 
+
 class Thruster_RPM_Echo(Node):
 
     #the rpms - most currrent updates
@@ -122,8 +123,6 @@ class Thruster_RPM_Echo(Node):
                       int(self.thruster_rpms[7]),]
 
         self.pub.publish(msgOut)
-
-
 
 
 def main(args=None):
