@@ -1,9 +1,9 @@
-riptide_imu:
+/**/riptide_imu:
   ros__parameters:
     port: "/dev/ttyTHS0"
     baud: 230400
     reconnect_ms: 500
-    frame_id: "vectornav"
+    frame_id: "talos/imu_link"
     # Error handler
     VNErrorType: [
       "hard fault",
