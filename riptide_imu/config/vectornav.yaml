@@ -1,6 +1,6 @@
 riptide_imu:
   ros__parameters:
-    port: "/dev/ttyUSB0"
+    port: "/dev/ttyTHS0"
     baud: 230400
     reconnect_ms: 500
     frame_id: "vectornav"
