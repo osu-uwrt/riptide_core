@@ -6,8 +6,9 @@
     # Reference vnproglib-1.2.0.0 headers for enum definitions
     # Async Output Type (ASCII)
     AsyncDataOutputType: 0           # VNOFF
+    # AsyncDataOutputType: 8           # VNQMR from sonia
     # Async output Frequency (Hz)
-    AsyncDataOutputFrequency: 20
+    AsyncDataOutputFrequency: 40
     # Sync control
     syncInMode: 3                    # SYNCINMODE_COUNT
     syncInEdge: 0                    # SYNCINEDGE_RISING

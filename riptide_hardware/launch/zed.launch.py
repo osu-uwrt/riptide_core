@@ -26,10 +26,9 @@ def generate_launch_description():
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(zed_launch_file),
             launch_arguments=[
-                #'onnx_weights_path': vision_model_path
                 ('publish_tf', "False"),
                 ('publish_map_tf', "False"),
-                ('base_frame', [LC('robot'), '/zed2i_base_link'])
+                ('base_frame', [LC('robot'), '/zed2i_base_link']),
             ]
         ),
 

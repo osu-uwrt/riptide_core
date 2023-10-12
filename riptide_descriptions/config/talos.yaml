@@ -10,8 +10,11 @@ com: [-0.162, 0.036, -0.051]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
 
 # Vehicle bouyancy properties
-volume: 0.0309 # m^3
-cob: [-0.156, 0.036, -0.046]
+# volume: 0.0309 # m^3  (with actuators)
+# cob: [-0.156, 0.036, -0.046]  # With Actuators
+
+volume: 0.0321 # m^3  (without actuators)
+cob: [-0.157, 0.036, -0.046]  # Without Actuators
 
 # Controller parameters
 controller:
@@ -30,8 +33,10 @@ controller:
 
     # linear controller proportional gains
     p_gains:
-      position: [1.2, 1.2, 0.9]
-      velocity: [7.5, 15.0, 22.0]
+      # position: [1.2, 1.2, 0.9]
+      # velocity: [7.5, 15.0, 22.0]
+      position: [0.8, 0.8, 0.7]
+      velocity: [7.0, 14.5, 21.0]
 
   angular:
     # angular damping coeficients
@@ -66,13 +71,13 @@ depth:
 imu:
   # topic: /imu/imu/data
   rate: 100 #Hz
-  pose: [-0.141, -0.147, 0.025, 3.141, 0.0, 3.141]
+  pose: [-0.122, -0.147, 0.025, 3.141, 0.0, 3.141]
 
-claw:
-  pose: [-0.35, 0.82, -0.066, 0, 0, 1.507]
+poker:
+  pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedos: 
-  pose: [-0.1143, 0.7112, 0.03175, 0, 0, 0]
+  pose: [0.0542, -0.0929, -0.1756, 0.0, 0.0, 0.0]
 
 droppers:
   pose: [-0.35, 0, 0.05, 0, 0, 0]
@@ -83,10 +88,11 @@ cameras: [
     name: zed2i,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
-    pose: [-0.242, 0.283, -0.066, 0, 0, 0]
+    pose: [-0.060, -0.088, 0.0, 0, 0, 0]
   }
 ]
 
+#this is for the 2023 solver
 thruster: 
   rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
   max_force: 22 # Newtons. Thrusters draw about 8A here
@@ -102,6 +108,37 @@ thruster:
     POS_YINT: 66.073
     NEG_SLOPE: 22.920
     NEG_YINT: -78.609
+
+#this is for the newly developed solver
+thruster_solver:
+  
+  #default weights for the thruster solver
+  default_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+  #power for lower heave thrusters for low downdraft mode
+  low_downdraft_weight: 3.0
+
+  #weight for disabled thrusters
+  disable_weight: 99999.0
+
+  #weight for surfaced thruster
+  surfaced_weight: 4.0
+
+  #the system limit for total thrust (N)
+  system_thrust_limit: 35
+
+  #the limit for an individual thruster
+  individual thrust_limit: 15
+
+  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 144.3832105, 257.460623, 42.948545, -24.402056, -986.338071]
+  #Format: 4 times positive curve then 4 times negative curve
+  # 1 * 1
+  # 2 * x
+  # 3 * tanh(x)
+  # 4-* x^(1/4)
+
+  
+
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:
