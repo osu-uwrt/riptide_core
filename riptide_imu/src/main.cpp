@@ -265,6 +265,13 @@ class Vectornav : public rclcpp::Node {
   }
 
   void monitorConnection() {
+    // Don't try to reconnect during magcal
+    // Doing so throws vn::timeout
+    if(doingMagCal) {
+      RCLCPP_WARN(get_logger(), "IMU ignored reconnect request during magcal");
+      return;
+    }
+    
     // Check if VN is connected
     if(vs && vs->verifySensorConnectivity())
       // All good
@@ -288,6 +295,7 @@ class Vectornav : public rclcpp::Node {
       // Something has gone terribly wrong. Scream and cry about it
       RCLCPP_ERROR(get_logger(), "Unrecoverable error thrown attemtping to reconnect to IMU");
     }
+    
   }
 
   rclcpp::Time getTimeStamp(/*vn::sensors::CompositeData& data*/) {
@@ -343,6 +351,8 @@ class Vectornav : public rclcpp::Node {
   }
 
   void executeMagCal(const std::shared_ptr<MagCalGH> goalHandle) {
+    // Let other async threads know that magcal is happening
+    doingMagCal = true;
 
     // Setup a ros rate timer (input is hz)
     rclcpp::Rate loopRate(4.0);
@@ -466,11 +476,11 @@ class Vectornav : public rclcpp::Node {
       vs->writeMagnetometerCalibrationControl(magControl);
 
       // write the settings (new config) to VNmemory
-      //try {
+      try {
         vs->writeSettings();
-      //} catch(...) {
-        //RCLCPP_ERROR(get_logger(), "IMU caught vn::timeout while writing settings");
-      //}
+      } catch(...) {
+        RCLCPP_ERROR(get_logger(), "IMU caught vn::timeout while writing settings");
+      }
     }
 
     // Setup final deviation vector
@@ -497,6 +507,10 @@ class Vectornav : public rclcpp::Node {
       // We did it
       goalHandle->succeed(result);
     }
+
+    // Reconnect to IMU and let async threads know magcal is done
+    vnConnect(get_parameter("port").as_string(), get_parameter("baud").as_int());
+    doingMagCal = false;
   }
 
   void setMagControl() {
@@ -557,6 +571,8 @@ class Vectornav : public rclcpp::Node {
 
   rclcpp::Publisher<riptide_msgs2::msg::ImuConfig>::SharedPtr publishImuConfig;
   rclcpp::Subscription<riptide_msgs2::msg::ImuConfig>::SharedPtr readImuConfig;
+
+  bool doingMagCal = false;
 };
 
 int main(int argc, char* argv[]) {
