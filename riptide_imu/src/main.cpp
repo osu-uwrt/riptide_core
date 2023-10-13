@@ -17,6 +17,7 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 #include "riptide_msgs2/action/mag_cal.hpp"
+#include "riptide_msgs2/msg/imu_config.hpp"
 
 using namespace vn::sensors;
 using namespace std::placeholders;
@@ -36,8 +37,13 @@ class Vectornav : public rclcpp::Node {
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
     // Declare parameters not used in constructor
-    declare_parameter<std::string>("frame_id", "vectornav");
+    declare_parameter<std::string>("frame_id", "talos/imu_link");
     declare_parameter("VNErrorType", rclcpp::PARAMETER_STRING_ARRAY);
+
+    // Declare magnetometer parameters
+    declare_parameter<bool>("hsiEnable", false);
+    declare_parameter<bool>("hsiOutput", false);
+    declare_parameter<int>("convergenceRate", 1);
 
     // Data Covariance parameters
     declare_parameter("orientation_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
@@ -46,6 +52,12 @@ class Vectornav : public rclcpp::Node {
 
     // Create publisher
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
+
+    // Create config publisher and subscriber
+    publishImuConfig = this->create_publisher<riptide_msgs2::msg::ImuConfig>("vectornav/config/read", 10);
+    readImuConfig = this->create_subscription<riptide_msgs2::msg::ImuConfig>("vectornav/config/write", 10,
+                                        std::bind(&Vectornav::hsiConfigCb, this, _1));
+
 
     // Mag cal server
     magCalServer = rclcpp_action::create_server<MagCal>(
@@ -58,6 +70,9 @@ class Vectornav : public rclcpp::Node {
     optimizeSerialConnection(port);
 
     vnConnect(port, baud);
+
+    // Send out hsi config for electrical panel
+    publishHsiConfig();
 
     // Setup spin to monitor connection (since packets are async)
     reconnectTimer = create_wall_timer(reconnectMS, std::bind(&Vectornav::monitorConnection, this));
@@ -157,6 +172,9 @@ class Vectornav : public rclcpp::Node {
     std::string mn = vs->readModelNumber();
     
     RCLCPP_INFO(get_logger(), "Connected to IMU %s at baud %d over %s", mn.c_str(), vs->baudrate(), vs->port().c_str());
+
+    // Set hsi mode
+    setMagControl();
 
     return true;
   }
@@ -373,7 +391,7 @@ class Vectornav : public rclcpp::Node {
     // Collect samples until converge
     while(calSamples < 1000 && !goalHandle->is_canceling()){
       // Increment the sample counter
-      calSamples ++;
+      calSamples++;
 
       // Read HSI calibration
       lastComp = vs->readCalculatedMagnetometerCalibration();
@@ -448,8 +466,11 @@ class Vectornav : public rclcpp::Node {
       vs->writeMagnetometerCalibrationControl(magControl);
 
       // write the settings (new config) to VNmemory
-      vs->writeSettings();
-      RCLCPP_INFO(get_logger(), "Wrote magcal profile to sensor");
+      //try {
+        vs->writeSettings();
+      //} catch(...) {
+        //RCLCPP_ERROR(get_logger(), "IMU caught vn::timeout while writing settings");
+      //}
     }
 
     // Setup final deviation vector
@@ -477,6 +498,49 @@ class Vectornav : public rclcpp::Node {
       goalHandle->succeed(result);
     }
   }
+
+  void setMagControl() {
+    vn::sensors::MagnetometerCalibrationControlRegister magControl = {
+      (vn::protocol::uart::HsiMode)this->get_parameter("hsiEnable").as_bool(),
+      parseHsiOutput(this->get_parameter("hsiOutput").as_bool()),
+      this->get_parameter("convergenceRate").as_int()
+    };
+    vs->writeMagnetometerCalibrationControl(magControl);
+  }
+
+  void hsiConfigCb(const riptide_msgs2::msg::ImuConfig config) {
+    // Check if the electrical panel requested to send current settings
+    if(config.convergence_rate == 100) {
+      RCLCPP_INFO(get_logger(), "IMU recieved config retransmit request");
+      // Issue the current imu hsi config to the electrical panel
+      publishHsiConfig();
+      return;
+    }
+
+    RCLCPP_INFO(get_logger(), "IMU recieved new HSI config");
+    this->set_parameters(std::vector<rclcpp::Parameter>{
+      rclcpp::Parameter("hsiEnable", config.hsi_enable),
+      rclcpp::Parameter("hsiOutput", config.hsi_output),
+      rclcpp::Parameter("convergenceRate", config.convergence_rate)
+    });
+    setMagControl();
+    publishHsiConfig();
+  }
+    
+
+  void publishHsiConfig() {
+    auto msg = riptide_msgs2::msg::ImuConfig();
+    msg.hsi_enable = this->get_parameter("hsiEnable").as_bool();
+    msg.hsi_output = this->get_parameter("hsiOutput").as_bool();
+    msg.convergence_rate = this->get_parameter("convergenceRate").as_int();
+
+    publishImuConfig->publish(msg);
+  }
+
+  vn::protocol::uart::HsiOutput parseHsiOutput(bool outputState) {
+    return outputState ? vn::protocol::uart::HsiOutput::HSIOUTPUT_USEONBOARD 
+                       : vn::protocol::uart::HsiOutput::HSIOUTPUT_NOONBOARD;
+  }
   
 
   //
@@ -490,6 +554,9 @@ class Vectornav : public rclcpp::Node {
 
   rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
   std::thread magCalThread;
+
+  rclcpp::Publisher<riptide_msgs2::msg::ImuConfig>::SharedPtr publishImuConfig;
+  rclcpp::Subscription<riptide_msgs2::msg::ImuConfig>::SharedPtr readImuConfig;
 };
 
 int main(int argc, char* argv[]) {

@@ -4,6 +4,12 @@
     baud: 230400
     reconnect_ms: 500
     frame_id: "talos/imu_link"
+    # Do continuous hsi calculations
+    hsiEnable: false
+    # Apply hsi to sensour output
+    hsiOutput: false
+    # 1-5 (slow-fast)
+    convergenceRate: 1
     # Error handler
     VNErrorType: [
       "hard fault",
