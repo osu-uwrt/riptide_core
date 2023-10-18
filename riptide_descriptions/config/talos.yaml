@@ -5,8 +5,8 @@
 base_link: [-0.14, 0.03, -0.09]
 
 # Vehicle mass properties
-mass: 31.618
-com: [-0.162, 0.036, -0.051]
+mass: 31.998
+com: [-0.148, 0.040, -0.071]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
 
 # Vehicle bouyancy properties
@@ -110,7 +110,7 @@ thruster:
     NEG_YINT: -78.609
 
 #this is for the newly developed solver
-thruster_new:
+thruster_solver:
   
   #default weights for the thruster solver
   default_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -130,6 +130,12 @@ thruster_new:
   #the limit for an individual thruster
   individual thrust_limit: 15
 
+  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105, 257.460623, 42.948545, -24.402056, -986.338071]
+  #Format: 4 times positive curve then 4 times negative curve
+  # 1 * 1
+  # 2 * x
+  # 3 * tanh(x)
+  # 4-* x^(1/4)
 
   
 

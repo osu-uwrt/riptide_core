@@ -1,0 +1,36 @@
+/**/riptide_imu:
+  ros__parameters:
+    port: "/dev/ttyTHS0"
+    baud: 230400
+    reconnect_ms: 500
+    frame_id: "talos/imu_link"
+    # Do continuous hsi calculations
+    hsiEnable: false
+    # Apply hsi to sensour output
+    hsiOutput: false
+    # 1-5 (slow-fast)
+    convergenceRate: 1
+    # Error handler
+    VNErrorType: [
+      "hard fault",
+      "serial buffer overflow",
+      "ivalid checksum",
+      "invalid command",
+      "not enough parameters",
+      "too many parameters",
+      "invalid parameter",
+      "invalid register",
+      "unauthorized access",
+      "watchdog reset",
+      "output buffer overflow",
+      "insufficient baud rate"]
+    # Covariance data
+    orientation_covariance: [0.01,  0.0,   0.0,
+                            0.0,   0.01,  0.0,
+                            0.0,   0.0,   0.01]
+    angular_velocity_covariance: [0.01,  0.0,   0.0,
+                         0.0,   0.01,  0.0,
+                         0.0,   0.0,   0.01]
+    linear_acceleration_covariance: [0.01,  0.0,   0.0,
+                         0.0,   0.01,  0.0,
+                         0.0,   0.0,   0.01]

@@ -1,0 +1,3 @@
+bool hsi_enable
+bool hsi_output
+uint8 convergence_rate

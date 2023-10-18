@@ -27,7 +27,7 @@ dvl_launch_file = os.path.join(
 )
 
 imu_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
+    get_package_share_directory('riptide_imu'),
     "launch", "imu.launch.py"
 )
 
@@ -73,8 +73,5 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(zed_launch_file),
-            # )
         ], scoped=True)
     ])
