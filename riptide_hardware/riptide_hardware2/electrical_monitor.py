@@ -127,7 +127,7 @@ class ESCMonitorTask(diagnostic_updater.DiagnosticTask):
         rpm_present = False
         for i in range(4):
             value: 'DshotSingleTelemetry' = esc_0_status.esc_telemetry[i]
-            if not value.present:
+            if not value.esc_online:
                 not_present.append(str(i+1))
             stat.add("ESC {} Speed".format(i+1), "{}RPM".format(value.rpm))
             stat.add("ESC {} Voltage".format(i+1), "{:.2f}V".format(value.voltage))
@@ -140,7 +140,7 @@ class ESCMonitorTask(diagnostic_updater.DiagnosticTask):
         for i in range(4):
             value: 'DshotSingleTelemetry' = esc_1_status.esc_telemetry[i]
             i += 4
-            if not value.present:
+            if not value.esc_online:
                 not_present.append(str(i+1))
             stat.add("ESC {} Speed".format(i+1), "{}RPM".format(value.rpm))
             stat.add("ESC {} Voltage".format(i+1), "{:.2f}V".format(value.voltage))
