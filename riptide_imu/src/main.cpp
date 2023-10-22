@@ -22,7 +22,6 @@
 using namespace vn::sensors;
 using namespace std::placeholders;
 using namespace std::chrono_literals;
-using namespace std::placeholders;
 
 class Vectornav : public rclcpp::Node {
   using MagCal = riptide_msgs2::action::MagCal;
@@ -112,7 +111,7 @@ class Vectornav : public rclcpp::Node {
     serial.flags |= ASYNC_LOW_LATENCY;
     ioctl(portFd, TIOCSSERIAL, &serial);
     close(portFd);
-    RCLCPP_INFO(get_logger(), "Set port to ASYNC_LOW_LATENCY");
+    RCLCPP_INFO(get_logger(), "Set IMU port to ASYNC_LOW_LATENCY");
   }
 
   bool vnConnect(const std::string& port, const int baud) {
@@ -140,10 +139,11 @@ class Vectornav : public rclcpp::Node {
     for(auto b: baudrates) {
       try {
         vs->connect(port, b);
-        if(vs->verifySensorConnectivity())
+        if(vs->verifySensorConnectivity()) {
           // VN successfully connected
           break;
-        // Connection failed but still passed connectivity check; stop communication
+        }
+        // Connection failed; disconnect so we can try again with a different baud
         vs->disconnect();
       } catch(...) {
         // Just catch everything
@@ -151,7 +151,7 @@ class Vectornav : public rclcpp::Node {
       }
     }
 
-    // If all baudrates failed, throw a fatal
+    // If all baudrates failed, throw a fatal and return
     if(!vs->verifySensorConnectivity()) {
       RCLCPP_FATAL(get_logger(), "Unable to connect to IMU over port %s", port.c_str());
       return false;
@@ -199,7 +199,7 @@ class Vectornav : public rclcpp::Node {
       CompositeData cd = cd.parse(asyncPacket);
 
       // Parse message data
-      msg.header.stamp = node->getTimeStamp(/*cd*/);
+      msg.header.stamp = node->getTimeStamp();
       msg.header.frame_id = node->get_parameter("frame_id").as_string();
 
       // Set quaternion data
@@ -237,7 +237,9 @@ class Vectornav : public rclcpp::Node {
   }
 
   static void errorPacketReceivedHandler(void* nodeptr, vn::protocol::uart::Packet& errorPacket, size_t packetStartIndex) {
+    // Get a handle to the VectorNav class
     auto node = reinterpret_cast<Vectornav*>(nodeptr);
+    // Parse the error and cast it from enum to int
     auto err = errorPacket.parseError();
     int error = static_cast<int>(err);
     
@@ -266,7 +268,7 @@ class Vectornav : public rclcpp::Node {
 
   void monitorConnection() {
     // Don't try to reconnect during magcal
-    // Doing so throws vn::timeout
+    // Doing so throws vn::timeout and crashes driver
     if(doingMagCal) {
       RCLCPP_WARN(get_logger(), "IMU ignored reconnect request during magcal");
       return;
@@ -298,12 +300,13 @@ class Vectornav : public rclcpp::Node {
     
   }
 
-  rclcpp::Time getTimeStamp(/*vn::sensors::CompositeData& data*/) {
+  rclcpp::Time getTimeStamp() {
+    // Return current ROS timestamp
     const rclcpp::Time t = now();
-    // Function here for comapability for potential future modifications
-    return t;  // Time not adjusted
+    return t;
   }
 
+  // Process vn math (4) into geometry message
   static inline geometry_msgs::msg::Quaternion toMsg(const vn::math::vec4f & rhs) {
     geometry_msgs::msg::Quaternion lhs;
     lhs.x = rhs[0];
@@ -313,6 +316,7 @@ class Vectornav : public rclcpp::Node {
     return lhs;
   }
 
+  // Process vn math (3) into geometry message
   static inline geometry_msgs::msg::Vector3 toMsg(const vn::math::vec3f& rhs) {
     geometry_msgs::msg::Vector3 lhs;
     lhs.x = rhs[0];
@@ -321,18 +325,28 @@ class Vectornav : public rclcpp::Node {
     return lhs;
   }
 
+  // Get covariance from yaml and return to caller by reference
   void fillCovarianceFromParam(std::string paramName, std::array<double, 9>& arr) const {
+    // Get copy of covariance array from param
     std::vector<double> covarianceData;
     get_parameter(paramName, covarianceData);
     
+    // Copy into reference
     std::copy(covarianceData.begin(), covarianceData.end(), arr.begin());
   }
 
+  //
+  // Magcal code starts here
+  //
+
+  // Handle start magcal request
   rclcpp_action::GoalResponse handleCalGoal(const rclcpp_action::GoalUUID& uuid, 
                                             std::shared_ptr<const MagCal::Goal> goal) {
     // Make sure there isn't an ongoing calibration
-    if(std::thread::id() == magCalThread.get_id() && vs->verifySensorConnectivity())
+    if(std::thread::id() == magCalThread.get_id() && vs->verifySensorConnectivity()) {
+      // All good, magcal starting
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+    }
     
     // If there is one running, or the sensor isn't connected
     RCLCPP_WARN(get_logger(), "Mag cal already in progress or sensor not connected, rejecting request");
@@ -382,11 +396,10 @@ class Vectornav : public rclcpp::Node {
       return;
     }
 
-    //
     // Calibration begins here
-    //
-    RCLCPP_WARN(get_logger(), "Magnetic calibration sampling starting");
+    RCLCPP_WARN(get_logger(), "IMU Magnetic calibration sampling starting");
 
+    // Deque is performant when modifying elements at start and end of list
     std::deque<vn::math::mat3f> cSamples;
     std::deque<vn::math::vec3f> bSamples;
 
@@ -513,7 +526,12 @@ class Vectornav : public rclcpp::Node {
     doingMagCal = false;
   }
 
+  //
+  // Realtime HSI code starts here
+  //
+
   void setMagControl() {
+    // Write realtime HSI config from parameter
     vn::sensors::MagnetometerCalibrationControlRegister magControl = {
       (vn::protocol::uart::HsiMode)this->get_parameter("hsiEnable").as_bool(),
       parseHsiOutput(this->get_parameter("hsiOutput").as_bool()),
@@ -531,6 +549,7 @@ class Vectornav : public rclcpp::Node {
       return;
     }
 
+    // Set ROS params, then write HSI config using parameters
     RCLCPP_INFO(get_logger(), "IMU recieved new HSI config");
     this->set_parameters(std::vector<rclcpp::Parameter>{
       rclcpp::Parameter("hsiEnable", config.hsi_enable),
@@ -538,11 +557,13 @@ class Vectornav : public rclcpp::Node {
       rclcpp::Parameter("convergenceRate", config.convergence_rate)
     });
     setMagControl();
+    // Publish new config so electrical panel knows everything is ok
     publishHsiConfig();
   }
     
 
   void publishHsiConfig() {
+    // Fill and publish current HSI config from param
     auto msg = riptide_msgs2::msg::ImuConfig();
     msg.hsi_enable = this->get_parameter("hsiEnable").as_bool();
     msg.hsi_output = this->get_parameter("hsiOutput").as_bool();
@@ -551,6 +572,7 @@ class Vectornav : public rclcpp::Node {
     publishImuConfig->publish(msg);
   }
 
+  // Parse a bool to hsi config enum (see enum in vnproglib header)
   vn::protocol::uart::HsiOutput parseHsiOutput(bool outputState) {
     return outputState ? vn::protocol::uart::HsiOutput::HSIOUTPUT_USEONBOARD 
                        : vn::protocol::uart::HsiOutput::HSIOUTPUT_NOONBOARD;
