@@ -98,7 +98,7 @@ thruster_solver:
   low_downdraft_weight: 3.0
 
   #weight for disabled thrusters
-  disable_weight: 99999.0
+  disable_weight: 2000.0
 
   #weight for surfaced thruster
   surfaced_weight: 4.0
