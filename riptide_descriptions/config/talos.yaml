@@ -11,6 +11,9 @@ inertia: [1.493, 0.549, 1.399] # kg*m^2
 
 # Controller parameters
 controller:
+  feed_forward:
+    base_wrench: [0.0, 0.0, -2.9, -0.03, 0.05, -0.04]
+    face_up_wrench: [-2.9, 0.0, 0.0, 0.0, 0.05, 0.0]
   linear:
     # linear damping coeficients
     damping:
