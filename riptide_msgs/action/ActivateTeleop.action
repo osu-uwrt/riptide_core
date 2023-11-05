@@ -1,0 +1,7 @@
+# Request
+int32 gamepad_type
+---
+# Result
+---
+# Feedback
+int32 still_alive
