@@ -119,7 +119,7 @@ thruster_solver:
 controller_overseer:
 
   #the height above water at which to kill the thrusters (m)
-  thruster_kill_plane: 0.1
+  thruster_kill_plane: 1.0
 
 
 
