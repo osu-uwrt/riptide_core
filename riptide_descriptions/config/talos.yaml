@@ -14,48 +14,48 @@ controller:
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.24, -0.01, -2.27, -0.05, 0.050, -0.01]
-  linear:
-    # linear damping coeficients
-    damping:
-      #drag = k1 + k2 * abs(v) + k3 * (e^(abs(v) / k4)
-      linear: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
+
+    # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
+    damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
                 -7.4651,   17.7641,    7.0013,    0.3067, #y
                 -7.0964,   27.6349,    6.9723,    0.3827, #z
                 -4.6881,    5.2662,    6.2630,    1.2739, #r
                -18.1269,   -3.1893,   17.3711,    2.0801, #p
                -20.4148,   -8.2547,   20.2604,    1.6177] #y
 
-      quadratic: [0.0, 0.0, 0.0]
+    #tunable paramters for controller
+    SMC_params:
+      #[x,y,z,r,p,y]
 
-    # physical maximums for each linear axis
-    max:
-      velocity: [.45, .4, .2]
-      acceleration: [1.0, 1.0, 1.0]
+      #first order eta
+      eta_order_1: [0,0,0,0,0,0]
 
-    # linear controller proportional gains
-    p_gains:
-      # position: [1.2, 1.2, 0.9]
-      # velocity: [7.5, 15.0, 22.0]
-      position: [0.8, 0.8, 0.7]
-      velocity: [7.0, 14.5, 21.0]
+      #second order eta
+      eta_order_2: [0,0,0,0,0,0]
 
-  angular:
-    # angular damping coeficients
-    damping:
-      # linear: [-2.0, -4.5, -2.5]
-      # quadratic: [-6.0, -12.0, -12.0]
-      linear: [0.0, 0.0, 0.0]
-      quadratic: [0.0, 0.0, 0.0]
+      #lamda
+      lamda: [0,0,0,0,0,0]
 
-    # physical maximums for each rotational axis
-    max:
-      velocity: [2.0, 2.0, 2.0]
-      acceleration: [8.0, 8.0, 8.0]
+      #max deviation before regenerating motion profile paths
+      #norm of deviation vector
+      linear_regeneration_threshhold: 0.5
 
-    # Angular controller proportional gains
-    p_gains:
-      position: [250.0, 450.0, 100.0]
-      velocity: [4.0, 2.2, 8.0]
+      angular_regneration_threshhold: 0.3
+
+    
+    #parameters for the motion profile generator used in SMC
+    motion_profile_params:
+
+      #[x,y,z,r,p,y]
+
+      #max velocity allowed in each dof
+      max_velocity: [0.5, 0.5, 0.5, 1.0, 1.0, 1.0]
+
+      #max acceleration allowed in each dof
+      max_acceleration: [.1, .1, .1, .1, .1, .1]
+
+      #max jerk allowed in each dof
+      max_jerk: [.1, .1, .1, .1, .1, .1]
 
 dvl:
   # topic: dvl
