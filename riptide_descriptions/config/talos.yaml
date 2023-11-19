@@ -9,15 +9,11 @@ mass: 31.998
 com: [-0.148, 0.040, -0.071]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
 
-# Vehicle bouyancy properties
-# volume: 0.0309 # m^3  (with actuators)
-# cob: [-0.156, 0.036, -0.046]  # With Actuators
-
-volume: 0.0321 # m^3  (without actuators)
-cob: [-0.157, 0.036, -0.046]  # Without Actuators
-
 # Controller parameters
 controller:
+  feed_forward:
+    #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
+    base_wrench: [0.24, -0.01, -2.27, -0.05, 0.050, -0.01]
   linear:
     # linear damping coeficients
     damping:
@@ -97,7 +93,47 @@ cameras: [
   }
 ]
 
-#this is for the 2023 solver
+#this is for the newly developed solver
+thruster_solver:
+  
+  #default weights for the thruster solver
+  default_weight: 1.0
+
+  #power for lower heave thrusters for low downdraft mode
+  low_downdraft_weight: 3.0
+
+  #weight for disabled thrusters
+  disable_weight: 2000.0
+
+  #weight for surfaced thruster
+  surfaced_weight: 4.0
+
+  #the system limit for total thrust (N)
+  system_thrust_limit: 73
+
+  #the limit for an individual thruster
+  individual_thrust_limit: 24
+
+  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105, 257.460623, 42.948545, -24.402056, -986.338071]
+  #Format: 4 times positive curve then 4 times negative curve
+  # 1 * 1
+  # 2 * x
+  # 3 * tanh(x)
+  # 4-* x^(1/4)
+
+#params for the newly developed overseer
+controller_overseer:
+
+  #the height above water at which to kill the thrusters (m)
+  thruster_kill_plane: 1.0
+
+
+
+
+#
+# THIS IS TEMPORARY TO PLEASE THE BLAINE SOLVER AND SHOULD NOT BE COMMITTED TO GITHUB!!
+# THIS WILL BE REMOVED LATER WHEN ALEX SOLVER IS WORKING AGAIN
+# 
 thruster: 
   rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
   max_force: 22 # Newtons. Thrusters draw about 8A here
@@ -114,35 +150,10 @@ thruster:
     NEG_SLOPE: 22.920
     NEG_YINT: -78.609
 
-#this is for the newly developed solver
-thruster_solver:
-  
-  #default weights for the thruster solver
-  default_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
-  #power for lower heave thrusters for low downdraft mode
-  low_downdraft_weight: 3.0
 
-  #weight for disabled thrusters
-  disable_weight: 99999.0
 
-  #weight for surfaced thruster
-  surfaced_weight: 4.0
 
-  #the system limit for total thrust (N)
-  system_thrust_limit: 35
-
-  #the limit for an individual thruster
-  individual thrust_limit: 15
-
-  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105, 257.460623, 42.948545, -24.402056, -986.338071]
-  #Format: 4 times positive curve then 4 times negative curve
-  # 1 * 1
-  # 2 * x
-  # 3 * tanh(x)
-  # 4-* x^(1/4)
-
-  
 
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test

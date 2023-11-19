@@ -49,6 +49,26 @@ class FakeDvlPub(Node):
         status = DvlStatus()
         status.header.stamp = now
         status.header.frame_id = dvlFrameId
+        status.b1_dist_valid = True
+        status.b1_fom_valid = True
+        status.b1_vel_valid = True
+        status.b2_dist_valid = True
+        status.b2_fom_valid = True
+        status.b2_vel_valid = True
+        status.b3_dist_valid = True
+        status.b3_fom_valid = True
+        status.b3_vel_valid = True
+        status.b4_dist_valid = True
+        status.b4_fom_valid = True
+        status.b4_vel_valid = True
+        status.x_vel_valid = True
+        status.x_fom_valid = True
+        status.y_vel_valid = True
+        status.y_fom_valid = True
+        status.z1_vel_valid = True
+        status.z1_fom_valid = True
+        status.z2_vel_valid = True
+        status.z2_fom_valid = True
         self.statPub.publish(status)
 
 
