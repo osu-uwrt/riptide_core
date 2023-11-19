@@ -21,9 +21,14 @@ controller:
   linear:
     # linear damping coeficients
     damping:
-      # linear: [-17.0, -17.0, -35.0]
-      # quadratic: [-180.0, -180.0, -460.0]
-      linear: [0.0, 0.0, 0.0]
+      #drag = k1 + k2 * abs(v) + k3 * (e^(abs(v) / k4)
+      linear: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
+                -7.4651,   17.7641,    7.0013,    0.3067, #y
+                -7.0964,   27.6349,    6.9723,    0.3827, #z
+                -4.6881,    5.2662,    6.2630,    1.2739, #r
+               -18.1269,   -3.1893,   17.3711,    2.0801, #p
+               -20.4148,   -8.2547,   20.2604,    1.6177] #y
+
       quadratic: [0.0, 0.0, 0.0]
 
     # physical maximums for each linear axis
