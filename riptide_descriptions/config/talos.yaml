@@ -16,7 +16,6 @@ controller:
     base_wrench: [0.24, -0.01, -2.27, -0.05, 0.050, -0.01]
 
   SMC:
-
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
                 -7.4651,   17.7641,    7.0013,    0.3067, #y
@@ -30,18 +29,18 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_1: [0,0,0,0,0,0]
+      eta_order_0: [0,0,0,0,0,0]
 
       #second order eta
-      eta_order_2: [0,0,0,0,0,0]
+      eta_order_1: [0,0,0,0,0,0]
 
       #lamda
-      lamda: [0,0,0,0,0,0]
+      lambda: [0,0,0,0,0,0]
 
       #max deviation before regenerating motion profile paths
       #norm of deviation vector
       linear_regeneration_threshhold: 0.5
-      angular_regneration_threshhold: 0.3
+      angular_regeneration_threshhold: 0.3
 
     
     #parameters for the motion profile generator used in SMC
@@ -57,6 +56,8 @@ controller:
 
       #max jerk allowed in each dof
       max_jerk: [.1, .1, .1, .1, .1, .1]
+
+      radial_function_count: 21 # this must be odd
 
 dvl:
   # topic: dvl
@@ -128,9 +129,6 @@ controller_overseer:
   #the height above water at which to kill the thrusters (m)
   thruster_kill_plane: 1.0
 
-
-
-
 #
 # THIS IS TEMPORARY TO PLEASE THE BLAINE SOLVER AND SHOULD NOT BE COMMITTED TO GITHUB!!
 # THIS WILL BE REMOVED LATER WHEN ALEX SOLVER IS WORKING AGAIN
@@ -150,12 +148,6 @@ thruster:
     POS_YINT: 66.073
     NEG_SLOPE: 22.920
     NEG_YINT: -78.609
-
-
-
-
-
-
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:
