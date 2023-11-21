@@ -37,11 +37,16 @@ controller:
       #lamda
       lambda: [0,0,0,0,0,0]
 
-      #max deviation before regenerating motion profile paths
+      #max deviation from path before regenerating motion profile paths
       #norm of deviation vector
       linear_regeneration_threshhold: 0.5
       angular_regeneration_threshhold: 0.3
 
+      #maximum deviation from setpoint before generating a motion profiler
+      #to run. Error must be less than 80 percent of these values to enter
+      #stationkeep mode. THESE MUST BE LESS THAN THE REGENERATION THRESHOLDS
+      linear_stationkeep_threshold: 0.2
+      angular_stationkeep_threshold: 0.2
     
     #parameters for the motion profile generator used in SMC
     motion_profile_params:
