@@ -64,6 +64,15 @@ controller:
 
       radial_function_count: 21 # this must be odd
 
+  PID:
+    p_gains: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+    i_gains: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    d_gains: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+
+    reset_threshold: 0.5
+
+
+
 dvl:
   # topic: dvl
   rate: 8 # Hz
