@@ -65,9 +65,9 @@ controller:
       radial_function_count: 21 # this must be odd
 
   PID:
-    p_gains: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+    p_gains: [5.0, 5.0, 10.0, 5.0, 2.5, 3.0]
     i_gains: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    d_gains: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+    d_gains: [0.0, 0.0, 2.0, 1.2, 11.0, 13.0]
 
     reset_threshold: 0.5
 
