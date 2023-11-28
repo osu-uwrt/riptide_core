@@ -54,69 +54,69 @@ class BatteryVoltageTask(diagnostic_updater.DiagnosticTask):
         return stat
 
 
-class ThrusterCurrentTask(diagnostic_updater.DiagnosticTask):
-    def __init__(self, electrical_readings_msg: ExpiringMessage, current_thresholds):
-        diagnostic_updater.DiagnosticTask.__init__(self, "Thruster Current")
+# class ThrusterCurrentTask(diagnostic_updater.DiagnosticTask):
+#     def __init__(self, electrical_readings_msg: ExpiringMessage, current_thresholds):
+#         diagnostic_updater.DiagnosticTask.__init__(self, "Thruster Current")
 
-        self._warning_current = float(current_thresholds["warn"])
-        self._error_current = float(current_thresholds["fuse"])
+#         self._warning_current = float(current_thresholds["warn"])
+#         self._error_current = float(current_thresholds["fuse"])
 
-        self._electrical_readings_msg = electrical_readings_msg
+#         self._electrical_readings_msg = electrical_readings_msg
 
-    def generateThrusterList(self, thruster_list, thruster_currents):
-        if len(thruster_list) == 1:
-            message = "Thruster "
-        else:
-            message = "Thrusters "
-        for i in range(len(thruster_list)):
-            if i != 0:
-                message += ", "
-            thruster_id = thruster_list[i]
-            message += "{} ({:.2f}A)".format(thruster_id+1, thruster_currents[thruster_id])
-        return message
+#     def generateThrusterList(self, thruster_list, thruster_currents):
+#         if len(thruster_list) == 1:
+#             message = "Thruster "
+#         else:
+#             message = "Thrusters "
+#         for i in range(len(thruster_list)):
+#             if i != 0:
+#                 message += ", "
+#             thruster_id = thruster_list[i]
+#             message += "{} ({:.2f}A)".format(thruster_id+1, thruster_currents[thruster_id])
+#         return message
 
-    def run(self, stat):
-        electrical_reading = self._electrical_readings_msg.get_value()
+#     def run(self, stat):
+#         electrical_reading = self._electrical_readings_msg.get_value()
 
-        if electrical_reading is None:
-            stat.summary(DiagnosticStatus.STALE, "No message available")
-            return stat
+#         if electrical_reading is None:
+#             stat.summary(DiagnosticStatus.STALE, "No message available")
+#             return stat
 
-        thruster_currents = electrical_reading.esc_current
+#         thruster_currents = electrical_reading.esc_current
 
-        if any(math.isnan(x) for x in thruster_currents):
-            stat.summary(DiagnosticStatus.ERROR, "Unable to read thruster currents")
-        else:
-            error_thrusters = []
-            warning_thrusters = []
-            zero_current_thrusters = []
-            current_total = 0
-            for i in range(len(thruster_currents)):
-                extra_info = ""
-                if thruster_currents[i] >= self._error_current:
-                    error_thrusters.append(i)
-                    extra_info = " [OVER FUSE]"
-                elif thruster_currents[i] >= self._warning_current:
-                    warning_thrusters.append(i)
-                    extra_info = " [WARN]"
-                elif thruster_currents[i] == 0:
-                    zero_current_thrusters.append(i)
-                    extra_info = " [OFF]"
-                stat.add("Thruster {} Current".format(i+1), "{:.2f}A".format(thruster_currents[i]) + extra_info)
-                current_total += thruster_currents[i]
+#         if any(math.isnan(x) for x in thruster_currents):
+#             stat.summary(DiagnosticStatus.ERROR, "Unable to read thruster currents")
+#         else:
+#             error_thrusters = []
+#             warning_thrusters = []
+#             zero_current_thrusters = []
+#             current_total = 0
+#             for i in range(len(thruster_currents)):
+#                 extra_info = ""
+#                 if thruster_currents[i] >= self._error_current:
+#                     error_thrusters.append(i)
+#                     extra_info = " [OVER FUSE]"
+#                 elif thruster_currents[i] >= self._warning_current:
+#                     warning_thrusters.append(i)
+#                     extra_info = " [WARN]"
+#                 elif thruster_currents[i] == 0:
+#                     zero_current_thrusters.append(i)
+#                     extra_info = " [OFF]"
+#                 stat.add("Thruster {} Current".format(i+1), "{:.2f}A".format(thruster_currents[i]) + extra_info)
+#                 current_total += thruster_currents[i]
 
-            stat.add("Total Current", "{:.2f}A".format(current_total))
+#             stat.add("Total Current", "{:.2f}A".format(current_total))
 
-            if len(error_thrusters) > 0:
-                error_message = self.generateThrusterList(error_thrusters, thruster_currents)
-                stat.summary(DiagnosticStatus.ERROR, "{} above ESC fuse rating ({}A) (Total Current: {:.2f}A)".format(error_message, self._error_current, current_total))
-            elif len(warning_thrusters) > 0:
-                warning_message = self.generateThrusterList(warning_thrusters, thruster_currents)
-                stat.summary(DiagnosticStatus.WARN, "{} above nominal ESC current ({}A) (Total Current: {:.2f}A)".format(warning_message, self._warning_current, current_total))
-            else:
-                stat.summary(DiagnosticStatus.OK, "Total Thruster Current: {:.2f}A".format(current_total))
+#             if len(error_thrusters) > 0:
+#                 error_message = self.generateThrusterList(error_thrusters, thruster_currents)
+#                 stat.summary(DiagnosticStatus.ERROR, "{} above ESC fuse rating ({}A) (Total Current: {:.2f}A)".format(error_message, self._error_current, current_total))
+#             elif len(warning_thrusters) > 0:
+#                 warning_message = self.generateThrusterList(warning_thrusters, thruster_currents)
+#                 stat.summary(DiagnosticStatus.WARN, "{} above nominal ESC current ({}A) (Total Current: {:.2f}A)".format(warning_message, self._warning_current, current_total))
+#             else:
+#                 stat.summary(DiagnosticStatus.OK, "Total Thruster Current: {:.2f}A".format(current_total))
 
-        return stat
+#         return stat
 
 
 class VoltageMonitorTask(diagnostic_updater.DiagnosticTask):
@@ -193,6 +193,7 @@ class VoltageMonitor:
 
         # updater.add(BatteryVoltageTask(self.electrical_readings_msg, thresholds["battery_volt"]))
         if current_robot == "puddles":
+            # TODO: Figure out
             ... # updater.add(ThrusterCurrentTask(self.electrical_readings_msg, thresholds["puddles_thruster_current"]))
         else:
             updater.add(BatteryVoltageTask("Port", self.port_batt_status, thresholds["battery_volt"], thresholds["battery_current"]))
