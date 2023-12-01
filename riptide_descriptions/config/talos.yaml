@@ -7,7 +7,9 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties
 mass: 31.998
 com: [-0.148, 0.040, -0.071]
+cob: [-0.148, 0.040, -0.051]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
+volume: 0.0321
 
 # Controller parameters
 controller:
@@ -63,15 +65,31 @@ controller:
       max_jerk: [.1, .1, .1, .1, .1, .1]
 
       radial_function_count: 21 # this must be odd
-
+  
+  #Gains for PID controller
   PID:
-    p_gains: [5.0, 5.0, 10.0, 5.0, 2.5, 3.0]
+    #all gains are in body frame
+    #linear unit are newtons per meter, angular are newton meter per radian
+
+    #the default gains for normal operation
+    p_gains: [5.0, 5.0, 10.0, 5.0, 20.0, 3.0]
     i_gains: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     d_gains: [0.0, 0.0, 2.0, 1.2, 11.0, 13.0]
 
+    #the gains to use near the surface or while submerdging
+    p_surface_gains: [5.0, 5.0, 10.0, 5.0, 20.0, 3.0]
+    i_surface_gains: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    d_surface_gains: [0.0, 0.0, 2.0, 1.2, 11.0, 13.0]
+
+    # the control value threshholds for each DOF -- body frame
+    max_control_threshholds: [30, 30, 30, 15, 15, 15]
+
+    #the maximum depth to use the surface gains (should be negative)
+    surface_gain_floor: 1.0
+    #the buffer height for switching between surface and default gains (should be positive)
+    surface_gain_buffer: .25
+
     reset_threshold: 0.5
-
-
 
 dvl:
   # topic: dvl
