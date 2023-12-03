@@ -72,14 +72,14 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [5.0, 5.0, 10.0, 5.0, 20.0, 3.0]
-    i_gains: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    d_gains: [0.0, 0.0, 2.0, 1.2, 11.0, 13.0]
+    p_gains: [20.0, 5.0, 10.0, 2.0, 1.0, 0.1]
+    i_gains: [0.0, 0.0, 0.0, 0.2, 0.2, 0.0]
+    d_gains: [0.0, 0.0, 0.0, 3.4, 10.0, 1.0]
 
     #the gains to use near the surface or while submerdging
-    p_surface_gains: [5.0, 5.0, 10.0, 5.0, 20.0, 3.0]
-    i_surface_gains: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    d_surface_gains: [0.0, 0.0, 2.0, 1.2, 11.0, 13.0]
+    p_surface_gains: [0.0, 0.0, 10.0, 2.0, 1.0, 0.1]
+    i_surface_gains: [0.0, 0.0, 0.0, 0.2, 0.2, 0.0]
+    d_surface_gains: [0.0, 0.0, 0.0, 3.4, 5.0, 0.0]
 
     # the control value threshholds for each DOF -- body frame
     max_control_threshholds: [30, 30, 30, 15, 15, 15]
