@@ -35,7 +35,8 @@ setup(
             'fake_ekf = riptide_hardware2.fake_ekf:main',
             'fake_dvl = riptide_hardware2.fake_dvl:main',
             'pose_converter = riptide_hardware2.pose_converter:main',
-            'rpm_echo = riptide_hardware2.rpm_echo:main'
+            'rpm_echo = riptide_hardware2.rpm_echo:main',
+            'tag_odom = riptide_hardware2.tag_odom:main'
         ],
     },
 )

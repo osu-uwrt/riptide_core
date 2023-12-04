@@ -2,10 +2,11 @@ import launch
 import launch.actions
 from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import LaunchConfiguration as LC
-from launch.substitutions import PathJoinSubstitution
-import os
+from launch.substitutions import PathJoinSubstitution, PythonExpression
 import xacro
+import os
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, GroupAction
+from launch.conditions import IfCondition
 from launch_ros.actions import Node, PushRosNamespace
 import traceback
 
@@ -57,13 +58,52 @@ def evaluate_xacro(context, *args, **kwargs):
 
     return []
 
+
+def launch_ekf(context, *args, **kwargs):
+    launch_items = []
+    tag_odom_enabled = LC("tag_odom_enabled").perform(context) == 'True'
+    
+    if LC("ekf_enabled").perform(context) == "True":
+        ekf_config_name = "talos_ekf.yaml" if not tag_odom_enabled else "talos_ekf_tag_odom.yaml"
+        
+        config = os.path.join(
+            get_package_share_directory('riptide_hardware2'),
+            'cfg',
+            ekf_config_name
+        )
+                
+        # start robot_localization Extended Kalman filter (EKF)
+        launch_items.append(
+            Node(
+                package='robot_localization',
+                executable='ekf_node',
+                name='ekf_localization_node',
+                output='screen',
+                parameters=[
+                    config,
+                    {
+                        'reset_on_time_jump': True,
+                    }
+                ]
+            )
+        )
+        
+        if tag_odom_enabled:
+            launch_items.append(
+                Node(
+                    package='riptide_hardware2',
+                    executable='tag_odom',
+                    name='tag_odom',
+                    output='screen'
+                )
+            )
+        
+    return launch_items
+
+
 def generate_launch_description():
     # declare the launch args to read for this file
-    config = PathJoinSubstitution([
-        get_package_share_directory('riptide_hardware2'),
-        'cfg',
-        LC("robot_ekf_config")
-    ])
+    
 
     return launch.LaunchDescription([ 
         # Read in the vehicle's namespace through the command line or use the default value one is not provided
@@ -77,6 +117,18 @@ def generate_launch_description():
             "debug", 
             default_value="False",
             description="enable xacro debug of the vehicle",
+        ),
+        
+        DeclareLaunchArgument(
+            "ekf_enabled",
+            default_value="True",
+            description="Enable EKF to estimate robot odometry"
+        ),
+        
+        DeclareLaunchArgument(
+            "tag_odom_enabled",
+            default_value="False",
+            description="Enable navigation using the apriltag"
         ),
 
         DeclareLaunchArgument(
@@ -99,25 +151,14 @@ def generate_launch_description():
                 arguments=["0", "0", "0", "0", "0", "0", "world", "odom"]
             ),
 
-            # start robot_localization Extended Kalman filter (EKF)
-            Node(
-                package='robot_localization',
-                executable='ekf_node',
-                name='ekf_localization_node',
-                output='screen',
-                parameters=[
-                    config,
-                    {
-                        'reset_on_time_jump': True,
-                    }
-                ]
-            ),
-                
             Node(
                 package='riptide_hardware2',
                 executable='depth_converter',
                 name='depth_converter',
             ),
+            
+            # start ekf
+            OpaqueFunction(function=launch_ekf),
 
             # Publish robot model for Sensor locations
             OpaqueFunction(function=evaluate_xacro),

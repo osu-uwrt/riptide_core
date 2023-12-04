@@ -7,54 +7,89 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties
 mass: 31.998
 com: [-0.148, 0.040, -0.071]
+cob: [-0.148, 0.040, -0.051]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
-
-# Vehicle bouyancy properties
-# volume: 0.0309 # m^3  (with actuators)
-# cob: [-0.156, 0.036, -0.046]  # With Actuators
-
-volume: 0.0321 # m^3  (without actuators)
-cob: [-0.157, 0.036, -0.046]  # Without Actuators
+volume: 0.0321
 
 # Controller parameters
 controller:
-  linear:
-    # linear damping coeficients
-    damping:
-      # linear: [-17.0, -17.0, -35.0]
-      # quadratic: [-180.0, -180.0, -460.0]
-      linear: [0.0, 0.0, 0.0]
-      quadratic: [0.0, 0.0, 0.0]
+  feed_forward:
+    #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
+    base_wrench: [0.24, -0.01, -2.27, -0.05, 0.050, -0.01]
 
-    # physical maximums for each linear axis
-    max:
-      velocity: [.45, .4, .2]
-      acceleration: [1.0, 1.0, 1.0]
+  SMC:
+    # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
+    damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
+                -7.4651,   17.7641,    7.0013,    0.3067, #y
+                -7.0964,   27.6349,    6.9723,    0.3827, #z
+                -4.6881,    5.2662,    6.2630,    1.2739, #r
+               -18.1269,   -3.1893,   17.3711,    2.0801, #p
+               -20.4148,   -8.2547,   20.2604,    1.6177] #y
 
-    # linear controller proportional gains
-    p_gains:
-      # position: [1.2, 1.2, 0.9]
-      # velocity: [7.5, 15.0, 22.0]
-      position: [0.8, 0.8, 0.7]
-      velocity: [7.0, 14.5, 21.0]
+    #tunable paramters for controller
+    SMC_params:
+      #[x,y,z,r,p,y]
 
-  angular:
-    # angular damping coeficients
-    damping:
-      # linear: [-2.0, -4.5, -2.5]
-      # quadratic: [-6.0, -12.0, -12.0]
-      linear: [0.0, 0.0, 0.0]
-      quadratic: [0.0, 0.0, 0.0]
+      #first order eta
+      eta_order_0: [0,0,0,0,0,0]
 
-    # physical maximums for each rotational axis
-    max:
-      velocity: [2.0, 2.0, 2.0]
-      acceleration: [8.0, 8.0, 8.0]
+      #second order eta
+      eta_order_1: [0,0,0,0,0,0]
 
-    # Angular controller proportional gains
-    p_gains:
-      position: [250.0, 450.0, 100.0]
-      velocity: [4.0, 2.2, 8.0]
+      #lamda
+      lambda: [1,1,1,1,1,1]
+
+      #max deviation from path before regenerating motion profile paths
+      #norm of deviation vector
+      linear_regeneration_threshold: 1000 #0.5
+      angular_regeneration_threshold: 1000 #0.3
+
+      #maximum deviation from setpoint before generating a motion profiler
+      #to run. Error must be less than 80 percent of these values to enter
+      #stationkeep mode. THESE MUST BE LESS THAN THE REGENERATION THRESHOLDS
+      linear_stationkeep_threshold: 0.2
+      angular_stationkeep_threshold: 0.2
+    
+    #parameters for the motion profile generator used in SMC
+    motion_profile_params:
+
+      #[x,y,z,r,p,y]
+
+      #max velocity allowed in each dof
+      max_velocity: [0.5, 0.5, 0.5, 1.0, 1.0, 1.0]
+
+      #max acceleration allowed in each dof
+      max_acceleration: [.1, .1, .1, .1, .1, .1]
+
+      #max jerk allowed in each dof
+      max_jerk: [.1, .1, .1, .1, .1, .1]
+
+      radial_function_count: 21 # this must be odd
+  
+  #Gains for PID controller
+  PID:
+    #all gains are in body frame
+    #linear unit are newtons per meter, angular are newton meter per radian
+
+    #the default gains for normal operation
+    p_gains: [20.0, 5.0, 10.0, 2.0, 1.0, 0.1]
+    i_gains: [0.0, 0.0, 0.0, 0.2, 0.2, 0.0]
+    d_gains: [0.0, 0.0, 0.0, 3.4, 10.0, 1.0]
+
+    #the gains to use near the surface or while submerdging
+    p_surface_gains: [0.0, 0.0, 10.0, 2.0, 1.0, 0.1]
+    i_surface_gains: [0.0, 0.0, 0.0, 0.2, 0.2, 0.0]
+    d_surface_gains: [0.0, 0.0, 0.0, 3.4, 5.0, 0.0]
+
+    # the control value threshholds for each DOF -- body frame
+    max_control_threshholds: [30, 30, 30, 15, 15, 15]
+
+    #the maximum depth to use the surface gains (should be negative)
+    surface_gain_floor: 1.0
+    #the buffer height for switching between surface and default gains (should be positive)
+    surface_gain_buffer: .25
+
+    reset_threshold: 0.5
 
 dvl:
   # topic: dvl
@@ -92,7 +127,44 @@ cameras: [
   }
 ]
 
-#this is for the 2023 solver
+#this is for the newly developed solver
+thruster_solver:
+  
+  #default weights for the thruster solver
+  default_weight: 1.0
+
+  #power for lower heave thrusters for low downdraft mode
+  low_downdraft_weight: 3.0
+
+  #weight for disabled thrusters
+  disable_weight: 2000.0
+
+  #weight for surfaced thruster
+  surfaced_weight: 4.0
+
+  #the system limit for total thrust (N)
+  system_thrust_limit: 73
+
+  #the limit for an individual thruster
+  individual_thrust_limit: 24
+
+  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105, 257.460623, 42.948545, -24.402056, -986.338071]
+  #Format: 4 times positive curve then 4 times negative curve
+  # 1 * 1
+  # 2 * x
+  # 3 * tanh(x)
+  # 4-* x^(1/4)
+
+#params for the newly developed overseer
+controller_overseer:
+
+  #the height above water at which to kill the thrusters (m)
+  thruster_kill_plane: 1.0
+
+#
+# THIS IS TEMPORARY TO PLEASE THE BLAINE SOLVER AND SHOULD NOT BE COMMITTED TO GITHUB!!
+# THIS WILL BE REMOVED LATER WHEN ALEX SOLVER IS WORKING AGAIN
+# 
 thruster: 
   rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
   max_force: 22 # Newtons. Thrusters draw about 8A here
@@ -108,37 +180,6 @@ thruster:
     POS_YINT: 66.073
     NEG_SLOPE: 22.920
     NEG_YINT: -78.609
-
-#this is for the newly developed solver
-thruster_solver:
-  
-  #default weights for the thruster solver
-  default_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-
-  #power for lower heave thrusters for low downdraft mode
-  low_downdraft_weight: 3.0
-
-  #weight for disabled thrusters
-  disable_weight: 99999.0
-
-  #weight for surfaced thruster
-  surfaced_weight: 4.0
-
-  #the system limit for total thrust (N)
-  system_thrust_limit: 35
-
-  #the limit for an individual thruster
-  individual thrust_limit: 15
-
-  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105, 257.460623, 42.948545, -24.402056, -986.338071]
-  #Format: 4 times positive curve then 4 times negative curve
-  # 1 * 1
-  # 2 * x
-  # 3 * tanh(x)
-  # 4-* x^(1/4)
-
-  
-
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:
