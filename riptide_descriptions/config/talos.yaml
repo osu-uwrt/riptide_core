@@ -95,13 +95,13 @@ controller:
 dvl:
   # topic: dvl
   rate: 8 # Hz
-  sigma: 0.001 # Stdev in m/s. Used by gazebo
+  sigma: 0.005 # Stdev in m/s. Used by gazebo
   pose: [-0.119, 0.034, -0.250, 0, 0, -0.7853981]
 
 depth:
   # topic: depth/pressure
   rate: 20 # Hz
-  sigma: 0.003 # Stdev in m. Used by gazebo
+  sigma: 0.010 # Stdev in m. Used by gazebo
   pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
 
 imu:
