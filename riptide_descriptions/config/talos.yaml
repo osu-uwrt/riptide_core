@@ -24,7 +24,7 @@ controller:
                 -7.0964,   27.6349,    6.9723,    0.3827, #z
                 -4.6881,    5.2662,    6.2630,    1.2739, #r
                -18.1269,   -3.1893,   17.3711,    2.0801, #p
-               -20.4148,   -8.2547,   20.2604,    1.6177] #y
+               -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
 
     #tunable paramters for controller
     SMC_params:
@@ -36,8 +36,20 @@ controller:
       #second order eta
       eta_order_1: [.3,0.3,0.3,0,0,0]
 
-      #lamda
-      lambda: [1.2,1.2,.2,2,2,2]
+      #lambda
+      lambda: [0.4,0.4,.2,2,2,2]
+
+      #format: 'a, m' for each degree of freedom
+      #where:
+      #  m = gravity well saturation error
+      #  a = gravity well saturation amplitude
+      velocity_curve_params: [10, 1,  #x
+                              1, 1,  #y
+                              1, 0.5,  #z
+                              0, 0,  #r
+                              0, 0,  #p
+                              0, 0] #yaw
+      
 
       #max deviation from path before regenerating motion profile paths
       #norm of deviation vector
@@ -158,6 +170,8 @@ thruster_solver:
   # 2 * x
   # 3 * tanh(x)
   # 4-* x^(1/4)
+
+  active_force_mask: [2, 2, 2, 1, 1, 1] #1 for PID, 2 for SMC
 
 #params for the newly developed overseer
 controller_overseer:
