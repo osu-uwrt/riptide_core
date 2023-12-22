@@ -225,7 +225,12 @@ class Vectornav : public rclcpp::Node {
       node->fillCovarianceFromParam("angular_velocity_covariance", msg.angular_velocity_covariance);
       node->fillCovarianceFromParam("linear_acceleration_covariance", msg.linear_acceleration_covariance);
 
-      magMsg = toMsg(cd.magnetic());
+      try {
+        magMsg = toMsg(cd.magnetic());
+      } catch (...) {
+        RCLCPP_WARN(node->get_logger(), "Invalid magnetometer data");
+      }
+      
     } catch (...) {
       // If at any point packet failed to parse, throw warning
       RCLCPP_WARN(node->get_logger(), "Failed to parse or fill binary IMU packet");
