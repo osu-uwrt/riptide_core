@@ -43,8 +43,8 @@ controller:
       #where:
       #  m = gravity well saturation error
       #  a = gravity well saturation amplitude
-      velocity_curve_params: [1, 1,  #x
-                              1, 1,  #y
+      velocity_curve_params: [25, 1,  #x
+                              25, 1,  #y
                               1, 0.5,  #z
                               0, 0,  #r
                               0, 0,  #p
@@ -86,12 +86,12 @@ controller:
     #the default gains for normal operation
     p_gains: [20.0, 20.0, 200.0, 4.0, 4.0, 10.0]
     i_gains: [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
-    d_gains: [5.0, 5.0, 90.0, 20.0, 20.0, 15.0]
+    d_gains: [5.0, 5.0, 90.0, 5.0, 5.0, 15.0]
 
     #the gains to use near the surface or while submerdging
-    p_surface_gains: [1.0, 1.0, 80.0, 2.0, 1.0, 0.1]
-    i_surface_gains: [0.0, 0.0, 0.0, 0.2, 0.2, 0.0]
-    d_surface_gains: [0.1, 0.1, 0.0, 3.4, 5.0, 0.0]
+    p_surface_gains: [20.0, 20.0, 200.0, 4.0, 4.0, 10.0]
+    i_surface_gains: [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
+    d_surface_gains: [5.0, 5.0, 90.0, 5.0, 5.0, 15.0]
 
 
     # the control value threshholds for each DOF -- body frame
@@ -171,7 +171,7 @@ thruster_solver:
   # 3 * tanh(x)
   # 4-* x^(1/4)
 
-  active_force_mask: [1, 1, 1, 1, 1, 1] #1 for PID, 2 for SMC
+  active_force_mask: [2, 2, 2, 1, 1, 1] #1 for PID, 2 for SMC
 
 #params for the newly developed overseer
 controller_overseer:
@@ -179,10 +179,7 @@ controller_overseer:
   #the height above water at which to kill the thrusters (m)
   thruster_kill_plane: 1.0
 
-#
-# THIS IS TEMPORARY TO PLEASE THE BLAINE SOLVER AND SHOULD NOT BE COMMITTED TO GITHUB!!
-# THIS WILL BE REMOVED LATER WHEN ALEX SOLVER IS WORKING AGAIN
-# 
+# TODO: sim uses some of this stuff. Figure out what we can delete
 thruster: 
   rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
   max_force: 22 # Newtons. Thrusters draw about 8A here
