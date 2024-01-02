@@ -7,7 +7,7 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties
 mass: 31.998
 com: [-0.148, 0.040, -0.071]
-cob: [-0.148, 0.040, -0.051]
+cob: [-0.155, 0.040, -0.051]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
 volume: 0.0321
 
@@ -15,7 +15,7 @@ volume: 0.0321
 controller:
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
-    base_wrench: [0.24, -0.01, -2.27, -0.05, 0.050, -0.01]
+    base_wrench: [0.00, 0.0, -0.38, 0.058, 0.010, -0.020]
 
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
@@ -24,20 +24,32 @@ controller:
                 -7.0964,   27.6349,    6.9723,    0.3827, #z
                 -4.6881,    5.2662,    6.2630,    1.2739, #r
                -18.1269,   -3.1893,   17.3711,    2.0801, #p
-               -20.4148,   -8.2547,   20.2604,    1.6177] #y
+               -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
 
     #tunable paramters for controller
     SMC_params:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [0,0,0,0,0,0]
+      eta_order_0: [.4,.4,5,.1,.1,.2]
 
       #second order eta
-      eta_order_1: [0,0,0,0,0,0]
+      eta_order_1: [.3,0.3,0.3,0,0,0]
 
-      #lamda
-      lambda: [1,1,1,1,1,1]
+      #lambda
+      lambda: [0.4,0.4,.2,2,2,2]
+
+      #format: 'a, m' for each degree of freedom
+      #where:
+      #  m = gravity well saturation error
+      #  a = gravity well saturation amplitude
+      velocity_curve_params: [1, 1,  #x
+                              1, 1,  #y
+                              1, 0.5,  #z
+                              0, 0,  #r
+                              0, 0,  #p
+                              0, 0] #yaw
+      
 
       #max deviation from path before regenerating motion profile paths
       #norm of deviation vector
@@ -72,20 +84,21 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [20.0, 5.0, 10.0, 2.0, 1.0, 0.1]
-    i_gains: [0.0, 0.0, 0.0, 0.2, 0.2, 0.0]
-    d_gains: [0.0, 0.0, 0.0, 3.4, 10.0, 1.0]
+    p_gains: [20.0, 20.0, 200.0, 4.0, 4.0, 10.0]
+    i_gains: [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
+    d_gains: [5.0, 5.0, 90.0, 20.0, 20.0, 15.0]
 
     #the gains to use near the surface or while submerdging
-    p_surface_gains: [0.0, 0.0, 10.0, 2.0, 1.0, 0.1]
+    p_surface_gains: [1.0, 1.0, 80.0, 2.0, 1.0, 0.1]
     i_surface_gains: [0.0, 0.0, 0.0, 0.2, 0.2, 0.0]
-    d_surface_gains: [0.0, 0.0, 0.0, 3.4, 5.0, 0.0]
+    d_surface_gains: [0.1, 0.1, 0.0, 3.4, 5.0, 0.0]
+
 
     # the control value threshholds for each DOF -- body frame
     max_control_threshholds: [30, 30, 30, 15, 15, 15]
 
     #the maximum depth to use the surface gains (should be negative)
-    surface_gain_floor: 1.0
+    surface_gain_floor: .5
     #the buffer height for switching between surface and default gains (should be positive)
     surface_gain_buffer: .25
 
@@ -94,18 +107,21 @@ controller:
 dvl:
   # topic: dvl
   rate: 8 # Hz
-  sigma: 0.001 # Stdev in m/s. Used by gazebo
+  sigma: 0.005 # Stdev in m/s. Used by gazebo
   pose: [-0.119, 0.034, -0.250, 0, 0, -0.7853981]
 
 depth:
   # topic: depth/pressure
   rate: 20 # Hz
-  sigma: 0.003 # Stdev in m. Used by gazebo
+  sigma: 0.010 # Stdev in m. Used by gazebo
   pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
 
 imu:
   # topic: /imu/imu/data
   rate: 100 #Hz
+  sigma_accel: 0.016 # Stdev in m/s^2. Used by sim
+  sigma_omega: 0.01 # Stdev in deg/s. Used by sim
+  sigma_angle: 0.5 # Std dev in deg. Used by sim
   pose: [-0.122, -0.147, 0.025, 3.141, 0.0, 3.141]
 
 poker:
@@ -154,6 +170,8 @@ thruster_solver:
   # 2 * x
   # 3 * tanh(x)
   # 4-* x^(1/4)
+
+  active_force_mask: [1, 1, 1, 1, 1, 1] #1 for PID, 2 for SMC
 
 #params for the newly developed overseer
 controller_overseer:

@@ -8,6 +8,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "sensor_msgs/msg/imu.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 #include <fcntl.h>
 #include <linux/serial.h>
@@ -51,6 +52,7 @@ class Vectornav : public rclcpp::Node {
 
     // Create publisher
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
+    magPub = this->create_publisher<geometry_msgs::msg::Vector3>("vectornav/magnetometer", 10);
 
     // Create config publisher and subscriber
     publishImuConfig = this->create_publisher<riptide_msgs2::msg::ImuConfig>("vectornav/config/read", 10);
@@ -193,6 +195,7 @@ class Vectornav : public rclcpp::Node {
 
     // Forward define msg so it can be used inside and outside try catch block
     auto msg = sensor_msgs::msg::Imu();
+    auto magMsg = geometry_msgs::msg::Vector3();
 
     try {
       // Parse into compositedata
@@ -221,6 +224,13 @@ class Vectornav : public rclcpp::Node {
       node->fillCovarianceFromParam("orientation_covariance", msg.orientation_covariance);
       node->fillCovarianceFromParam("angular_velocity_covariance", msg.angular_velocity_covariance);
       node->fillCovarianceFromParam("linear_acceleration_covariance", msg.linear_acceleration_covariance);
+
+      try {
+        magMsg = toMsg(cd.magnetic());
+      } catch (...) {
+        RCLCPP_WARN(node->get_logger(), "Invalid magnetometer data");
+      }
+      
     } catch (...) {
       // If at any point packet failed to parse, throw warning
       RCLCPP_WARN(node->get_logger(), "Failed to parse or fill binary IMU packet");
@@ -230,6 +240,7 @@ class Vectornav : public rclcpp::Node {
     // Publish output, throw error if publish failed
     try {
       node->imuPub->publish(msg);
+      node->magPub->publish(magMsg);
     } catch(...) {
       RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
     }
@@ -587,6 +598,7 @@ class Vectornav : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr reconnectTimer;
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imuPub;
+  rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr magPub;
 
   rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
   std::thread magCalThread;

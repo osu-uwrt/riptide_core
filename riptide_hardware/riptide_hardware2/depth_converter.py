@@ -29,7 +29,7 @@ class depthConverter(Node):
             b2oOrientation = self.tfBuffer.lookup_transform(
                 'odom', self.namespace+'/base_link', Time()).transform.rotation
             b2oMatrix = tf3d.quaternions.quat2mat(
-                [b2oOrientation.x, b2oOrientation.y, b2oOrientation.z, b2oOrientation.w])[:3, :3]
+                [b2oOrientation.w, b2oOrientation.x, b2oOrientation.y, b2oOrientation.z])[:3, :3]
 
             if self.b2pVector is None:
                 # Offset to pressure sensor
