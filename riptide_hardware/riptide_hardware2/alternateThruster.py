@@ -8,7 +8,7 @@ class ThrusterAlternater(Node):
     #wether the thrusters are currently spinning positive or not
     isPositive = True
 
-    previousFrequency = 1
+    previousFrequency = 1.0
 
     def __init__(self):
         super().__init__("Thruster_Alternator")
