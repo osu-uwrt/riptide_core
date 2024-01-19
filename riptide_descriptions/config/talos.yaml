@@ -7,7 +7,7 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties
 mass: 31.998
 com: [-0.148, 0.040, -0.071]
-cod: [-0.148, 0.040, 0.0]
+cod: [-0.148, 0.040, -0.055]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
 inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
              -0.0599, 0.7341, 0.0427,  # Iyx Iyy Iyz
@@ -124,6 +124,7 @@ imu:
   sigma_accel: 0.016 # Stdev in m/s^2. Used by sim
   sigma_omega: 0.01 # Stdev in deg/s. Used by sim
   sigma_angle: 0.5 # Std dev in deg. Used by sim
+  yaw_drift:   1.5 # deg/min 
   pose: [-0.122, -0.147, 0.025, 3.141, 0.0, 3.141]
 
 poker:
