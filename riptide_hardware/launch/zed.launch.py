@@ -30,7 +30,6 @@ def generate_launch_description():
                 ('camera_model', 'zed2i'),
                 ('publish_tf', "false"),
                 ('publish_map_tf', "false"),
-                ('base_frame', [LC('robot'), '/zed2i_base_link']),
             ]
         ),
 

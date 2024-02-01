@@ -93,11 +93,21 @@
         <!-- MYNT/ZED Camera -->
         <!-- Suffix isn't set here because right now we just have one, but you should just need to change the suffix for each and it'll work. -->
         <xacro:unless value="${camera['type'] == 'mono'}">
+          <xacro:if value="${camera['type'] == 'zed'}">
+          <!-- TODO: zed macro is not needed when we figure out how to change the name of hte zed base link-->
+            <xacro:zed_macro
+             namespace="${namespace}"
+             name="${camera['name']}"
+             parent_link="${namespace}/origin">
+             <origin xyz="${camera['pose'][0]} ${camera['pose'][1]} ${camera['pose'][2]}" 
+                    rpy="${camera['pose'][3]} ${camera['pose'][4]} ${camera['pose'][5]}"/>
+            </xacro:zed_macro>
+          </xacro:if>
         </xacro:unless>
       </xacro:unless>
       <xacro:cameras_macro namespace="${namespace}" cameras="${cameras[1:]}"/>
     </xacro:if>
   </xacro:macro>
 
-  <xacro:cameras_macro namespace="${namespace}" cameras="${config['cameras']}"/>
+  <xacro:cameras_macro namespace="${namespace}" cameras="${config['cameras']}"/> 
 </robot>
