@@ -132,6 +132,15 @@ controller:
     #minimum velocity to allow braking
     minimum_braking_velocity: 0.1
 
+    boost:
+      #cause wtf not
+
+      multiplier: 1.5
+
+      duration: 5.0
+
+      cooldown: 10.0
+
   stunt:
     #paramters for flips and more!
 
