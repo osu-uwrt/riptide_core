@@ -129,13 +129,13 @@ controller:
     #simulated drag coefficent N * s / m
     controller__teleop__drag_coefficent: 100000000
 
-    #minimum velocity to allow braking
-    minimum_braking_velocity: 0.1
+    #multiplier of the accel force to allow in reverse
+    minimum_braking_velocity: 0.4
 
     boost:
       #cause wtf not
 
-      multiplier: 1.5
+      multiplier: 2.5
 
       duration: 5.0
 
