@@ -20,7 +20,7 @@ class SimpleActuatorInterface(Node):
 
         self.armClient = self.create_client(SetBool, 'command/actuator/arm')
         self.dropperClient = self.create_client(Trigger, 'command/actuator/dropper')
-        self.torpedoClient = self.create_client(SetBool, 'command/actuator/torpedo')
+        self.torpedoClient = self.create_client(Trigger, 'command/actuator/torpedo')
 
         self.torpedoReqSub = self.create_subscription(Empty, "command/simple_torpedo_fire", self.torpedoFireCb, qos_profile_system_default)
         self.dropperReqSub = self.create_subscription(Empty, "command/simple_dropper_fire", self.dropperFireCb, qos_profile_system_default)
@@ -44,7 +44,7 @@ class SimpleActuatorInterface(Node):
     def actuatorBusy(self, msg: 'Bool'):
         self.isBusy.update_value(msg.data)
 
-def fireActuator(node: 'ActuatorInterface', targetClient: 'Client'):
+def fireActuator(node: 'SimpleActuatorInterface', targetClient: 'Client'):
     # Make sure we can get that we're armed
     isArmed = node.isArmed.get_value()
     if isArmed is None:
@@ -134,7 +134,7 @@ def fireActuator(node: 'ActuatorInterface', targetClient: 'Client'):
     rclpy.spin_until_future_complete(node, future)
     result: 'SetBool.Response' = future.result()
 
-    if result.success:
+    if not result.success:
         node.get_logger().error("Failed to disarm after firing: " + result.message)
         return
 
