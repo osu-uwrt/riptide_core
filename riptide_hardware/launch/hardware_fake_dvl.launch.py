@@ -67,5 +67,18 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
+
+            Node(
+                package='riptide_hardware2',
+                executable='simple_actuator_interface',
+                name='simple_actuator_interface',
+                output='screen',
+            ),
+            Node(
+                package='riptide_hardware2',
+                executable='imu_power_cycle',
+                name='imu_power_cycle',
+                output='screen',
+            ),
         ], scoped=True)
     ])
