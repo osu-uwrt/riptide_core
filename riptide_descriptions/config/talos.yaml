@@ -15,7 +15,7 @@ volume: 0.0321
 controller:
   scaling_factor: 1000000
 
-  active_force_mask: [3,3,2,2,2,3]
+  active_force_mask: [2, 2, 2, 1, 1, 2]
 
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
@@ -35,23 +35,23 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [.8,.8,5,0.2,0.2,0.2]
+      eta_order_0: [.8, .8, 5, 0.2, 0.2, 1.0]
 
       #second order eta
-      eta_order_1: [.4,0.4,0.3,0,0,0]
+      eta_order_1: [0.4, 0.4, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2,0.2,.4,10,10,0.15]
+      lambda: [0.2, 0.2, 0.4, 10.0, 10.0, 0.5]
 
       #format: 'a, m' for each degree of freedom
       #where:
       #  m = gravity well saturation error
       #  a = gravity well saturation amplitude
-      velocity_curve_params: [13, 2,  #x
-                              13, 2,  #y
-                              10, 0.5,  #z
-                              15, 1,  #r
-                              15, 1,  #p
+      velocity_curve_params: [13.0, 2.0,  #x
+                              13.0, 2.0,  #y
+                              10.0, 0.5,  #z
+                              15.0, 1.0,  #r
+                              15.0, 1.0,  #p
                               2.0, 0.707] #yaw
       
 
@@ -99,7 +99,7 @@ controller:
 
 
     # the control value threshholds for each DOF -- body frame
-    max_control_threshholds: [30, 30, 30, 15, 15, 15]
+    max_control_thresholds: [30, 30, 30, 15, 15, 15]
 
     #the maximum depth to use the surface gains (should be negative)
     surface_gain_floor: .5
@@ -115,7 +115,7 @@ controller:
     throttle_deadzone: .05
 
     #nudge forces
-    nudge_forces: [7,7,2,.5,.5,2]
+    nudge_forces: [7.0, 7.0, 2.0, 0.5, 0.5, 2.0]
 
     #max simulated steering angle - degrees
     max_steering_angle: 45
@@ -164,7 +164,7 @@ dvl:
   # topic: dvl
   rate: 8 # Hz
   sigma: 0.005 # Stdev in m/s. Used by gazebo
-  pose: [-0.119, 0.034, -0.250, 0, 0, -0.7853981]
+  pose: [-0.119, 0.034, -0.250, 0.0, 0.0, -0.7853981]
 
 depth:
   # topic: depth/pressure
@@ -187,7 +187,7 @@ torpedos:
   pose: [0.0542, -0.0929, -0.1756, 0.0, 0.0, 0.0]
 
 droppers:
-  pose: [-0.35, 0, 0.05, 0, 0, 0]
+  pose: [-0.35, 0.0, 0.05, 0.0, 0.0, 0.0]
 
 cameras: [
   {
@@ -195,7 +195,7 @@ cameras: [
     name: zed_camera_link,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
-    pose: [-0.060, -0.088, 0.0, 0, 0, 0]
+    pose: [-0.060, -0.088, 0.0, 0.0, 0.0, 0.0]
   }
 ]
 
