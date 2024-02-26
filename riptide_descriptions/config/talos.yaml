@@ -31,7 +31,7 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [.8,.8,5,0.2,0.2,1.0]
+      eta_order_0: [.8,.8,5,0.2,0.2,0.7]
 
       #second order eta
       eta_order_1: [.4,0.4,0.3,0,0,0]
@@ -48,7 +48,7 @@ controller:
                               10, 0.5,  #z
                               15, 1,  #r
                               15, 1,  #p
-                              2.0, 1.0] #yaw
+                              2.0, 1.5] #yaw
       
 
       #max deviation from path before regenerating motion profile paths
@@ -171,7 +171,7 @@ thruster_solver:
   # 3 * tanh(x)
   # 4-* x^(1/4)
 
-  active_force_mask: [2, 2, 2, 1, 1, 2] #1 for PID, 2 for SMC
+  active_force_mask: [2, 2, 2, 1, 1, 1] #1 for PID, 2 for SMC
 
 #params for the newly developed overseer
 controller_overseer:
