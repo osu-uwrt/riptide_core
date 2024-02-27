@@ -98,7 +98,7 @@ controller:
     d_surface_gains: [5.0, 5.0, 90.0, 15.0, 30.0, 15.0]
 
 
-    # the control value threshholds for each DOF -- body frame
+    # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
 
     #the maximum depth to use the surface gains (should be negative)
