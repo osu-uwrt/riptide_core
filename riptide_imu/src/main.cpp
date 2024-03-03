@@ -32,7 +32,7 @@ class Vectornav : public rclcpp::Node {
   public:
   Vectornav() : Node("riptide_imu") {
     // Declare parameters used in constructor
-    auto port = declare_parameter<std::string>("port", "/dev/ttyUSB0");
+    auto port = declare_parameter<std::string>("port", "/dev/ttyTHS0");
     auto baud = declare_parameter<int>("baud", 230400);
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
@@ -50,14 +50,18 @@ class Vectornav : public rclcpp::Node {
     declare_parameter("angular_velocity_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
     declare_parameter("linear_acceleration_covariance", rclcpp::PARAMETER_DOUBLE_ARRAY);
 
+    // Magnetometer parameters
+    declare_parameter<float>("magneticDeclination", 0.0f);
+
     // Create publisher
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
     magPub = this->create_publisher<geometry_msgs::msg::Vector3>("vectornav/magnetometer", 10);
+    magHeadingPub = this->create_publisher<std_msgs::msg::Float32>("vectornav/magheading", 10);
 
     // Create config publisher and subscriber
     publishImuConfig = this->create_publisher<riptide_msgs2::msg::ImuConfig>("vectornav/config/read", 10);
-    readImuConfig = this->create_subscription<riptide_msgs2::msg::ImuConfig>("vectornav/config/write", 10,
-                                        std::bind(&Vectornav::hsiConfigCb, this, _1));
+    //readImuConfig = this->create_subscription<riptide_msgs2::msg::ImuConfig>("vectornav/config/write", 10,
+                                        //std::bind(&Vectornav::hsiConfigCb, this, _1));
 
 
     // Mag cal server
@@ -73,7 +77,7 @@ class Vectornav : public rclcpp::Node {
     vnConnect(port, baud);
 
     // Send out hsi config for electrical panel
-    publishHsiConfig();
+    //publishHsiConfig();
 
     // Setup spin to monitor connection (since packets are async)
     reconnectTimer = create_wall_timer(reconnectMS, std::bind(&Vectornav::monitorConnection, this));
@@ -176,7 +180,7 @@ class Vectornav : public rclcpp::Node {
     RCLCPP_INFO(get_logger(), "Connected to IMU %s at baud %d over %s", mn.c_str(), vs->baudrate(), vs->port().c_str());
 
     // Set hsi mode
-    setMagControl();
+    //etMagControl();
 
     return true;
   }
@@ -196,6 +200,7 @@ class Vectornav : public rclcpp::Node {
     // Forward define msg so it can be used inside and outside try catch block
     auto msg = sensor_msgs::msg::Imu();
     auto magMsg = geometry_msgs::msg::Vector3();
+    auto headingMsg = std_msgs::msg::Float32();
 
     try {
       // Parse into compositedata
@@ -227,9 +232,17 @@ class Vectornav : public rclcpp::Node {
 
       try {
         magMsg = toMsg(cd.magnetic());
+
+        try {
+          headingMsg.data = node->calculateMagnetHeading(magMsg);
+        } catch (...) {
+          RCLCPP_WARN(node->get_logger(), "Failed to parse magnetometer heading");
+        }
       } catch (...) {
         RCLCPP_WARN(node->get_logger(), "Invalid magnetometer data");
       }
+
+      
       
     } catch (...) {
       // If at any point packet failed to parse, throw warning
@@ -241,6 +254,7 @@ class Vectornav : public rclcpp::Node {
     try {
       node->imuPub->publish(msg);
       node->magPub->publish(magMsg);
+      node->magHeadingPub->publish(headingMsg);
     } catch(...) {
       RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
     }
@@ -344,6 +358,27 @@ class Vectornav : public rclcpp::Node {
     
     // Copy into reference
     std::copy(covarianceData.begin(), covarianceData.end(), arr.begin());
+  }
+
+  float calculateMagnetHeading(const geometry_msgs::msg::Vector3& magnetData) {
+    // Get heading
+    float heading = atan2(magnetData.y, magnetData.x);
+
+    // Offset so angle is measured between positive y-axis and magnetic North
+    //heading += M_PI / 2;
+
+    // Crush between [-Pi, Pi]
+    while (heading > M_PI)
+      heading -= 2 * M_PI;
+    while (heading <= -M_PI)
+      heading += 2 * M_PI;
+
+    // Get magnetic declination from param
+    float declination;
+    get_parameter("magneticDeclination", declination);
+
+    // Adjust heading by declination (converted to rad)
+    return heading * (180 / M_PI) + (declination );
   }
 
   //
@@ -541,6 +576,7 @@ class Vectornav : public rclcpp::Node {
   // Realtime HSI code starts here
   //
 
+  /*
   void setMagControl() {
     // Write realtime HSI config from parameter
     vn::sensors::MagnetometerCalibrationControlRegister magControl = {
@@ -588,6 +624,7 @@ class Vectornav : public rclcpp::Node {
     return outputState ? vn::protocol::uart::HsiOutput::HSIOUTPUT_USEONBOARD 
                        : vn::protocol::uart::HsiOutput::HSIOUTPUT_NOONBOARD;
   }
+  */
   
 
   //
@@ -599,6 +636,7 @@ class Vectornav : public rclcpp::Node {
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imuPub;
   rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr magPub;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr magHeadingPub;
 
   rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
   std::thread magCalThread;
