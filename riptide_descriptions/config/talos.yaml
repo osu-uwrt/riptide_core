@@ -38,10 +38,10 @@ controller:
       eta_order_0: [.8, .8, 5, 0.2, 0.2, 1.0]
 
       #second order eta
-      eta_order_1: [0.4, 0.4, 0.3, 0.0, 0.0, 0.0]
+      eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2, 0.2, 0.4, 10.0, 10.0, 0.5]
+      lambda: [0.1, 0.1, 0.4, 10.0, 10.0, 0.5]
 
       #format: 'a, m' for each degree of freedom
       #where:
@@ -65,6 +65,11 @@ controller:
       #stationkeep mode. THESE MUST BE LESS THAN THE REGENERATION THRESHOLDS
       linear_stationkeep_threshold: 0.2
       angular_stationkeep_threshold: 0.2
+
+      #the maximum accelerations permitted by the SMC controller
+      #these do not affect decreases in speed - only increases
+
+    max_target_accelerations: [.12,.12, .05, .01, .01, .1]
     
     #parameters for the motion profile generator used in SMC
     motion_profile_params:
@@ -90,7 +95,7 @@ controller:
     #the default gains for normal operation
     p_gains: [20.0, 20.0, 200.0, 2.0, 2.0, 5.0]
     i_gains: [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
-    d_gains: [5.0, 5.0, 90.0, 15.0, 30.0, 15.0]
+    d_gains: [5.0, 5.0, 90.0, 15.0, 30.0, 0.0]
 
     #the gains to use near the surface or while submerdging
     p_surface_gains: [20.0, 20.0, 200.0, 2.0, 2.0, 5.0]
