@@ -8,14 +8,12 @@ from std_msgs.msg import String
 #
 # colcon build --packages-select
 # ros2 run riptide_diagnostics diagnostics.py
-print("hello world")
-
 class DiagnosticsSubscriber(Node):
     
     def __init__(self):
         super().__init__('diagnostics_subscriber')
         self.subscription = self.create_subscription(
-            String, 'topic', self.listener_callback, 10)
+            String, 'diagnostics_agg', self.listener_callback, 10)
         self.subscription # prevent unused variable warning
 
     def listener_callback(self, msg):
