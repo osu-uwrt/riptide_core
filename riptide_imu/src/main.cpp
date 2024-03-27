@@ -216,9 +216,9 @@ class Vectornav : public rclcpp::Node {
 
       // Set linear acceleration data
       vn::math::vec3f acceleration = cd.acceleration();
-      msg.linear_acceleration.x = -acceleration.x;
-      msg.linear_acceleration.y = -acceleration.y;
-      msg.linear_acceleration.z = -acceleration.z;
+      msg.linear_acceleration.x = acceleration.x;
+      msg.linear_acceleration.y = acceleration.y;
+      msg.linear_acceleration.z = acceleration.z;
 
       // Fill covariance data
       node->fillCovarianceFromParam("orientation_covariance", msg.orientation_covariance);

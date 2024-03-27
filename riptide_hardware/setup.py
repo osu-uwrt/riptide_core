@@ -37,7 +37,8 @@ setup(
             'pose_converter = riptide_hardware2.pose_converter:main',
             'rpm_echo = riptide_hardware2.rpm_echo:main',
             'tag_odom = riptide_hardware2.tag_odom:main',
-            'alternate_thruster = riptide_hardware2.alternateThruster:main '
+            'alternate_thruster = riptide_hardware2.alternateThruster:main ',
+            'imu_power_cycle = riptide_hardware2.imu_power_cycle:main'
         ],
     },
 )
