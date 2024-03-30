@@ -7,9 +7,11 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties
 mass: 31.998
 com: [-0.148, 0.040, -0.071]
-cob: [-0.155, 0.040, -0.051]
+cod: [-0.148, 0.040, -0.055]
 inertia: [1.493, 0.549, 1.399] # kg*m^2
-volume: 0.0321
+inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
+             -0.0599, 0.7341, 0.0427,  # Iyx Iyy Iyz
+             -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^2
 
 # Controller parameters
 controller:
@@ -31,24 +33,24 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [.8,.8,5,0.2,0.2,0.2]
+      eta_order_0: [.8,.8,5,0.2,0.2,0.7]
 
       #second order eta
       eta_order_1: [.4,0.4,0.3,0,0,0]
 
       #lambda
-      lambda: [0.2,0.2,.4,10,10,0.15]
+      lambda: [0.2,0.2,.4,10,10,0.5]
 
       #format: 'a, m' for each degree of freedom
       #where:
       #  m = gravity well saturation error
       #  a = gravity well saturation amplitude
-      velocity_curve_params: [13, 2,  #x
-                              13, 2,  #y
+      velocity_curve_params: [7, 2,  #x
+                              7, 2,  #y
                               10, 0.5,  #z
                               15, 1,  #r
                               15, 1,  #p
-                              2.0, 0.707] #yaw
+                              2.0, 1.5] #yaw
       
 
       #max deviation from path before regenerating motion profile paths
@@ -84,14 +86,14 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [20.0, 20.0, 200.0, 2.0, 2.0, 5.0]
-    i_gains: [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
-    d_gains: [5.0, 5.0, 90.0, 15.0, 30.0, 15.0]
+    p_gains: [20.0, 20.0, 200.0, 1.0, 1.0, 2.0]
+    i_gains: [0.0, 0.0, 0.0, 0.1, 0.1, 0.1]
+    d_gains: [5.0, 5.0, 90.0, 0.1, 0.1, 4.0]
 
     #the gains to use near the surface or while submerdging
-    p_surface_gains: [20.0, 20.0, 200.0, 2.0, 2.0, 5.0]
+    p_surface_gains: [20.0, 20.0, 200.0, 4.0, 4.0, 10.0]
     i_surface_gains: [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
-    d_surface_gains: [5.0, 5.0, 90.0, 15.0, 30.0, 15.0]
+    d_surface_gains: [5.0, 5.0, 90.0, 0.0, 0.0, 0.0]
 
 
     # the control value threshholds for each DOF -- body frame
@@ -122,13 +124,14 @@ imu:
   sigma_accel: 0.016 # Stdev in m/s^2. Used by sim
   sigma_omega: 0.01 # Stdev in deg/s. Used by sim
   sigma_angle: 0.5 # Std dev in deg. Used by sim
+  yaw_drift:   1.5 # deg/min 
   pose: [-0.122, -0.147, 0.025, 3.141, 0.0, 3.141]
 
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedos: 
-  pose: [0.0542, -0.0929, -0.1756, 0.0, 0.0, 0.0]
+  pose: [0.048, -0.1057, -0.1501, 0.0, 0.0, 0.0]
 
 droppers:
   pose: [-0.35, 0, 0.05, 0, 0, 0]
@@ -136,10 +139,16 @@ droppers:
 cameras: [
   {
     type: zed, 
-    name: zed_camera_link,
+    name: zed,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
-    pose: [-0.060, -0.088, 0.0, 0, 0, 0]
+    pose: [-0.060, -0.088, 0, 0, 0, 0]
+  },
+  { #TODO: FILL IN WITH REAL VALUES
+    type: stereo,
+    name: downwards_camera,
+    baseline: 0.12,
+    pose: [0.06, 0, -0.01, 0, 1.5707, 0]
   }
 ]
 
@@ -171,7 +180,7 @@ thruster_solver:
   # 3 * tanh(x)
   # 4-* x^(1/4)
 
-  active_force_mask: [2, 2, 2, 1, 1, 2] #1 for PID, 2 for SMC
+  active_force_mask: [2, 2, 2, 1, 1, 1] #1 for PID, 2 for SMC
 
 #params for the newly developed overseer
 controller_overseer:
@@ -179,10 +188,7 @@ controller_overseer:
   #the height above water at which to kill the thrusters (m)
   thruster_kill_plane: 1.0
 
-#
-# THIS IS TEMPORARY TO PLEASE THE BLAINE SOLVER AND SHOULD NOT BE COMMITTED TO GITHUB!!
-# THIS WILL BE REMOVED LATER WHEN ALEX SOLVER IS WORKING AGAIN
-# 
+# TODO: sim uses some of this stuff. Figure out what we can delete
 thruster: 
   rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
   max_force: 22 # Newtons. Thrusters draw about 8A here
