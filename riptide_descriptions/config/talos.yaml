@@ -17,7 +17,7 @@ inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
 controller:
   scaling_factor: 1000000
 
-  active_force_mask: [3,3,2,2,2,3]
+  active_force_mask: [2, 2, 2, 1, 1, 2]
 
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
@@ -37,23 +37,23 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [.8,.8,5,0.2,0.2,0.7]
+      eta_order_0: [0.8, 0.8, 5.0, 0.2, 0.2, 0.7]
 
       #second order eta
-      eta_order_1: [.4,0.4,0.3,0,0,0]
+      eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2,0.2,.4,10,10,0.5]
+      lambda: [0.2, 0.2, 0.4, 10.0, 10.0, 0.5]
 
       #format: 'a, m' for each degree of freedom
       #where:
       #  m = gravity well saturation error
       #  a = gravity well saturation amplitude
-      velocity_curve_params: [7, 2,  #x
-                              7, 2,  #y
-                              10, 0.5,  #z
-                              15, 1,  #r
-                              15, 1,  #p
+      velocity_curve_params: [7.0, 2.0,  #x
+                              7.0, 2.0,  #y
+                              10.0, 0.5,  #z
+                              15.0, 1.0,  #r
+                              15.0, 1.0,  #p
                               2.0, 1.5] #yaw
       
 
@@ -67,6 +67,11 @@ controller:
       #stationkeep mode. THESE MUST BE LESS THAN THE REGENERATION THRESHOLDS
       linear_stationkeep_threshold: 0.2
       angular_stationkeep_threshold: 0.2
+
+      #the maximum accelerations permitted by the SMC controller
+      #these do not affect decreases in speed - only increases
+
+    max_target_accelerations: [.12,.12, .05, .01, .01, .1]
     
     #parameters for the motion profile generator used in SMC
     motion_profile_params:
@@ -100,8 +105,8 @@ controller:
     d_surface_gains: [5.0, 5.0, 90.0, 0.0, 0.0, 0.0]
 
 
-    # the control value threshholds for each DOF -- body frame
-    max_control_threshholds: [30, 30, 30, 15, 15, 15]
+    # the control value thresholds for each DOF -- body frame
+    max_control_thresholds: [30, 30, 30, 15, 15, 15]
 
     #the maximum depth to use the surface gains (should be negative)
     surface_gain_floor: .5
@@ -117,7 +122,7 @@ controller:
     throttle_deadzone: .05
 
     #nudge forces
-    nudge_forces: [7,7,2,.5,.5,2]
+    nudge_forces: [7.0, 7.0, 2.0, 0.5, 0.5, 2.0]
 
     #max simulated steering angle - degrees
     max_steering_angle: 45
@@ -166,7 +171,7 @@ dvl:
   # topic: dvl
   rate: 8 # Hz
   sigma: 0.005 # Stdev in m/s. Used by gazebo
-  pose: [-0.119, 0.034, -0.250, 0, 0, -0.7853981]
+  pose: [-0.119, 0.034, -0.250, 0.0, 0.0, -0.7853981]
 
 depth:
   # topic: depth/pressure
@@ -190,7 +195,7 @@ torpedos:
   pose: [0.048, -0.1057, -0.1501, 0.0, 0.0, 0.0]
 
 droppers:
-  pose: [-0.35, 0, 0.05, 0, 0, 0]
+  pose: [-0.35, 0.0, 0.05, 0.0, 0.0, 0.0]
 
 cameras: [
   {
