@@ -15,6 +15,10 @@ inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
 
 # Controller parameters
 controller:
+  scaling_factor: 1000000
+
+  active_force_mask: [3,3,2,2,2,3]
+
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.00, 0.0, -0.38, 0.058, 0.010, -0.020]
@@ -105,6 +109,58 @@ controller:
     surface_gain_buffer: .25
 
     reset_threshold: 0.5
+  
+  teleop:
+    #parameters for teleop mode
+
+    #deadzone on robot throttle
+    throttle_deadzone: .05
+
+    #nudge forces
+    nudge_forces: [7,7,2,.5,.5,2]
+
+    #max simulated steering angle - degrees
+    max_steering_angle: 45
+
+    #robot width - actually get from mech team - meters
+    width: 0.9 
+
+    #maximum throttle force
+    accel_force: 20
+
+    #simulated drag coefficent N * s / m
+    drag_coefficent: 150000000
+
+    #multiplier of the accel force to allow in reverse
+    minimum_braking_velocity: 0.4
+
+    boost:
+      #cause wtf not
+
+      multiplier: 2.5
+
+      duration: 5.0
+
+      cooldown: 10.0
+
+  stunt:
+    #paramters for flips and more!
+
+    #False - allow stunts, True - no stunts
+    safe_mode: True
+
+    #force required for summersault
+    summersault_force: 25.0
+
+    #time required for a summersault
+    summersault_duration: 8.0
+
+    #force required for flip
+    barrel_roll_force: 25
+
+    #time required for a barrel roll
+    barrel_roll_duration: 10
+
 
 dvl:
   # topic: dvl
