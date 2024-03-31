@@ -14,13 +14,16 @@ inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
              -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^2
 
 # Controller parameters
+#params for the newly developed overseer
+controller_overseer:
+  #the height above water at which to kill the thrusters (m)
+  thruster_kill_plane: 1.0
+
 controller:
   scaling_factor: 1000000
-
   active_force_mask: [2, 2, 2, 1, 1, 2]
 
   feed_forward:
-    #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.00, 0.0, -0.38, 0.058, 0.010, -0.020]
 
   SMC:
@@ -55,39 +58,10 @@ controller:
                               15.0, 1.0,  #r
                               15.0, 1.0,  #p
                               2.0, 1.5] #yaw
-      
 
-      #max deviation from path before regenerating motion profile paths
-      #norm of deviation vector
-      linear_regeneration_threshold: 1000 #0.5
-      angular_regeneration_threshold: 1000 #0.3
-
-      #maximum deviation from setpoint before generating a motion profiler
-      #to run. Error must be less than 80 percent of these values to enter
-      #stationkeep mode. THESE MUST BE LESS THAN THE REGENERATION THRESHOLDS
-      linear_stationkeep_threshold: 0.2
-      angular_stationkeep_threshold: 0.2
-
-      #the maximum accelerations permitted by the SMC controller
-      #these do not affect decreases in speed - only increases
-
-    max_target_accelerations: [.12,.12, .05, .01, .01, .1]
-    
-    #parameters for the motion profile generator used in SMC
-    motion_profile_params:
-
-      #[x,y,z,r,p,y]
-
-      #max velocity allowed in each dof
-      max_velocity: [0.5, 0.5, 0.5, 1.0, 1.0, 1.0]
-
-      #max acceleration allowed in each dof
-      max_acceleration: [.05, .05, .05, .1, .1, .1]
-
-      #max jerk allowed in each dof
-      max_jerk: [.05, .05, .05, .1, .1, .1]
-
-      radial_function_count: 21 # this must be odd
+    #the maximum accelerations permitted by the SMC controller
+    #these do not affect decreases in speed - only increases
+    max_target_accelerations: [2.0, 2.0, 5.0, .01, .01, .1]
   
   #Gains for PID controller
   PID:
@@ -99,25 +73,12 @@ controller:
     i_gains: [0.0, 0.0, 0.0, 0.1, 0.1, 0.1]
     d_gains: [5.0, 5.0, 90.0, 0.1, 0.1, 4.0]
 
-    #the gains to use near the surface or while submerdging
-    p_surface_gains: [20.0, 20.0, 200.0, 4.0, 4.0, 10.0]
-    i_surface_gains: [0.0, 0.0, 0.0, 1.0, 1.0, 0.0]
-    d_surface_gains: [5.0, 5.0, 90.0, 0.0, 0.0, 0.0]
-
-
     # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
-
-    #the maximum depth to use the surface gains (should be negative)
-    surface_gain_floor: .5
-    #the buffer height for switching between surface and default gains (should be positive)
-    surface_gain_buffer: .25
-
     reset_threshold: 0.5
   
   teleop:
     #parameters for teleop mode
-
     #deadzone on robot throttle
     throttle_deadzone: .05
 
@@ -128,7 +89,7 @@ controller:
     max_steering_angle: 45
 
     #robot width - actually get from mech team - meters
-    width: 0.9 
+    width: 0.9 #TODO: when sim gets talos collider in urdf we should pull this from there - itll still be in this yaml just somewhere else
 
     #maximum throttle force
     accel_force: 20
@@ -136,16 +97,10 @@ controller:
     #simulated drag coefficent N * s / m
     drag_coefficent: 150000000
 
-    #multiplier of the accel force to allow in reverse
-    minimum_braking_velocity: 0.4
-
     boost:
       #cause wtf not
-
       multiplier: 2.5
-
       duration: 5.0
-
       cooldown: 10.0
 
   stunt:
@@ -165,6 +120,35 @@ controller:
 
     #time required for a barrel roll
     barrel_roll_duration: 10
+
+
+#this is for the newly developed solver
+thruster_solver:
+  #default weights for the thruster solver
+  default_weight: 1.0
+
+  #power for lower heave thrusters for low downdraft mode
+  low_downdraft_weight: 3.0
+
+  #weight for disabled thrusters
+  disable_weight: 2000.0
+
+  #weight for surfaced thruster
+  surfaced_weight: 4.0
+
+  #the system limit for total thrust (N)
+  system_thrust_limit: 73
+
+  #the limit for an individual thruster
+  individual_thrust_limit: 24
+
+  #Format: 4 times positive curve then 4 times negative curve
+  # 1 * 1
+  # 2 * x
+  # 3 * tanh(x)
+  # 4-* x^(1/4)
+  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105,
+                             257.460623,  42.948545, -24.402056,  -986.338071]
 
 
 dvl:
@@ -212,42 +196,6 @@ cameras: [
     pose: [0.06, 0, -0.01, 0, 1.5707, 0]
   }
 ]
-
-#this is for the newly developed solver
-thruster_solver:
-  
-  #default weights for the thruster solver
-  default_weight: 1.0
-
-  #power for lower heave thrusters for low downdraft mode
-  low_downdraft_weight: 3.0
-
-  #weight for disabled thrusters
-  disable_weight: 2000.0
-
-  #weight for surfaced thruster
-  surfaced_weight: 4.0
-
-  #the system limit for total thrust (N)
-  system_thrust_limit: 73
-
-  #the limit for an individual thruster
-  individual_thrust_limit: 24
-
-  force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105, 257.460623, 42.948545, -24.402056, -986.338071]
-  #Format: 4 times positive curve then 4 times negative curve
-  # 1 * 1
-  # 2 * x
-  # 3 * tanh(x)
-  # 4-* x^(1/4)
-
-  active_force_mask: [2, 2, 2, 1, 1, 1] #1 for PID, 2 for SMC
-
-#params for the newly developed overseer
-controller_overseer:
-
-  #the height above water at which to kill the thrusters (m)
-  thruster_kill_plane: 1.0
 
 # TODO: sim uses some of this stuff. Figure out what we can delete
 thruster: 
