@@ -21,7 +21,7 @@ controller_overseer:
 
 controller:
   scaling_factor: 1000000
-  active_force_mask: [2, 2, 2, 1, 1, 2]
+  active_force_mask: [2, 2, 2, 1, 1, 1]
 
   feed_forward:
     base_wrench: [0.00, 0.0, -0.38, 0.058, 0.010, -0.020]
@@ -46,18 +46,18 @@ controller:
       eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2, 0.2, 0.4, 10.0, 10.0, 0.5]
+      lambda: [0.2, 0.2, 0.4, 10.0, 10.0, 0.35]
 
       #format: 'a, m' for each degree of freedom
       #where:
-      #  m = gravity well saturation error
       #  a = gravity well saturation amplitude
+      #  m = gravity well saturation error
       velocity_curve_params: [7.0, 2.0,  #x
                               7.0, 2.0,  #y
                               10.0, 0.5,  #z
                               15.0, 1.0,  #r
                               15.0, 1.0,  #p
-                              1.5, 1.5] #yaw
+                              1.5, 1.2] #yaw
 
     #the maximum accelerations permitted by the SMC controller
     #these do not affect decreases in speed - only increases
@@ -71,7 +71,7 @@ controller:
     #the default gains for normal operation
     p_gains: [20.0, 20.0, 200.0, 1.0, 1.0, 2.0]
     i_gains: [0.0, 0.0, 0.0, 0.1, 0.1, 0.1]
-    d_gains: [5.0, 5.0, 90.0, 0.1, 0.1, 4.0]
+    d_gains: [5.0, 5.0, 90.0, 0.1, 0.1, 3.0]
 
     # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
