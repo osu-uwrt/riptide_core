@@ -111,11 +111,11 @@ class ESCBoardMonitor(FirmwareMonitor):
         "FAULT_WATCHDOG_RESET",
         "FAULT_WATCHDOG_WARNING",
         "FAULT_CAN_INTERNAL_ERROR",
-        "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
         "FAULT_TIMER_MISSED",
         "FAULT_ROS_BAD_COMMAND",
-        "FAULT_THRUSTER_TIMEOUT"
+        "FAULT_THRUSTER_TIMEOUT",
+        "FAULT_RAW_MODE",
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage', board_num: int):
@@ -127,11 +127,11 @@ class PowerBoardMonitor(FirmwareMonitor):
         "FAULT_WATCHDOG_RESET",
         "FAULT_WATCHDOG_WARNING",
         "FAULT_CAN_INTERNAL_ERROR",
-        "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
         "FAULT_TIMER_MISSED",
         "FAULT_ROS_BAD_COMMAND",
         "FAULT_ADC_ERROR",
+        "FAULT_SHT41_ERROR",
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
@@ -142,11 +142,12 @@ class CameraCageBBMonitor(FirmwareMonitor):
         "FAULT_WATCHDOG_RESET",
         "FAULT_WATCHDOG_WARNING",
         "FAULT_CAN_INTERNAL_ERROR",
-        "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
         "FAULT_TIMER_MISSED",
+        "FAULT_ROS_BAD_COMMAND",
         "FAULT_DEPTH_INIT_ERROR",
         "FAULT_DEPTH_ERROR",
+        "FAULT_SHT41_ERROR",
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
@@ -157,11 +158,10 @@ class ActuatorBoardMonitor(FirmwareMonitor):
         "FAULT_WATCHDOG_RESET",
         "FAULT_WATCHDOG_WARNING",
         "FAULT_CAN_INTERNAL_ERROR",
-        "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
         "FAULT_TIMER_MISSED",
         "FAULT_ACTUATOR_FAILURE",
-        "FAULT_ACTUATOR_UNPLUGGED"
+        "FAULT_ACTUATOR_UNPLUGGED",
     ]
 
     def __init__(self, node: 'rclpy.Node', message_lifetime, asserting_kill: 'ExpiringMessage'):
@@ -172,10 +172,10 @@ class SmartBatteryMonitor(FirmwareMonitor):
         "FAULT_WATCHDOG_RESET",
         "FAULT_WATCHDOG_WARNING",
         "FAULT_CAN_INTERNAL_ERROR",
-        "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
         "FAULT_TIMER_MISSED",
-        "FAULT_BQ40_ERROR"
+        "FAULT_BQ40_ERROR",
+        "FAULT_SHT41_ERROR"
     ]
 
     cachedSerialNum = None
@@ -198,8 +198,6 @@ class PuddlesCoproMonitor(FirmwareMonitor):
     ERROR_DESCRIPTIONS = [
         "FAULT_WATCHDOG_RESET",
         "FAULT_WATCHDOG_WARNING",
-        "FAULT_CAN_INTERNAL_ERROR",
-        "FAULT_CAN_RECV_ERROR",
         "FAULT_ROS_ERROR",
         "FAULT_TIMER_MISSED",
         "FAULT_ROS_BAD_COMMAND",
