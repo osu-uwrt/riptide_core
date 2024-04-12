@@ -65,13 +65,17 @@
         </xacro:camera_macro>
     </xacro:macro>
 
-    <xacro:macro name="zed_macro" params="namespace parent_link name *origin">
-        <link name="${name}" />
+    <xacro:macro name="zed_macro" params="namespace parent_link">
+        <!-- this link must be called "zed_camera_link" because thats what the zed launch attaches its tree to -->
+        <link name="zed_camera_link">
+            <xacro:dummy_inertia/>
+            <xacro:no_collision/>
+        </link>
 
-        <joint name="${namespace}/${name}_origin_joint" type="fixed">
+        <joint name="${namespace}/zed_camera_link_origin_joint" type="fixed">
             <parent link="${parent_link}" />
-            <child link="${name}" />
-            <xacro:insert_block name="origin" />
+            <child link="zed_camera_link" />
+            <origin xyz="0 0 0" rpy="0 0 0"/>
         </joint>
     </xacro:macro>
 

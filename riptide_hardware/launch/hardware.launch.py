@@ -1,7 +1,7 @@
 import launch
 from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
-from launch_ros.actions import PushRosNamespace
+from launch_ros.actions import PushRosNamespace, Node
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.actions import GroupAction, IncludeLaunchDescription
 from ament_index_python.packages import get_package_share_directory
@@ -29,11 +29,6 @@ dvl_launch_file = os.path.join(
 imu_launch_file = os.path.join(
     get_package_share_directory('riptide_imu'),
     "launch", "imu.launch.py"
-)
-
-imu_power_cycle_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "launch", "imu_power_cycle.py" #TODO: make this an includelaunchdescription
 )
 
 # zed_launch_file = os.path.join(
@@ -78,9 +73,17 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(imu_power_cycle_launch_file),
-            #     launch_arguments=[]
-            # ),
+            Node(
+                package='riptide_hardware2',
+                executable='simple_actuator_interface',
+                name='simple_actuator_interface',
+                output='screen',
+            ),
+            Node(
+                package='riptide_hardware2',
+                executable='imu_power_cycle',
+                name='imu_power_cycle',
+                output='screen',
+            ),
         ], scoped=True)
     ])

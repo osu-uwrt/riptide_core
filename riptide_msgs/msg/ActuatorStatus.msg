@@ -19,6 +19,7 @@ uint8 DROPPER_READY=2
 uint8 DROPPER_DROPPING=3
 uint8 DROPPER_DROPPED=4
 
+bool actuators_armed
 uint8 claw_state
 uint8 torpedo_state
 uint8 torpedo_available_count
