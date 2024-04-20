@@ -9,8 +9,6 @@ import os
 
 zed_launch_file = os.path.join(get_package_share_directory(
     "zed_wrapper"), "launch", "zed_camera.launch.py")
-vision_model_path = os.path.join(get_package_share_directory(
-    "riptide_hardware2"), "weights", "best.onnx")
 zed_config_path = os.path.join(get_package_share_directory('riptide_hardware2'), "cfg", "zed_common.yaml")
 
 def generate_launch_description():
@@ -26,10 +24,12 @@ def generate_launch_description():
         IncludeLaunchDescription(
             AnyLaunchDescriptionSource(zed_launch_file),
             launch_arguments=[
-                ('config', zed_config_path),
+                ('config_path', zed_config_path),
                 ('camera_model', 'zed2i'),
                 ('publish_tf', "false"),
+                ('publish_imu_tf', 'false'),
                 ('publish_map_tf', "false"),
+                ('publish_urdf', 'false')
             ]
         ),
 

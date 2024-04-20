@@ -95,9 +95,9 @@
         <!-- Suffix isn't set here because right now we just have one, but you should just need to change the suffix for each and it'll work. -->
         <xacro:unless value="${camera['type'] == 'mono'}">
           <xacro:if value="${camera['type'] == 'zed'}">
-          <!-- TODO: zed macro is not needed when we figure out how to change the name of the zed base link-->
             <xacro:zed_macro
              namespace="${namespace}"
+             name="talos/${camera['name']}_link"
              parent_link="${camera_base_link}" />
           </xacro:if>
         </xacro:unless>

@@ -184,7 +184,7 @@ droppers:
 cameras: [
   {
     type: zed, 
-    name: zed,
+    name: zed_camera,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.036, -0.0874, 0, 0, 0, 0]
