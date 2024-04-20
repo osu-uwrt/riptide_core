@@ -69,9 +69,9 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [20.0, 20.0, 200.0, 1.0, 1.0, 2.0]
-    i_gains: [0.0, 0.0, 0.0, 0.1, 0.1, 0.1]
-    d_gains: [5.0, 5.0, 90.0, 0.1, 0.1, 3.0]
+    p_gains: [20.0, 20.0, 200.0, 1.0, 1.0, 75.0]
+    i_gains: [0.0, 0.0, 0.0, 0.1, 0.1, 7.0]
+    d_gains: [5.0, 5.0, 90.0, 0.1, 0.1, 0.5]
 
     # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
@@ -184,7 +184,7 @@ droppers:
 cameras: [
   {
     type: zed, 
-    name: zed,
+    name: zed_camera,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.036, -0.0874, 0, 0, 0, 0]
