@@ -71,6 +71,7 @@ def evaluate_xacro(context, *args, **kwargs):
         zed_state_publisher = Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
+            namespace='zed',
             name='zed_state_publisher',
             output='screen',
             parameters=[

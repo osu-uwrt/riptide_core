@@ -24,7 +24,7 @@ controller:
   active_force_mask: [2, 2, 2, 1, 1, 1]
 
   feed_forward:
-    base_wrench: [0.00, 0.0, -0.38, 0.058, 0.010, -0.020]
+    base_wrench: [0.00, 0.0, -6.0, 0.058, 0.010, -0.020]
 
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
