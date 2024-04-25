@@ -19,7 +19,7 @@ controller:
 
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
-    base_wrench: [0.00, 0.0, -0.38, 0.058, 0.010, -0.020]
+    base_wrench: [0.00, 0.0, -6.0, 0.058, 0.010, -0.020]
 
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
