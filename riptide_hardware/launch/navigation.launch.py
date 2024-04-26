@@ -1,6 +1,6 @@
 import launch
 import launch.actions
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 from launch.substitutions import LaunchConfiguration as LC
 from launch.substitutions import PathJoinSubstitution
 import xacro
@@ -19,12 +19,6 @@ def evaluate_xacro(context, *args, **kwargs):
         get_package_share_directory('riptide_descriptions2'),
         'robots',
         robot + '.xacro'
-    ]).perform(context)
-    
-    zed_model_path = PathJoinSubstitution([
-        get_package_share_directory('zed_wrapper'),
-        'urdf',
-        'zed_descr.urdf.xacro'
     ]).perform(context)
 
     try:
@@ -56,31 +50,44 @@ def evaluate_xacro(context, *args, **kwargs):
             arguments=['/tmp/model.urdf']
         )
         
+        nodes = [robot_state_publisher, joint_state]
+        
         #
         # zed state publisher
         #
+        try:
+            zed_model_path = PathJoinSubstitution([
+                get_package_share_directory('zed_wrapper'),
+                'urdf',
+                'zed_descr.urdf.xacro'
+            ]).perform(context)
 
-        zed_description_data = xacro.process_file(zed_model_path,  mappings={
-            'debug': debug,
-            'namespace': robot,
-            'inertial_reference_frame':'world',
-            'camera_name': robot + "/zed",
-            'camera_model': "zed2i"}
-        ).toxml()
+            zed_description_data = xacro.process_file(zed_model_path,  mappings={
+                'debug': debug,
+                'namespace': robot,
+                'inertial_reference_frame':'world',
+                'camera_name': robot + "/zed",
+                'camera_model': "zed2i"}
+            ).toxml()
+            
+            zed_state_publisher = Node(
+                package='robot_state_publisher',
+                executable='robot_state_publisher',
+                namespace='zed',
+                name='zed_state_publisher',
+                output='screen',
+                parameters=[
+                    {'robot_description': zed_description_data},
+                    {'use_tf_static': True}
+                ]
+            )
+            
+            nodes.append(zed_state_publisher)
+        except PackageNotFoundError:
+            print("zed_wrapper not found. Launching without zed TF")
         
-        zed_state_publisher = Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            namespace='zed',
-            name='zed_state_publisher',
-            output='screen',
-            parameters=[
-                {'robot_description': zed_description_data},
-                {'use_tf_static': True}
-            ]
-        )
-        
-        return [robot_state_publisher, joint_state, zed_state_publisher]
+        return nodes
+    
     except Exception as ex:
         print()
         print("---------------------------------------------")
