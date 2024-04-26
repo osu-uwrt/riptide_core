@@ -24,6 +24,7 @@ controller:
   active_force_mask: [2, 2, 2, 1, 1, 1]
 
   feed_forward:
+    #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.00, 0.0, -6.0, 0.058, 0.010, -0.020]
 
   SMC:
