@@ -18,6 +18,10 @@ find_package(geometry_msgs REQUIRED)
 
 add_executable(run_acoustics src/Acoustics.cpp)
 
+target_include_directories(run_acoustics  PUBLIC
+$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+$<INSTALL_INTERFACE:include>)
+
 ament_target_dependencies(run_acoustics
 std_msgs 
 geometry_msgs

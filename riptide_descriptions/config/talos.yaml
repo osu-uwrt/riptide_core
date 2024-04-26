@@ -164,6 +164,12 @@ depth:
   sigma: 0.010 # Stdev in m. Used by gazebo
   pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
 
+acoustics:
+  port:
+    pose: [ -0.305, 0.125, 0.045, 0.0, 0.0, 0.0]
+  starboard:
+    pose: [ -0.315, 0.125, 0.045, 0.0, 0.0, 0.0]
+
 imu:
   # topic: /imu/imu/data
   rate: 100 #Hz
