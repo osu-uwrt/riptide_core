@@ -4,12 +4,8 @@
     baud: 230400
     reconnect_ms: 500
     frame_id: "talos/imu_link"
-    # Do continuous hsi calculations
-    hsiEnable: false
-    # Apply hsi to sensour output
-    hsiOutput: false
-    # 1-5 (slow-fast)
-    convergenceRate: 1
+    # declination of current location (degrees) https://www.magnetic-declination.com/
+    magneticDeclination: -4.96
     # Error handler
     VNErrorType: [
       "hard fault",
