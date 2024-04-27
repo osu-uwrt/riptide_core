@@ -26,10 +26,10 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
-# zed_launch_file = os.path.join(
-#     get_package_share_directory('riptide_hardware2'),
-#     "launch", "zed.launch.py"
-# )
+zed_launch_file = os.path.join(
+    get_package_share_directory('riptide_hardware2'),
+    "launch", "zed.launch.py"
+)
 
 
 def generate_launch_description():
@@ -66,6 +66,25 @@ def generate_launch_description():
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(zed_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
+
+            Node(
+                package='riptide_hardware2',
+                executable='simple_actuator_interface',
+                name='simple_actuator_interface',
+                output='screen',
+            ),
+            Node(
+                package='riptide_hardware2',
+                executable='imu_power_cycle',
+                name='imu_power_cycle',
+                output='screen',
             ),
         ], scoped=True)
     ])

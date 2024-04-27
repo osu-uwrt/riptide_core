@@ -1,28 +1,31 @@
 import launch
 import launch.actions
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import get_package_share_directory, PackageNotFoundError
 from launch.substitutions import LaunchConfiguration as LC
-from launch.substitutions import PathJoinSubstitution, PythonExpression
+from launch.substitutions import PathJoinSubstitution
 import xacro
 import os
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, GroupAction
-from launch.conditions import IfCondition
 from launch_ros.actions import Node, PushRosNamespace
 import traceback
+
 
 # evaluates LaunchConfigurations in context for use with xacro.process_file(). Returns a list of launch actions to be included in launch description
 def evaluate_xacro(context, *args, **kwargs):
     robot = LC('robot').perform(context)
     debug = LC('debug').perform(context)
 
-    modelPath = PathJoinSubstitution([
+    robot_model_path = PathJoinSubstitution([
         get_package_share_directory('riptide_descriptions2'),
         'robots',
         robot + '.xacro'
     ]).perform(context)
 
     try:
-        xacroData = xacro.process_file(modelPath,  mappings={'debug': debug, 'namespace': robot, 'inertial_reference_frame':'world'}).toxml()
+        #
+        # robot state publisher
+        #
+        robot_description_data = xacro.process_file(robot_model_path,  mappings={'debug': debug, 'namespace': robot, 'inertial_reference_frame':'world'}).toxml()
 
         robot_state_publisher = Node(
             name = 'robot_state_publisher',
@@ -31,13 +34,13 @@ def evaluate_xacro(context, *args, **kwargs):
             output = 'screen',
             arguments=['--ros-args', '--log-level', 'WARN'],
             parameters=[
-                {'robot_description': xacroData},
+                {'robot_description': robot_description_data},
                 {'use_tf_static': True}
-                ], # Use subst here
+            ], # Use subst here
         )
         
         with open('/tmp/model.urdf', 'w') as urdf_file:
-            urdf_file.write(xacroData)
+            urdf_file.write(robot_description_data)
         
         joint_state = Node(
             name="joint_state_publisher",
@@ -47,11 +50,48 @@ def evaluate_xacro(context, *args, **kwargs):
             arguments=['/tmp/model.urdf']
         )
         
-        return [robot_state_publisher, joint_state]
+        nodes = [robot_state_publisher, joint_state]
+        
+        #
+        # zed state publisher
+        #
+        try:
+            zed_model_path = PathJoinSubstitution([
+                get_package_share_directory('zed_wrapper'),
+                'urdf',
+                'zed_descr.urdf.xacro'
+            ]).perform(context)
+
+            zed_description_data = xacro.process_file(zed_model_path,  mappings={
+                'debug': debug,
+                'namespace': robot,
+                'inertial_reference_frame':'world',
+                'camera_name': robot + "/zed",
+                'camera_model': "zed2i"}
+            ).toxml()
+            
+            zed_state_publisher = Node(
+                package='robot_state_publisher',
+                executable='robot_state_publisher',
+                namespace='zed',
+                name='zed_state_publisher',
+                output='screen',
+                parameters=[
+                    {'robot_description': zed_description_data},
+                    {'use_tf_static': True}
+                ]
+            )
+            
+            nodes.append(zed_state_publisher)
+        except PackageNotFoundError:
+            print("zed_wrapper not found. Launching without zed TF")
+        
+        return nodes
+    
     except Exception as ex:
         print()
         print("---------------------------------------------")
-        print("COULD NOT OPEN ROBOT DESCRIPTION XACRO FILE")
+        print("COULD NOT OPEN ROBOT DESCRIPTION OR ZED XACRO FILE")
         traceback.print_exc()
         print("---------------------------------------------")
         print()

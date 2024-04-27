@@ -31,6 +31,9 @@ class ExpiringMessage:
         else:
             return None
 
+    def force_expire(self):
+        self._receive_time = None
+
 # Constants from Firmware
 class Mk2Board(enum.Enum):
     def __new__(cls, bus_id: int, client_id: int, board_name: str, friendly_name: str) -> 'Mk2Board':

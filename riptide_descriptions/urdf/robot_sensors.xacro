@@ -54,15 +54,16 @@
   <xacro:macro name="cameras_macro" params="namespace cameras">
     <xacro:if value="${cameras != []}">
       <xacro:property name="camera" value="${cameras[0]}"/>
+      <xacro:property name="camera_base_link" value="${namespace}/${camera['name']}_base_link"/>
 
-      <link name="${namespace}/${camera['name']}_base_link">
+      <link name="${camera_base_link}">
         <xacro:dummy_inertia/>
         <xacro:no_collision/>
       </link>
 
-      <joint name="${namespace}/${camera['name']}_joint" type="fixed">
+      <joint name="${camera_base_link}_joint" type="fixed">
         <parent link="${namespace}/origin"/>
-        <child link="${namespace}/${camera['name']}_base_link"/>
+        <child link="${camera_base_link}"/>
         <origin xyz="${camera['pose'][0]} ${camera['pose'][1]} ${camera['pose'][2]}" 
                 rpy="${camera['pose'][3]} ${camera['pose'][4]} ${camera['pose'][5]}"/>
       </joint>
@@ -93,11 +94,17 @@
         <!-- MYNT/ZED Camera -->
         <!-- Suffix isn't set here because right now we just have one, but you should just need to change the suffix for each and it'll work. -->
         <xacro:unless value="${camera['type'] == 'mono'}">
+          <xacro:if value="${camera['type'] == 'zed'}">
+            <xacro:zed_macro
+             namespace="${namespace}"
+             name="talos/${camera['name']}_link"
+             parent_link="${camera_base_link}" />
+          </xacro:if>
         </xacro:unless>
       </xacro:unless>
       <xacro:cameras_macro namespace="${namespace}" cameras="${cameras[1:]}"/>
     </xacro:if>
   </xacro:macro>
 
-  <xacro:cameras_macro namespace="${namespace}" cameras="${config['cameras']}"/>
+  <xacro:cameras_macro namespace="${namespace}" cameras="${config['cameras']}"/> 
 </robot>

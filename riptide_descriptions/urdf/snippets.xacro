@@ -65,6 +65,19 @@
         </xacro:camera_macro>
     </xacro:macro>
 
+    <xacro:macro name="zed_macro" params="namespace name parent_link">
+        <link name="${name}">
+            <xacro:dummy_inertia/>
+            <xacro:no_collision/>
+        </link>
+
+        <joint name="${namespace}/zed_camera_link_origin_joint" type="fixed">
+            <parent link="${parent_link}" />
+            <child link="${name}" />
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </joint>
+    </xacro:macro>
+
     <xacro:macro name="dvl_plugin_macro" params="namespace suffix parent_link *origin">
         <link name="${namespace}/dvl${suffix}_link">
             <xacro:dummy_inertia />
