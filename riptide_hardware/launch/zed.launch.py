@@ -46,7 +46,7 @@ def generate_launch_description():
                     'general.camera_model': "zed2i",
                     'pos_tracking.publish_tf': False,
                     'pos_tracking.publish_map_tf': False,
-                    'sensors.publish_imu_tf': False
+                    'sensors.publish_imu_tf': True
                 },
             ]
         ),
