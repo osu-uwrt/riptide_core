@@ -41,7 +41,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robot', default_value="tempest",
                               description="Name of the vehicle"),
-
+        
         GroupAction([
             PushRosNamespace(
                 LC("robot")
@@ -70,7 +70,7 @@ def generate_launch_description():
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(imu_launch_file),
                 launch_arguments=[
-                    ('robot', LC('robot')),
+                    ('robot', LC('robot'))
                 ]
             ),
             IncludeLaunchDescription(

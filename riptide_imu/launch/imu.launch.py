@@ -10,7 +10,7 @@ def generate_launch_description():
     this_dir = get_package_share_directory('riptide_imu')
 
     return LaunchDescription([
-        DeclareLaunchArgument(name="port", default_value="/dev/ttyTHS0",
+        DeclareLaunchArgument(name="imu_port", default_value="/dev/ttyTHS0",
                               description="Port to connect over"),
 
         Node(
@@ -20,7 +20,7 @@ def generate_launch_description():
             parameters=[
                 os.path.join(this_dir, 'config', 'vectornav.yaml'),
                 {
-                    "port" : LaunchConfiguration("port"),
+                    "port" : LaunchConfiguration("imu_port")
                 }
             ]
         )
