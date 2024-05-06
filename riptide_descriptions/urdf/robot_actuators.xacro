@@ -50,6 +50,19 @@
     </link>
   </xacro:macro>
 
+  <xacro:macro name="launcher_macro" params="namespace name parent *origin">
+    <link name="${namespace}/${name}_link">
+      <xacro:dummy_inertia/>
+      <xacro:no_collision/>
+    </link>
+
+    <joint name="${namespace}/${name}_joint" type="fixed">
+      <xacro:insert_block name="origin"/>
+      <parent link="${parent}"/>
+      <child link="${namespace}/${name}_link"/>
+    </joint>
+  </xacro:macro>
+
   <xacro:macro name="torpedo_macro" params="namespace config">
     <xacro:property name="torpedo" value="${config['torpedos']}"/>
     <joint name="${namespace}/torpedo_joint" type="fixed">
@@ -63,6 +76,16 @@
       <xacro:dummy_inertia />
       <xacro:no_collision />
     </link>
+
+    <xacro:launcher_macro namespace="${namespace}" name="torpedo_0" parent="${namespace}/torpedo_link">
+      <origin xyz="0 ${-torpedo['baseline'] / 2} 0"
+              rpy="0 0 0"/>
+    </xacro:launcher_macro>
+
+    <xacro:launcher_macro namespace="${namespace}" name="torpedo_1" parent="${namespace}/torpedo_link">
+      <origin xyz="0 ${torpedo['baseline'] / 2} 0"
+              rpy="0 0 0"/>
+    </xacro:launcher_macro>
   </xacro:macro>
 
   <xacro:macro name="dropper_macro" params="namespace config">
