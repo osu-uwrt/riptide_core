@@ -1,4 +1,3 @@
-import launch
 from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch_ros.actions import PushRosNamespace, Node
@@ -36,6 +35,10 @@ zed_launch_file = os.path.join(
     "launch", "zed.launch.py"
 )
 
+apriltag_launch_file = os.path.join(
+    get_package_share_directory('riptide_hardware2'),
+    "launch", "apriltag.launch.py"
+)
 
 def generate_launch_description():
     return LaunchDescription([
@@ -75,6 +78,12 @@ def generate_launch_description():
             ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(zed_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(apriltag_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
