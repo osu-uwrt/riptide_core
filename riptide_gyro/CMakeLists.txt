@@ -12,6 +12,21 @@ find_package(rclcpp REQUIRED)
 set(deps
   rclcpp)
 
+# build serial library
+file(GLOB serial_library_sources RELATIVE ${PROJECT_SOURCE_DIR}
+  src/serial_library/*.cpp)
+
+add_library(serial_library ${serial_library_sources})
+
+ament_target_dependencies(serial_library ${deps})
+
+target_include_directories(serial_library PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+install(TARGETS serial_library
+  DESTINATION lib/${PROJECT_NAME})
+
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest QUIET) 
 
@@ -43,6 +58,8 @@ if(BUILD_TESTING)
 
     ament_target_dependencies(test_serial_library
       ${deps})
+    
+    target_link_libraries(test_serial_library serial_library)
     
     install(TARGETS test_serial_library
       DESTINATION lib/${PROJECT_NAME})
