@@ -24,20 +24,6 @@ namespace uwrt_gyro
 
         return nextUnusedCharacter;
     }
-
-
-    template<typename T>
-    T convertCString(const char *str)
-    {
-        T val;
-        for(int i = 0; i < sizeof(T) / sizeof(*str); i++)
-        {
-            val |= str[i];
-            val << sizeof(*str);
-        }
-
-        return val;
-    }
 }
 
 

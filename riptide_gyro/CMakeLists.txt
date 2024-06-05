@@ -50,6 +50,7 @@ if(BUILD_TESTING)
     ament_add_gtest(test_serial_library
       ${test_serial_library_sources}
       test/riptide_gyro/RosTest.cpp
+      test/riptide_gyro/LinuxTransceiverTest.cpp
       test/riptide_gyro/ExecuteTests.cpp)
     
     target_include_directories(test_serial_library PUBLIC

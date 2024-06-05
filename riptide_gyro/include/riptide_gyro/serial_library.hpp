@@ -24,6 +24,7 @@ namespace uwrt_gyro
     class LinuxSerialTransceiver : public SerialTransceiver
     {
         public:
+        LinuxSerialTransceiver() = default;
         LinuxSerialTransceiver(
             const rclcpp::Node::SharedPtr node,
             const std::string& fileName,
@@ -60,11 +61,21 @@ namespace uwrt_gyro
     #endif
 
 
-    static size_t extractFieldFromBuffer(char *msgStart, SerialFrame frame, SerialFieldId field, char *dst);
+    size_t extractFieldFromBuffer(char *msgStart, SerialFrame frame, SerialFieldId field, char *dst);
     
     template<typename T>
-    T convertCString(const char *str);
+    T convertCString(const char *str)
+    {
+        T val;
+        for(int i = 0; i < sizeof(T) / sizeof(*str); i++)
+        {
+            val |= str[i];
+            val << sizeof(*str);
+        }
 
+        return val;
+    }
+    
     template<typename T>
     class ProtectedResource
     {
@@ -92,7 +103,12 @@ namespace uwrt_gyro
     class SerialProcessor
     {
         public:
-        SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, char *syncValue);
+        #if defined(USE_LINUX)
+        typedef std::shared_ptr<SerialProcessor> SharedPtr;
+        #endif
+
+        SerialProcessor() = default;
+        SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char *syncValue);
         ~SerialProcessor();
         void update(const Time& now);
         bool hasDataForField(SerialFieldId field);
@@ -108,7 +124,7 @@ namespace uwrt_gyro
             transmissionBuffer[PROCESSOR_BUFFER_SIZE];
         
         size_t msgBufferCursorPos;
-        char *syncValue;
+        const char *syncValue;
         const SerialFramesMap frameMap;
         const SerialFrameId defaultFrame;
         

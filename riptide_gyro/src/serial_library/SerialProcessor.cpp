@@ -2,7 +2,7 @@
 
 namespace uwrt_gyro
 {
-    SerialProcessor::SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, char *syncValue)
+    SerialProcessor::SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char *syncValue)
      : transceiver(transceiver),
        frameMap(frames),
        msgBufferCursorPos(0),
@@ -13,6 +13,7 @@ namespace uwrt_gyro
         transceiver.init();
 
         //check that the frames include a sync
+        //TODO: must check all individual frames for a sync, not the frame ids
         if(frames.find(FIELD_SYNC) == frames.end())
         {
             THROW_SERIAL_LIB_EXCEPTION("No sync field provided in the serial frames map.");

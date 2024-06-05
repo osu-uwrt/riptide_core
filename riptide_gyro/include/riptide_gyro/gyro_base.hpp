@@ -69,6 +69,9 @@ typedef map<SerialFieldId, SerialDataStamped> SerialValuesMap;
 //
 
 class SerialLibraryException
+#if defined(USE_LINUX)
+: public std::exception
+#endif
 {
     public:
     SerialLibraryException(const string& error)

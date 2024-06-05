@@ -24,4 +24,15 @@ class RosTest : public ::testing::Test
     std::string home;
 };
 
+class LinuxTransceiverTest : public RosTest
+{
+    protected:
+    void SetUp() override;
+    void TearDown() override;
+
+    private:
+    pid_t socatProc;
+};
+
+
 #endif
