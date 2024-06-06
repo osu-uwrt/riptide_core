@@ -37,37 +37,8 @@
 
 
 //
-// library typedefs
+// exception
 //
-
-#define FIELD_SYNC INT_MAX
-#define FIELD_FRAME INT_MAX - 1
-typedef int SerialFrameId;
-typedef int SerialFieldId;
-
-//describes the fields held by a serial frame. Each frame represents 8 bits.
-typedef vector<SerialFieldId> SerialFrame;
-typedef map<SerialFrameId, SerialFrame> SerialFramesMap;
-
-struct SerialData
-{
-    size_t numData;
-    char data[MAX_DATA_BYTES];
-};
-
-struct SerialDataStamped
-{
-    Time timestamp;
-    SerialData data;
-};
-
-typedef map<SerialFieldId, SerialDataStamped> SerialValuesMap;
-
-
-//
-// other types
-//
-
 class SerialLibraryException
 #if defined(USE_LINUX)
 : public std::exception
@@ -88,3 +59,48 @@ class SerialLibraryException
 
 #define THROW_SERIAL_LIB_EXCEPTION_WTIH_LINE(errmsg, line) throw SerialLibraryException(__FILE__ "@" #line ": " errmsg)
 #define THROW_SERIAL_LIB_EXCEPTION(errmsg) THROW_SERIAL_LIB_EXCEPTION_WTIH_LINE(errmsg, __LINE__)
+
+
+
+//
+// library typedefs
+//
+
+#define FIELD_SYNC INT_MAX
+#define FIELD_FRAME INT_MAX - 1
+typedef int SerialFrameId;
+typedef int SerialFieldId;
+
+//describes the fields held by a serial frame. Each frame represents 8 bits.
+typedef vector<SerialFieldId> SerialFrame;
+typedef map<SerialFrameId, SerialFrame> SerialFramesMap;
+
+struct SerialData
+{
+    size_t numData;
+    char data[MAX_DATA_BYTES];
+
+    void operator=(const SerialData& rhs)
+    {
+        if(rhs.numData >= MAX_DATA_BYTES)
+        {
+            THROW_SERIAL_LIB_EXCEPTION("SerialData being assigned must have less than " + std::to_string(numData) + " data");
+        }
+        numData = rhs.numData;
+        memcpy(data, rhs.data, numData);
+    }
+};
+
+struct SerialDataStamped
+{
+    Time timestamp;
+    SerialData data;
+
+    void operator=(const SerialDataStamped& rhs)
+    {
+        timestamp = rhs.timestamp;
+        data = rhs.data;
+    }
+};
+
+typedef map<SerialFieldId, SerialDataStamped> SerialValuesMap;

@@ -60,17 +60,18 @@ namespace uwrt_gyro
 
     #endif
 
+    size_t extractFieldFromBuffer(char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen);
+    void insertFieldToBuffer(char *dst, size_t dstLen, SerialFrame frame, SerialFieldId field, const char *src, size_t srcLen);
+    SerialData serialDataFromString(const char *str, size_t numData);
 
-    size_t extractFieldFromBuffer(char *msgStart, SerialFrame frame, SerialFieldId field, char *dst);
-    
     template<typename T>
     T convertCString(const char *str)
     {
         T val;
-        for(int i = 0; i < sizeof(T) / sizeof(*str); i++)
+        for(size_t i = 0; i < sizeof(T) / sizeof(*str); i++)
         {
             val |= str[i];
-            val << sizeof(*str);
+            val = val << sizeof(*str);
         }
 
         return val;
@@ -114,7 +115,7 @@ namespace uwrt_gyro
         bool hasDataForField(SerialFieldId field);
         SerialDataStamped getField(SerialFieldId field);
         void setField(SerialFieldId field, SerialData data, const Time& now);
-        void send(SerialFramesMap map);
+        void send(SerialFrame frame);
 
         private:
         // regular member vars

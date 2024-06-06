@@ -14,9 +14,13 @@ namespace uwrt_gyro
 
         //check that the frames include a sync
         //TODO: must check all individual frames for a sync, not the frame ids
-        if(frames.find(FIELD_SYNC) == frames.end())
+        for(int i = 0; i < frames.size(); i++)
         {
-            THROW_SERIAL_LIB_EXCEPTION("No sync field provided in the serial frames map.");
+            SerialFrame frame = frames.at(i);
+            if(std::find(frame.begin(), frame.end(), FIELD_SYNC) == frame.end())
+            {
+                THROW_SERIAL_LIB_EXCEPTION("No sync field provided in frame " + std::to_string(i) + " of the map.");
+            }
         }
     }
 
@@ -56,13 +60,16 @@ namespace uwrt_gyro
             return;
         }
 
+        int firstSyncLocationSz = msgBufferCursorPos - (int) firstSyncLocation;
+
         // can process message here. first need to figure out the frame to use.
         // if there was only one frame provided, this is easy. otherwise, need to look for indication in the message
         SerialFrame frameToUse = frameMap.at(defaultFrame);
-        if(frameMap.size() > 1)
+        size_t frameMapSz = frameMap.size();
+        if(frameMapSz > 1)
         {
-            char frameIdBuf[frameMap.size()] = {0};
-            size_t bytes = extractFieldFromBuffer(firstSyncLocation, frameToUse, FIELD_FRAME, frameIdBuf);
+            char frameIdBuf[] = {0};
+            size_t bytes = extractFieldFromBuffer(firstSyncLocation, firstSyncLocationSz, frameToUse, FIELD_FRAME, frameIdBuf, frameMapSz);
             if(bytes == 0)
             {
                 throw SerialLibraryException("No frame id found in message");
@@ -79,7 +86,7 @@ namespace uwrt_gyro
 
             if(values->find(*it) == values->end())
             {
-                values->at(*it) = SerialDataStamped();
+                values->insert({ *it, SerialDataStamped() });
             }
 
             valueMap.unlockResource();
@@ -87,12 +94,13 @@ namespace uwrt_gyro
 
         //iterate through known fields and update their values
         SerialValuesMap *values = valueMap.lockResource();
-        char fieldBuf[frameMap.size()];
+        const int fieldBufSz = frameMap.size();
+        char fieldBuf[fieldBufSz];
         for(auto it = values->begin(); it != values->end(); it++)
         {
             memset(fieldBuf, 0, frameMap.size());
             SerialFieldId field = it->first;
-            size_t extracted = extractFieldFromBuffer(firstSyncLocation, frameToUse, field, fieldBuf);
+            size_t extracted = extractFieldFromBuffer(firstSyncLocation, firstSyncLocationSz, frameToUse, field, fieldBuf, fieldBufSz);
             if(extracted > 0)
             {
                 SerialDataStamped serialData;
@@ -102,6 +110,8 @@ namespace uwrt_gyro
                 it->second = serialData;
             }
         }
+
+        valueMap.unlockResource();
     }
     
     
@@ -117,7 +127,12 @@ namespace uwrt_gyro
     SerialDataStamped SerialProcessor::getField(SerialFieldId field)
     {
         SerialValuesMap *values = valueMap.lockResource();
-        SerialDataStamped data = values->at(field);
+        SerialDataStamped data;
+        if(values->find(field) != values->end())
+        {
+            data = values->at(field);
+        }
+
         valueMap.unlockResource();
         return data;
     }
@@ -126,14 +141,41 @@ namespace uwrt_gyro
     void SerialProcessor::setField(SerialFieldId field, SerialData data, const Time& now)
     {
         SerialValuesMap *values = valueMap.lockResource();
-        values->at(field).timestamp = now;
-        values->at(field).data = data;
+        if(values->find(field) == values->end())
+        {
+            //no field currently set, so add one
+            values->insert({ field, SerialDataStamped() });
+        }
+
+        SerialDataStamped stampedData;
+        stampedData.data = data;
+        stampedData.timestamp = now;
+        values->at(field) = stampedData;
         valueMap.unlockResource();
     }
     
     
-    void SerialProcessor::send(SerialFramesMap map)
+    void SerialProcessor::send(SerialFrame frame)
     {
+        //loop through minimal set of frames and pack each frame into the transmission buffer
+        std::set<SerialFieldId> frameSet(frame.begin(), frame.end());
+        for(auto fieldIt = frameSet.begin(); fieldIt != frameSet.end(); fieldIt++)
+        {
+            SerialValuesMap *values = valueMap.lockResource();
+            if(values->find(*fieldIt) == values->end())
+            {
+                THROW_SERIAL_LIB_EXCEPTION("Cannot send serial frame because it is missing field " + std::to_string(*fieldIt));
+            }
 
+            insertFieldToBuffer(
+                transmissionBuffer, 
+                sizeof(transmissionBuffer), 
+                frame, 
+                *fieldIt, 
+                values->at(*fieldIt).data.data, 
+                values->at(*fieldIt).data.numData);
+        }
+
+        transceiver.send(transmissionBuffer);
     }
 }
