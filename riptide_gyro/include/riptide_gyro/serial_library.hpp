@@ -60,23 +60,52 @@ namespace uwrt_gyro
 
     #endif
 
-    size_t extractFieldFromBuffer(char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen);
+    size_t extractFieldFromBuffer(const char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen);
     void insertFieldToBuffer(char *dst, size_t dstLen, SerialFrame frame, SerialFieldId field, const char *src, size_t srcLen);
     SerialData serialDataFromString(const char *str, size_t numData);
 
+    // packs c string into primitive type. 0 is most significant
     template<typename T>
-    T convertCString(const char *str)
+    T convertFromCString(const char *str, size_t strLen)
     {
-        T val;
-        for(size_t i = 0; i < sizeof(T) / sizeof(*str); i++)
+        T val = 0;
+
+        if(strLen <= 0)
         {
+            return 0;
+        }
+
+        size_t tSz = sizeof(T) / sizeof(*str);
+
+        //shift the smaller number of bytes
+        size_t placesToShift = (tSz < strLen ? tSz : strLen);
+
+        val |= str[0];
+        for(size_t i = 1; i < placesToShift; i++)
+        {
+            val = val << sizeof(*str) * 8;
             val |= str[i];
-            val = val << sizeof(*str);
         }
 
         return val;
     }
     
+    template<typename T>
+    void convertToCString(T val, char *str, size_t strLen)
+    {
+        size_t valLen = sizeof(val);
+        for(int i = valLen / sizeof(*str) - 1; i >= 0; i--)
+        {
+            char newC = (char) val & 0xFF;
+            if(i < strLen)
+            {
+                str[i] = newC;
+            }
+
+            val = val >> sizeof(*str) * 8;
+        }
+    }
+
     template<typename T>
     class ProtectedResource
     {

@@ -2,7 +2,7 @@
 
 namespace uwrt_gyro
 {
-    size_t extractFieldFromBuffer(char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen)
+    size_t extractFieldFromBuffer(const char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen)
     {
         auto it = frame.begin();
         size_t nextUnusedCharacter = 0; //for dst

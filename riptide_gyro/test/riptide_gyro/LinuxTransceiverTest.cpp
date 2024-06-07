@@ -43,7 +43,7 @@ void LinuxTransceiverTest::SetUp()
         socatProc = proc;
 
         //wait for file created by socat to appear
-        while(!(std::filesystem::exists(virtualFile1) || std::filesystem::exists(virtualFile2)))
+        while(!(std::filesystem::exists(virtualFile1) && std::filesystem::exists(virtualFile2)))
         {
             usleep(1000);
         }

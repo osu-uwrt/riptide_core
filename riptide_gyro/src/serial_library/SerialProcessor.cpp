@@ -60,7 +60,7 @@ namespace uwrt_gyro
             return;
         }
 
-        int firstSyncLocationSz = msgBufferCursorPos - (int) firstSyncLocation;
+        int firstSyncLocationSz = msgBufferCursorPos - (size_t) firstSyncLocation;
 
         // can process message here. first need to figure out the frame to use.
         // if there was only one frame provided, this is easy. otherwise, need to look for indication in the message
@@ -68,14 +68,14 @@ namespace uwrt_gyro
         size_t frameMapSz = frameMap.size();
         if(frameMapSz > 1)
         {
-            char frameIdBuf[] = {0};
+            char frameIdBuf[MAX_DATA_BYTES] = {0};
             size_t bytes = extractFieldFromBuffer(firstSyncLocation, firstSyncLocationSz, frameToUse, FIELD_FRAME, frameIdBuf, frameMapSz);
             if(bytes == 0)
             {
                 throw SerialLibraryException("No frame id found in message");
             }
 
-            SerialFrameId frameId = convertCString<SerialFrameId>(frameIdBuf);
+            SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, frameMapSz);
             frameToUse = frameMap.at(frameId);
         }
 
