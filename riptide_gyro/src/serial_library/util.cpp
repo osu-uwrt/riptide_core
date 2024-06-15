@@ -2,6 +2,22 @@
 
 namespace uwrt_gyro
 {
+    char *memstr(const char *haystack, size_t numHaystack, const char *needle, size_t numNeedle)
+    {
+        char *search = (char*) haystack;
+        for(size_t i = 0; i < numHaystack - numNeedle; i++)
+        {
+            if(memcmp(search, needle, numNeedle) == 0)
+            {
+                return search;
+            }
+            search = &search[1];
+        }
+
+        return nullptr;
+    }
+
+
     size_t extractFieldFromBuffer(const char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen)
     {
         auto it = frame.begin();
@@ -49,6 +65,7 @@ namespace uwrt_gyro
             if(idx < dstLen)
             {
                 dst[idx] = src[nextUnusedCharacter];
+                nextUnusedCharacter++;
             }
 
             it++;
@@ -61,6 +78,20 @@ namespace uwrt_gyro
         strcpy(data.data, str);
         data.numData = numData;
         return data;
+    }
+
+
+    SerialFrame normalizeSerialFrame(const SerialFrame& frame)
+    {
+        auto syncIt = std::find(frame.begin(), frame.end(), FIELD_SYNC);
+
+        //start with frame from sync field to end
+        SerialFrame normalizedFrame(syncIt, frame.end());
+
+        //add frame begin to sync field
+        normalizedFrame.insert(normalizedFrame.end(),frame.begin(), syncIt);
+
+        return normalizedFrame;
     }
 }
 

@@ -1,6 +1,6 @@
 #include "riptide_gyro/testing.hpp"
 
-void Type1SerialProcessorTest::SetUp() 
+void Type2SerialProcessorTest::SetUp() 
 {
     LinuxTransceiverTest::SetUp();
     transceiver = uwrt_gyro::LinuxSerialTransceiver(
@@ -37,8 +37,8 @@ void Type1SerialProcessorTest::SetUp()
             {
                 TYPE_2_FIELD_5,
                 FIELD_SYNC,
-                TYPE_2_FIELD_1,
                 FIELD_FRAME,
+                TYPE_2_FIELD_1,
                 TYPE_2_FIELD_6,
                 TYPE_2_FIELD_5,
                 TYPE_2_FIELD_6
@@ -54,7 +54,7 @@ void Type1SerialProcessorTest::SetUp()
         syncValue);
 }
 
-void Type1SerialProcessorTest::TearDown()
+void Type2SerialProcessorTest::TearDown()
 {
     LinuxTransceiverTest::TearDown();
 }

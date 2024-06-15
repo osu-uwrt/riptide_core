@@ -29,10 +29,10 @@ TEST_F(LinuxTransceiverTest, TestTransceiverRdWr)
     
     transceiver1.init();
     transceiver2.init();
-    transceiver1.send(expectedMsg1);
+    transceiver1.send(expectedMsg1.c_str(), expectedMsg1.length());
     size_t recvd1 = transceiver2.recv(buf, sizeof(buf));
     std::string msg1((char*) buf);
-    transceiver2.send(expectedMsg2);
+    transceiver2.send(expectedMsg2.c_str(), expectedMsg2.length());
     size_t recvd2 = transceiver1.recv(buf, sizeof(buf));
     std::string msg2((char*) buf);
     transceiver1.deinit();
@@ -69,10 +69,10 @@ TEST_F(LinuxTransceiverTest, TestTransceiverRoWo)
     
     transceiver1.init();
     transceiver2.init();
-    transceiver1.send(expectedMsg);
+    transceiver1.send(expectedMsg.c_str(), expectedMsg.length());
     size_t recvd1 = transceiver2.recv(buf, sizeof(buf));
     std::string msg1(buf);
-    transceiver2.send("stuff");
+    transceiver2.send("stuff", sizeof("stuff"));
     transceiver1.recv(buf, sizeof(buf));
     std::string msg2(buf);
     transceiver1.deinit();

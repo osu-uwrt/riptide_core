@@ -1,6 +1,25 @@
 #include "riptide_gyro/serial_library.hpp"
 #include "riptide_gyro/testing.hpp"
 
+
+TEST(UtilTest, testMemstr)
+{
+    const char
+        str1[] = "abcdefg",
+        *str1Needle = strstr(str1, "de");
+    
+    EXPECT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "de", 2), str1Needle);
+    EXPECT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "12", 2), nullptr);
+
+    const char
+        str3[] = {'a', 0, 'y', 3, 5, 8, 45, 'u'},
+        str3Needle[] = {'y', 3},
+        *str3NeedleExpected = &str3[2];
+    
+    EXPECT_EQ(uwrt_gyro::memstr(str3, sizeof(str3), str3Needle, 2), str3NeedleExpected);
+}
+
+
 TEST(UtilTest, testConvertFromCString)
 {
     int i;
@@ -96,8 +115,121 @@ TEST_F(Type1SerialProcessorTest, testExtractFieldFromBufferBasic)
 }
 
 
-
-TEST(UtilTest, testInsertFieldToBuffer)
+TEST_F(Type2SerialProcessorTest, testExtractFieldFromBufferAdvanced)
 {
-    GTEST_SKIP();
+    const char *testMsg1 = "Aa1bcde";
+    char dst[5] = {0};
+
+    //1-char extraction of type 2 frame 1 field 1 into bigger buffer (expect "a")
+    size_t result = uwrt_gyro::extractFieldFromBuffer(testMsg1, sizeof(testMsg1), frameMap[0], TYPE_2_FIELD_1, dst, sizeof(dst));
+    ASSERT_EQ(result, 1);
+    ASSERT_TRUE(memcmp(dst, "a", 1) == 0);
+
+    //3-char extraction of type 2 frame 1 field 2 in sequential order (expect "bcd")
+    result = uwrt_gyro::extractFieldFromBuffer(testMsg1, sizeof(testMsg1), frameMap[0], TYPE_2_FIELD_2, dst, sizeof(dst));
+    ASSERT_EQ(result, 3);
+    ASSERT_TRUE(memcmp(dst, "bcd", 3) == 0);
+
+    const char *testMsg2 = "ab2cdeA";
+
+    //3-char extraction of type 2 frame 1 field 2 (disjointed, expect "abe")
+    result = uwrt_gyro::extractFieldFromBuffer(testMsg2, sizeof(testMsg2), frameMap[1], TYPE_2_FIELD_2, dst, sizeof(dst));
+    ASSERT_EQ(result, 3);
+    ASSERT_TRUE(memcmp(dst, "abe", 3) == 0);
+
+    //3-char extraction of type 2 frame 1 field 2 (disjointed, expect "abe"), into smaller buffer (expect "ab")
+    dst[2] = 'M'; //this tests that this character wasnt touched
+    result = uwrt_gyro::extractFieldFromBuffer(testMsg2, sizeof(testMsg2), frameMap[1], TYPE_2_FIELD_2, dst, sizeof(dst) - 1);
+    ASSERT_EQ(result, 3);
+    ASSERT_TRUE(memcmp(dst, "abM", 2) == 0);
+}
+
+
+TEST_F(Type1SerialProcessorTest, testInsertFieldToBufferBasic)
+{
+    const char c = 'j';
+    char dst[5] = "Abcd";
+
+    //1-char insertion of beginning value
+    uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[0], FIELD_SYNC, &c, sizeof(c));
+    ASSERT_TRUE(memcmp(dst, "jbcd", 4) == 0);
+
+    //1-char insertion of beginning value
+    strcpy(dst, "Abcd");
+    uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[0], TYPE_1_FRAME_1_FIELD_1, &c, sizeof(c));
+    ASSERT_TRUE(memcmp(dst, "Ajcd", 4) == 0);
+
+    //1-char insertion of end value
+    strcpy(dst, "Abcd");
+    uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[0], TYPE_1_FRAME_1_FIELD_3, &c, sizeof(c));
+    ASSERT_TRUE(memcmp(dst, "Abcj", 4) == 0);
+}
+
+
+TEST_F(Type2SerialProcessorTest, testInsertFieldToBufferAdvanced)
+{
+    const char src[] = "XYZ";
+    char dst[] = "Ab1defg";
+
+    //1-char insertion of src from bigger buffer
+    uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[0], TYPE_2_FIELD_1, src, sizeof(src));
+    ASSERT_TRUE(memcmp(dst, "AX1defg", 7) == 0);
+
+    //3-char insertion of src, continuous
+    strcpy(dst, "Ab1defg");
+    uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[0], TYPE_2_FIELD_2, src, sizeof(src));
+    ASSERT_TRUE(memcmp(dst, "Ab1XYZg", 7) == 0);
+
+    //3-char insertion of src, disjointed
+    strcpy(dst, "ab1cdeA");
+    uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[1], TYPE_2_FIELD_2, src, sizeof(src));
+    ASSERT_TRUE(memcmp(dst, "XY1cdZA", 7) == 0);
+}
+
+TEST(UtilTest, testNormalizeSerialFrame)
+{
+    SerialFrame frameSyncBeginning = {
+        FIELD_SYNC,
+        TYPE_1_FRAME_1_FIELD_1,
+        TYPE_1_FRAME_1_FIELD_2,
+        TYPE_1_FRAME_1_FIELD_3
+    };
+
+    SerialFrame normalizedSyncBeginning = uwrt_gyro::normalizeSerialFrame(frameSyncBeginning);
+
+    ASSERT_EQ(frameSyncBeginning, normalizedSyncBeginning);
+
+    SerialFrame frameSyncMiddle = {
+        TYPE_1_FRAME_1_FIELD_1,
+        FIELD_SYNC,
+        TYPE_1_FRAME_1_FIELD_2,
+        TYPE_1_FRAME_1_FIELD_3
+    };
+
+    SerialFrame normalizedSyncMiddle = uwrt_gyro::normalizeSerialFrame(frameSyncMiddle);
+    SerialFrame expectedSyncMiddle = {
+        FIELD_SYNC,
+        TYPE_1_FRAME_1_FIELD_2,
+        TYPE_1_FRAME_1_FIELD_3,
+        TYPE_1_FRAME_1_FIELD_1
+    };
+
+    ASSERT_EQ(normalizedSyncMiddle, expectedSyncMiddle);
+
+    SerialFrame frameSyncEnd = {
+        TYPE_1_FRAME_1_FIELD_1,
+        TYPE_1_FRAME_1_FIELD_2,
+        TYPE_1_FRAME_1_FIELD_3,
+        FIELD_SYNC
+    };
+
+    SerialFrame normalizedSyncEnd = uwrt_gyro::normalizeSerialFrame(frameSyncEnd);
+    SerialFrame expectedSyncEnd = {
+        FIELD_SYNC,
+        TYPE_1_FRAME_1_FIELD_1,
+        TYPE_1_FRAME_1_FIELD_2,
+        TYPE_1_FRAME_1_FIELD_3
+    };
+
+    ASSERT_EQ(normalizedSyncEnd, expectedSyncEnd);
 }

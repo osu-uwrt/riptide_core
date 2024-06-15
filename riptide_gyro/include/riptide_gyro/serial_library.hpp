@@ -13,7 +13,7 @@ namespace uwrt_gyro
     {
         public:
         virtual bool init(void) = 0;
-        virtual void send(const std::string& msg) const = 0;
+        virtual void send(const char *data, size_t numData) const = 0;
         virtual size_t recv(char *data, size_t numData) const = 0;
         virtual void deinit(void) = 0;
     };
@@ -37,7 +37,7 @@ namespace uwrt_gyro
             bool parityBit = false);
 
         bool init(void) override;
-        void send(const std::string& msg) const override;
+        void send(const char *data, size_t numData) const override;
         size_t recv(char *data, size_t numData) const override;
         void deinit(void) override;
 
@@ -60,9 +60,13 @@ namespace uwrt_gyro
 
     #endif
 
+    char *memstr(const char *haystack, size_t numHaystack, const char *needle, size_t numNeedle);
     size_t extractFieldFromBuffer(const char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen);
     void insertFieldToBuffer(char *dst, size_t dstLen, SerialFrame frame, SerialFieldId field, const char *src, size_t srcLen);
     SerialData serialDataFromString(const char *str, size_t numData);
+    
+    // "normalized" in this case means that the frame starts with a sync, makes processing easier
+    SerialFrame normalizeSerialFrame(const SerialFrame& frame);
 
     // packs c string into primitive type. 0 is most significant
     template<typename T>
@@ -154,8 +158,9 @@ namespace uwrt_gyro
             transmissionBuffer[PROCESSOR_BUFFER_SIZE];
         
         size_t msgBufferCursorPos;
-        const char *syncValue;
-        const SerialFramesMap frameMap;
+        char syncValue[MAX_DATA_BYTES];
+        size_t syncValueLen;
+        SerialFramesMap normalizedFrameMap;
         const SerialFrameId defaultFrame;
         
         // "thread-safe" resources 

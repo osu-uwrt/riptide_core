@@ -3,7 +3,7 @@
 
 using namespace std::chrono_literals;
 
-TEST_F(Type1SerialProcessorTest, TestRecvWithManualSend)
+TEST_F(Type1SerialProcessorTest, TestBasicRecvWithManualSendType1)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
         rosNode,
@@ -14,23 +14,21 @@ TEST_F(Type1SerialProcessorTest, TestRecvWithManualSend)
     
     client.init();
     
-    const char *msg = "Aqwerty";
+    const char msg[] = "AqweA";
 
-    client.send(msg);
+    client.send(msg, sizeof(msg));
     
     Time startTime = rosNode->get_clock()->now();
-    while(!processor->hasDataForField(FIELD_SYNC) && rosNode->get_clock()->now() - startTime < 1s)
-    {
-        processor->update(rosNode->get_clock()->now());
-    }
+    processor->update(rosNode->get_clock()->now());
 
     ASSERT_TRUE(processor->hasDataForField(FIELD_SYNC));
-    ASSERT_EQ(std::string(processor->getField(TYPE_1_FRAME_1_FIELD_1).data.data), "q");
-    ASSERT_EQ(std::string(processor->getField(TYPE_1_FRAME_1_FIELD_2).data.data), "w");
-    ASSERT_EQ(std::string(processor->getField(TYPE_1_FRAME_1_FIELD_3).data.data), "e");
+
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_1_FRAME_1_FIELD_1).data, uwrt_gyro::serialDataFromString("q", 1)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_1_FRAME_1_FIELD_2).data, uwrt_gyro::serialDataFromString("w", 1)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_1_FRAME_1_FIELD_3).data, uwrt_gyro::serialDataFromString("e", 1)));
 }
 
-TEST_F(Type1SerialProcessorTest, TestSendWithManualRecv)
+TEST_F(Type1SerialProcessorTest, TestBasicSendWithManualRecvType1)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
         rosNode,
@@ -45,4 +43,66 @@ TEST_F(Type1SerialProcessorTest, TestSendWithManualRecv)
     processor->setField(TYPE_1_FRAME_1_FIELD_1, uwrt_gyro::serialDataFromString("a", 1), rosNode->get_clock()->now());
     processor->setField(TYPE_1_FRAME_1_FIELD_2, uwrt_gyro::serialDataFromString("b", 1), rosNode->get_clock()->now());
     processor->setField(TYPE_1_FRAME_1_FIELD_3, uwrt_gyro::serialDataFromString("c", 1), rosNode->get_clock()->now());
+
+    processor->send(frameMap[0]);
+
+    char buf[4];
+    client.recv(buf, 4);
+    
+    ASSERT_TRUE(memcmp(buf, "Aabc", 4) == 0);
+}
+
+TEST_F(Type2SerialProcessorTest, TestBasicRecvWithManualSendType2)
+{
+    uwrt_gyro::LinuxSerialTransceiver client(
+        rosNode,
+        homeDir() + "virtualsp2",
+        9600,
+        1,
+        0);
+    
+    client.init();
+
+    //send msg
+    const char 
+        msg1[] = {'A', 'a', 0, 'b', 'c', 'd', 'e', 'A'},
+        msg2[] = {'A', 'a', 'b', 1, 'c', 'd', 'e', 'A'},
+        msg3[] = {'z', 'A', 2, 'b', 'c', 'd', 'e', 'a', 'A'};
+    
+    Time now = rosNode->get_clock()->now();
+
+    client.send(msg1, sizeof(msg1));
+    processor->update(now);
+
+    ASSERT_TRUE(processor->hasDataForField(FIELD_SYNC));
+    // ASSERT_TRUE(strcmp(processor->getField(FIELD_SYNC).data.data, "A") == 0);
+    SerialDataStamped data = processor->getField(FIELD_FRAME);
+    int frameId = uwrt_gyro::convertFromCString<int>(data.data.data, data.data.numData);
+    ASSERT_EQ(frameId, 0);
+
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_1).data, uwrt_gyro::serialDataFromString("a", 1)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_2).data, uwrt_gyro::serialDataFromString("bcd", 3)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_3).data, uwrt_gyro::serialDataFromString("e", 1)));
+
+    client.send(msg2, sizeof(msg2));
+    processor->update(now);
+
+    ASSERT_TRUE(processor->hasDataForField(FIELD_SYNC));
+    data = processor->getField(FIELD_FRAME);
+    frameId = uwrt_gyro::convertFromCString<int>(data.data.data, data.data.numData);
+    ASSERT_EQ(frameId, 1);
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_2).data, uwrt_gyro::serialDataFromString("abe", 3)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_3).data, uwrt_gyro::serialDataFromString("c", 1)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_4).data, uwrt_gyro::serialDataFromString("d", 1)));
+    
+    client.send(msg3, sizeof(msg3));
+    processor->update(now);
+
+    ASSERT_TRUE(processor->hasDataForField(FIELD_SYNC));
+    data = processor->getField(FIELD_FRAME);
+    frameId = uwrt_gyro::convertFromCString<int>(data.data.data, data.data.numData);
+    ASSERT_EQ(frameId, 2);
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_1).data, uwrt_gyro::serialDataFromString("b", 1)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_5).data, uwrt_gyro::serialDataFromString("ad", 2)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_6).data, uwrt_gyro::serialDataFromString("ce", 2)));
 }

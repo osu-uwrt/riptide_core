@@ -94,11 +94,11 @@ namespace uwrt_gyro
     }
 
 
-    void LinuxSerialTransceiver::send(const std::string& msg) const
+    void LinuxSerialTransceiver::send(const char *data, size_t numData) const
     {
         if(initialized)
         {
-            write(file, msg.c_str(), msg.length());
+            write(file, data, numData);
         }
     }
 

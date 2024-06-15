@@ -14,7 +14,7 @@ class RosTest : public ::testing::Test
     protected:
     void SetUp() override;
     void TearDown() override;
-
+    bool compareSerialData(const SerialData& data1, const SerialData& data2);
     std::string homeDir();
     rclcpp::Node::SharedPtr rosNode;
     

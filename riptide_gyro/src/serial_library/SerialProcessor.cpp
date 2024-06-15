@@ -2,16 +2,17 @@
 
 namespace uwrt_gyro
 {
-    SerialProcessor::SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char *syncValue)
+    SerialProcessor::SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[])
      : transceiver(transceiver),
-       frameMap(frames),
        msgBufferCursorPos(0),
-       syncValue(syncValue),
        defaultFrame(defaultFrame),
        valueMap(new SerialValuesMap())
     {
         transceiver.init();
 
+        memcpy(this->syncValue, syncValue, sizeof(syncValue));
+        syncValueLen = sizeof(syncValue);
+        
         //check that the frames include a sync
         //TODO: must check all individual frames for a sync, not the frame ids
         for(int i = 0; i < frames.size(); i++)
@@ -21,6 +22,21 @@ namespace uwrt_gyro
             {
                 THROW_SERIAL_LIB_EXCEPTION("No sync field provided in frame " + std::to_string(i) + " of the map.");
             }
+        }
+
+        //add sync value
+        SerialData syncData = serialDataFromString(syncValue, strlen(syncValue));
+        SerialDataStamped syncDataStamped;
+        syncDataStamped.data = syncData;
+        SerialValuesMap *values = valueMap.lockResource();
+        values->insert( {FIELD_SYNC, syncDataStamped} );
+        valueMap.unlockResource();
+
+        //compute normalized frames and add them to map
+        for(auto pair : frames)
+        {
+            SerialFrame normalizedFrame = normalizeSerialFrame(pair.second);
+            normalizedFrameMap.insert({ pair.first, normalizedFrame });
         }
     }
 
@@ -50,33 +66,39 @@ namespace uwrt_gyro
         msgBufferCursorPos += bytesToCopy;
 
         // find sync values. having two means we have one potential messages
-        char
-            *firstSyncLocation = strstr(msgBuffer, syncValue),
-            *secondSyncLocation = strstr(msgBuffer, syncValue);
+        char *firstSyncLocation = memstr(msgBuffer, msgBufferCursorPos, syncValue, syncValueLen);
+        size_t currentDataLen = msgBuffer + msgBufferCursorPos - firstSyncLocation;
+        char *secondSyncLocation = memstr(firstSyncLocation + 1, currentDataLen, syncValue, syncValueLen);
 
         // if one of the sync values is NULL, dont process message
-        if(!(firstSyncLocation || secondSyncLocation))
+        if(!firstSyncLocation || !secondSyncLocation)
         {
             return;
         }
 
-        int firstSyncLocationSz = msgBufferCursorPos - (size_t) firstSyncLocation;
+        size_t msgSz = (size_t) secondSyncLocation - (size_t) firstSyncLocation;
 
         // can process message here. first need to figure out the frame to use.
         // if there was only one frame provided, this is easy. otherwise, need to look for indication in the message
-        SerialFrame frameToUse = frameMap.at(defaultFrame);
-        size_t frameMapSz = frameMap.size();
+        SerialFrame frameToUse = normalizedFrameMap.at(defaultFrame);
+        size_t frameMapSz = normalizedFrameMap.size();
         if(frameMapSz > 1)
         {
             char frameIdBuf[MAX_DATA_BYTES] = {0};
-            size_t bytes = extractFieldFromBuffer(firstSyncLocation, firstSyncLocationSz, frameToUse, FIELD_FRAME, frameIdBuf, frameMapSz);
+            size_t bytes = extractFieldFromBuffer(firstSyncLocation, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, frameMapSz);
             if(bytes == 0)
             {
                 throw SerialLibraryException("No frame id found in message");
             }
 
-            SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, frameMapSz);
-            frameToUse = frameMap.at(frameId);
+            SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
+
+            if(normalizedFrameMap.find(frameId) == normalizedFrameMap.end())
+            {
+                THROW_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
+            }
+
+            frameToUse = normalizedFrameMap.at(frameId);
         }
 
         //iterate through frame and find all unknown fields
@@ -94,24 +116,30 @@ namespace uwrt_gyro
 
         //iterate through known fields and update their values
         SerialValuesMap *values = valueMap.lockResource();
-        const int fieldBufSz = frameMap.size();
+        const int fieldBufSz = normalizedFrameMap.size();
         char fieldBuf[fieldBufSz];
         for(auto it = values->begin(); it != values->end(); it++)
         {
-            memset(fieldBuf, 0, frameMap.size());
+            memset(fieldBuf, 0, normalizedFrameMap.size());
             SerialFieldId field = it->first;
-            size_t extracted = extractFieldFromBuffer(firstSyncLocation, firstSyncLocationSz, frameToUse, field, fieldBuf, fieldBufSz);
+            size_t extracted = extractFieldFromBuffer(firstSyncLocation, msgSz, frameToUse, field, fieldBuf, fieldBufSz);
             if(extracted > 0)
             {
                 SerialDataStamped serialData;
                 serialData.timestamp = now;
                 memcpy(serialData.data.data, fieldBuf, extracted);
+                serialData.data.numData = extracted;
 
                 it->second = serialData;
             }
         }
 
         valueMap.unlockResource();
+
+        //remove message from the buffer
+        memmove(msgBuffer, secondSyncLocation, PROCESSOR_BUFFER_SIZE - msgBufferCursorPos);
+        size_t amountRemoved = secondSyncLocation - msgBuffer;
+        msgBufferCursorPos -= amountRemoved;
     }
     
     
@@ -162,7 +190,7 @@ namespace uwrt_gyro
         for(auto fieldIt = frameSet.begin(); fieldIt != frameSet.end(); fieldIt++)
         {
             SerialValuesMap *values = valueMap.lockResource();
-            if(values->find(*fieldIt) == values->end())
+            if(values->find(*fieldIt) == values->end() && *fieldIt != FIELD_SYNC)
             {
                 THROW_SERIAL_LIB_EXCEPTION("Cannot send serial frame because it is missing field " + std::to_string(*fieldIt));
             }
@@ -174,8 +202,10 @@ namespace uwrt_gyro
                 *fieldIt, 
                 values->at(*fieldIt).data.data, 
                 values->at(*fieldIt).data.numData);
+            
+            valueMap.unlockResource();
         }
 
-        transceiver.send(transmissionBuffer);
+        transceiver.send(transmissionBuffer, frame.size());
     }
 }

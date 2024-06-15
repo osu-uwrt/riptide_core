@@ -52,6 +52,7 @@ if(BUILD_TESTING)
       test/riptide_gyro/RosTest.cpp
       test/riptide_gyro/LinuxTransceiverTest.cpp
       test/riptide_gyro/Type1SerialProcessorTest.cpp
+      test/riptide_gyro/Type2SerialProcessorTest.cpp
       test/riptide_gyro/ExecuteTests.cpp)
     
     target_include_directories(test_serial_library PUBLIC
