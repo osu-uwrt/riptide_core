@@ -70,11 +70,11 @@ void Type2SerialProcessorTest::SetUp()
     frameMap = {
         {Type2SerialFrames1::TYPE_2_FRAME_1, 
             {
-                FIELD_SYNC,
                 TYPE_2_FIELD_1,
                 FIELD_FRAME,
                 TYPE_2_FIELD_2,
                 TYPE_2_FIELD_2,
+                FIELD_SYNC,
                 TYPE_2_FIELD_2,
                 TYPE_2_FIELD_3
             }
@@ -85,18 +85,18 @@ void Type2SerialProcessorTest::SetUp()
                 FIELD_FRAME,
                 TYPE_2_FIELD_2,
                 TYPE_2_FIELD_4,
+                FIELD_SYNC,
                 TYPE_2_FIELD_3,
                 TYPE_2_FIELD_2,
-                FIELD_SYNC
             }
         },
         {Type2SerialFrames1::TYPE_2_FRAME_3, 
             {
                 TYPE_2_FIELD_5,
-                FIELD_SYNC,
-                TYPE_2_FIELD_1,
                 FIELD_FRAME,
+                TYPE_2_FIELD_1,
                 TYPE_2_FIELD_6,
+                FIELD_SYNC,
                 TYPE_2_FIELD_5,
                 TYPE_2_FIELD_6
             }

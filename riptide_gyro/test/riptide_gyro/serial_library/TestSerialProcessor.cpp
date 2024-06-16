@@ -65,9 +65,9 @@ TEST_F(Type2SerialProcessorTest, TestBasicRecvWithManualSendType2)
 
     //define messages (to be sent in increasing order)
     const char
-        msg1[] = {'A', 'a', 0, 'b', 'c', 'd', 'e', 'A'},
-        msg2[] = {'a', 1, 'b', 'c', 'd', 'e', 'A'},
-        msg3[] = {'q', 'A', 'b', 2, 'c', 'd', 'e', 'z', 'A'};
+        msg1[] = {'A', 'a', 0, 'b', 'c', 'A', 'd', 'e'},
+        msg2[] = {'a', 1, 'b', 'c', 'A', 'd', 'e'},
+        msg3[] = {'q', 'A', 'b', 2, 'c', 'd', 'A', 'e', 'z'};
     
     Time now = rosNode->get_clock()->now();
 
@@ -102,9 +102,9 @@ TEST_F(Type2SerialProcessorTest, TestBasicRecvWithManualSendType2)
     data = processor->getField(FIELD_FRAME);
     frameId = uwrt_gyro::convertFromCString<int>(data.data.data, data.data.numData);
     ASSERT_EQ(frameId, 2);
-    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_1).data, uwrt_gyro::serialDataFromString("b", 1)));
-    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_5).data, uwrt_gyro::serialDataFromString("dz", 2)));
-    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_6).data, uwrt_gyro::serialDataFromString("ce", 2)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_1).data, uwrt_gyro::serialDataFromString("c", 1)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_5).data, uwrt_gyro::serialDataFromString("be", 2)));
+    ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_6).data, uwrt_gyro::serialDataFromString("dz", 2)));
 }
 
 TEST_F(Type2SerialProcessorTest, TestBasicRecvAndSendType2)

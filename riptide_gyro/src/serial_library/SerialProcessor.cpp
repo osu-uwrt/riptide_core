@@ -59,103 +59,120 @@ namespace uwrt_gyro
         memcpy(&msgBuffer[msgBufferCursorPos], transmissionBuffer, bytesToCopy);
         msgBufferCursorPos += bytesToCopy;
 
-        char *secondSyncLocation = nullptr;
+        char *syncLocation = nullptr;
 
         do
         {
             // find sync values. having two means we have one potential messages
-            char *firstSyncLocation = memstr(msgBuffer, msgBufferCursorPos, syncValue, syncValueLen);
-            if(!firstSyncLocation)
+            syncLocation = memstr(msgBuffer, msgBufferCursorPos, syncValue, syncValueLen);
+            if(!syncLocation)
             {
                 return;
             }
 
-            size_t currentDataLen = msgBuffer + msgBufferCursorPos - firstSyncLocation;
-            secondSyncLocation = memstr(firstSyncLocation + 1, currentDataLen, syncValue, syncValueLen);
-
-            // if one of the sync values is NULL, dont process message
-            if(!secondSyncLocation)
-            {
-                return;
-            }
-
-            size_t msgSz = (size_t) secondSyncLocation - (size_t) firstSyncLocation;
+            size_t msgSz = msgBufferCursorPos + (size_t) msgBuffer - (size_t) syncLocation;
 
             // can process message here. first need to figure out the frame to use.
             // if there was only one frame provided, this is easy. otherwise, need to look for indication in the message
             SerialFrame frameToUse = frameMap.at(defaultFrame);
-            size_t frameMapSz = frameMap.size();
-            if(frameMapSz > 1)
+            size_t
+                frameMapSz = frameMap.size(),
+                frameSz = frameToUse.size();
+
+            //determine the message string based on the sync location. then process it
+            int
+                msgStartOffsetFromSync = std::find(frameToUse.begin(), frameToUse.end(), FIELD_SYNC) - frameToUse.begin(),
+                syncOffsetFromBuffer = syncLocation - msgBuffer;
+
+            char 
+                *msgStart = syncLocation,
+                *msgEnd = msgBuffer + msgBufferCursorPos;
+
+            if(msgStartOffsetFromSync <= syncOffsetFromBuffer) //todo also add msg checker function to this condition
             {
-                char frameIdBuf[MAX_DATA_BYTES] = {0};
-                size_t bytes = extractFieldFromBuffer(firstSyncLocation, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, MAX_DATA_BYTES);
-                if(bytes == 0)
+                //message good and parsable
+                msgStart = syncLocation - msgStartOffsetFromSync;
+                msgEnd = msgStart + frameSz;
+
+                //check that we can parse for a frame id
+                if(msgBufferCursorPos < frameSz)
                 {
-                    throw SerialLibraryException("No frame id found in message");
+                    //we dont have enough information to parse the default frame for a frame id.
+                    break;
                 }
 
-                SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
-
-                if(frameMap.find(frameId) == frameMap.end())
+                //parse for a frame id
+                if(frameMapSz > 1)
                 {
-                    THROW_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
+                    char frameIdBuf[MAX_DATA_BYTES] = {0};
+                    size_t bytes = extractFieldFromBuffer(msgStart, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, MAX_DATA_BYTES);
+                    if(bytes == 0)
+                    {
+                        THROW_SERIAL_LIB_EXCEPTION("No frame id found in message");
+                    }
+
+                    SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
+
+                    if(frameMap.find(frameId) == frameMap.end())
+                    {
+                        THROW_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
+                    }
+
+                    frameToUse = frameMap.at(frameId);
+                    
+                    //check if the frame is parsable
+                    frameSz = frameToUse.size();
+                    if(msgBufferCursorPos < frameSz)
+                    {
+                        //we dont have enough information to parse this frame
+                        continue;
+                    }
                 }
 
-                frameToUse = frameMap.at(frameId);
-            }
+                //iterate through frame and find all unknown fields
+                for(auto it = frameToUse.begin(); it != frameToUse.end(); it++)
+                {
+                    SerialValuesMap *values = valueMap.lockResource();
+                    if(values->find(*it) == values->end())
+                    {
+                        values->insert({ *it, SerialDataStamped() });
+                    }
 
-            //find beginning of message based on frame being used
-            int 
-                msgStartOffsetFromSyncLoc = std::find(frameToUse.begin(), frameToUse.end(), FIELD_SYNC) - frameToUse.begin(),
-                msgSyncOffsetFromBufferStart = firstSyncLocation - msgBuffer;
+                    valueMap.unlockResource();
+                }
 
-            if(msgStartOffsetFromSyncLoc < msgSyncOffsetFromBufferStart)
-            {
-                //message is cut off by the start of the buffer. Move on
-                continue;
-            }
-
-            char *msgStart = firstSyncLocation - msgStartOffsetFromSyncLoc;
-
-            //iterate through frame and find all unknown fields
-            for(auto it = frameToUse.begin(); it != frameToUse.end(); it++)
-            {
+                //iterate through known fields and update their values from message
                 SerialValuesMap *values = valueMap.lockResource();
-                if(values->find(*it) == values->end())
+                const int fieldBufSz = frameMap.size();
+                char fieldBuf[fieldBufSz];
+                for(auto it = values->begin(); it != values->end(); it++)
                 {
-                    values->insert({ *it, SerialDataStamped() });
+                    memset(fieldBuf, 0, frameMap.size());
+                    SerialFieldId field = it->first;
+                    size_t extracted = extractFieldFromBuffer(msgStart, frameSz, frameToUse, field, fieldBuf, fieldBufSz);
+                    if(extracted > 0)
+                    {
+                        SerialDataStamped serialData;
+                        serialData.timestamp = now;
+                        memcpy(serialData.data.data, fieldBuf, extracted);
+                        serialData.data.numData = extracted;
+
+                        it->second = serialData;
+                    }
                 }
 
                 valueMap.unlockResource();
-            }
-
-            //iterate through known fields and update their values
-            SerialValuesMap *values = valueMap.lockResource();
-            const int fieldBufSz = frameMap.size();
-            char fieldBuf[fieldBufSz];
-            for(auto it = values->begin(); it != values->end(); it++)
+            } else
             {
-                memset(fieldBuf, 0, frameMap.size());
-                SerialFieldId field = it->first;
-                size_t extracted = extractFieldFromBuffer(msgStart, msgSz, frameToUse, field, fieldBuf, fieldBufSz);
-                if(extracted > 0)
-                {
-                    SerialDataStamped serialData;
-                    serialData.timestamp = now;
-                    memcpy(serialData.data.data, fieldBuf, extracted);
-                    serialData.data.numData = extracted;
-
-                    it->second = serialData;
-                }
+                //message bad. dont remove like normal, just delete through the sync character
+                msgEnd = syncLocation + 1;
             }
-
-            valueMap.unlockResource();
 
             //remove message from the buffer
-            memmove(msgBuffer, secondSyncLocation, PROCESSOR_BUFFER_SIZE - msgBufferCursorPos);
-            size_t amountRemoved = secondSyncLocation - msgBuffer;
+            memmove(msgBuffer, msgEnd, PROCESSOR_BUFFER_SIZE - msgBufferCursorPos);
+            size_t amountRemoved = msgEnd - msgStart;
             msgBufferCursorPos -= amountRemoved;
-        } while(secondSyncLocation);
+        } while(syncLocation);
     }
     
     

@@ -5,7 +5,7 @@ namespace uwrt_gyro
     char *memstr(const char *haystack, size_t numHaystack, const char *needle, size_t numNeedle)
     {
         char *search = (char*) haystack;
-        for(size_t i = 0; i < numHaystack - numNeedle; i++)
+        for(size_t i = 0; i <= numHaystack - numNeedle; i++)
         {
             if(memcmp(search, needle, numNeedle) == 0)
             {

@@ -6,9 +6,11 @@ TEST(UtilTest, testMemstr)
 {
     const char
         str1[] = "abcdefg",
-        *str1Needle = strstr(str1, "de");
+        *str1Needle = strstr(str1, "de"),
+        *str1Needle2 = strstr(str1, "g");
     
     EXPECT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "de", 2), str1Needle);
+    EXPECT_EQ(uwrt_gyro::memstr(str1, strlen(str1), "g", 1), str1Needle2);
     EXPECT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "12", 2), nullptr);
 
     const char
@@ -17,6 +19,8 @@ TEST(UtilTest, testMemstr)
         *str3NeedleExpected = &str3[2];
     
     EXPECT_EQ(uwrt_gyro::memstr(str3, sizeof(str3), str3Needle, 2), str3NeedleExpected);
+
+    
 }
 
 
@@ -123,19 +127,19 @@ TEST_F(Type2SerialProcessorTest, testExtractFieldFromBufferAdvanced)
     //1-char extraction of type 2 frame 1 field 1 into bigger buffer (expect "a")
     size_t result = uwrt_gyro::extractFieldFromBuffer(testMsg1, sizeof(testMsg1), frameMap[0], TYPE_2_FIELD_1, dst, sizeof(dst));
     ASSERT_EQ(result, 1);
-    ASSERT_TRUE(memcmp(dst, "a", 1) == 0);
+    ASSERT_TRUE(memcmp(dst, "A", 1) == 0);
 
     //3-char extraction of type 2 frame 1 field 2 in sequential order (expect "bcd")
     result = uwrt_gyro::extractFieldFromBuffer(testMsg1, sizeof(testMsg1), frameMap[0], TYPE_2_FIELD_2, dst, sizeof(dst));
     ASSERT_EQ(result, 3);
-    ASSERT_TRUE(memcmp(dst, "bcd", 3) == 0);
+    ASSERT_TRUE(memcmp(dst, "1bd", 3) == 0);
 
     const char *testMsg2 = "a2bcdeA";
 
     //3-char extraction of type 2 frame 1 field 2 (disjointed, expect "abe")
     result = uwrt_gyro::extractFieldFromBuffer(testMsg2, sizeof(testMsg2), frameMap[1], TYPE_2_FIELD_2, dst, sizeof(dst));
     ASSERT_EQ(result, 3);
-    ASSERT_TRUE(memcmp(dst, "abe", 3) == 0);
+    ASSERT_TRUE(memcmp(dst, "abA", 3) == 0);
 
     //3-char extraction of type 2 frame 1 field 2 (disjointed, expect "abe"), into smaller buffer (expect "ab")
     dst[2] = 'M'; //this tests that this character wasnt touched
@@ -173,17 +177,17 @@ TEST_F(Type2SerialProcessorTest, testInsertFieldToBufferAdvanced)
 
     //1-char insertion of src from bigger buffer
     uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[0], TYPE_2_FIELD_1, src, sizeof(src));
-    ASSERT_TRUE(memcmp(dst, "AX1defg", 7) == 0);
+    ASSERT_TRUE(memcmp(dst, "Xb1defg", 7) == 0);
 
-    //3-char insertion of src, continuous
+    //3-char insertion of src
     strcpy(dst, "Ab1defg");
     uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[0], TYPE_2_FIELD_2, src, sizeof(src));
-    ASSERT_TRUE(memcmp(dst, "Ab1XYZg", 7) == 0);
+    ASSERT_TRUE(memcmp(dst, "AbXYeZg", 7) == 0);
 
-    //3-char insertion of src, disjointed
+    //3-char insertion of src
     strcpy(dst, "a1bcdeA");
     uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[1], TYPE_2_FIELD_2, src, sizeof(src));
-    ASSERT_TRUE(memcmp(dst, "X1YcdZA", 7) == 0);
+    ASSERT_TRUE(memcmp(dst, "X1YcdeZ", 7) == 0);
 }
 
 TEST(UtilTest, testNormalizeSerialFrame)
