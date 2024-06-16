@@ -130,7 +130,7 @@ TEST_F(Type2SerialProcessorTest, testExtractFieldFromBufferAdvanced)
     ASSERT_EQ(result, 3);
     ASSERT_TRUE(memcmp(dst, "bcd", 3) == 0);
 
-    const char *testMsg2 = "ab2cdeA";
+    const char *testMsg2 = "a2bcdeA";
 
     //3-char extraction of type 2 frame 1 field 2 (disjointed, expect "abe")
     result = uwrt_gyro::extractFieldFromBuffer(testMsg2, sizeof(testMsg2), frameMap[1], TYPE_2_FIELD_2, dst, sizeof(dst));
@@ -181,9 +181,9 @@ TEST_F(Type2SerialProcessorTest, testInsertFieldToBufferAdvanced)
     ASSERT_TRUE(memcmp(dst, "Ab1XYZg", 7) == 0);
 
     //3-char insertion of src, disjointed
-    strcpy(dst, "ab1cdeA");
+    strcpy(dst, "a1bcdeA");
     uwrt_gyro::insertFieldToBuffer(dst, sizeof(dst), frameMap[1], TYPE_2_FIELD_2, src, sizeof(src));
-    ASSERT_TRUE(memcmp(dst, "XY1cdZA", 7) == 0);
+    ASSERT_TRUE(memcmp(dst, "X1YcdZA", 7) == 0);
 }
 
 TEST(UtilTest, testNormalizeSerialFrame)

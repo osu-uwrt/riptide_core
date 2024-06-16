@@ -93,6 +93,21 @@ namespace uwrt_gyro
 
         return normalizedFrame;
     }
+
+
+    SerialFramesMap normalizeSerialFramesMap(const SerialFramesMap& map)
+    {
+        SerialFramesMap normalizedFrameMap;
+        
+        //compute normalized frames and add them to map
+        for(auto pair : map)
+        {
+            SerialFrame normalizedFrame = normalizeSerialFrame(pair.second);
+            normalizedFrameMap.insert({ pair.first, normalizedFrame });
+        }
+
+        return normalizedFrameMap;
+    }
 }
 
 

@@ -67,6 +67,7 @@ namespace uwrt_gyro
     
     // "normalized" in this case means that the frame starts with a sync, makes processing easier
     SerialFrame normalizeSerialFrame(const SerialFrame& frame);
+    SerialFramesMap normalizeSerialFramesMap(const SerialFramesMap& map);
 
     // packs c string into primitive type. 0 is most significant
     template<typename T>
@@ -95,19 +96,23 @@ namespace uwrt_gyro
     }
     
     template<typename T>
-    void convertToCString(T val, char *str, size_t strLen)
+    size_t convertToCString(T val, char *str, size_t strLen)
     {
         size_t valLen = sizeof(val);
+        size_t numData = 0;
         for(int i = valLen / sizeof(*str) - 1; i >= 0; i--)
         {
             char newC = (char) val & 0xFF;
             if(i < strLen)
             {
                 str[i] = newC;
+                numData++;
             }
 
             val = val >> sizeof(*str) * 8;
         }
+
+        return numData;
     }
 
     template<typename T>
@@ -142,13 +147,13 @@ namespace uwrt_gyro
         #endif
 
         SerialProcessor() = default;
-        SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char *syncValue);
+        SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen);
         ~SerialProcessor();
         void update(const Time& now);
         bool hasDataForField(SerialFieldId field);
         SerialDataStamped getField(SerialFieldId field);
         void setField(SerialFieldId field, SerialData data, const Time& now);
-        void send(SerialFrame frame);
+        void send(SerialFrameId frameId);
 
         private:
         // regular member vars
@@ -160,7 +165,8 @@ namespace uwrt_gyro
         size_t msgBufferCursorPos;
         char syncValue[MAX_DATA_BYTES];
         size_t syncValueLen;
-        SerialFramesMap normalizedFrameMap;
+
+        const SerialFramesMap frameMap;
         const SerialFrameId defaultFrame;
         
         // "thread-safe" resources 

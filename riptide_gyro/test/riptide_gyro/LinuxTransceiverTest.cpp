@@ -15,6 +15,17 @@ void LinuxTransceiverTest::SetUp()
     sprintf(virtualFile2, "%s/virtualsp2", homeDir().c_str());
     sprintf(virtualSerialArg1, "PTY,link=%s,raw,echo=0", virtualFile1);
     sprintf(virtualSerialArg2, "PTY,link=%s,raw,echo=0", virtualFile2);
+
+    //delete files if they already exist
+    if(std::filesystem::exists(virtualFile1))
+    {
+        std::filesystem::remove(virtualFile1);
+    }
+
+    if(std::filesystem::exists(virtualFile2))
+    {
+        std::filesystem::remove(virtualFile2);
+    }
     
     // create a virtual terminal using socat
     pid_t proc = fork();

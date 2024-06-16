@@ -68,7 +68,7 @@ class SerialLibraryException
 
 #define FIELD_SYNC INT_MAX
 #define FIELD_FRAME INT_MAX - 1
-typedef int SerialFrameId;
+typedef uint8_t SerialFrameId;
 typedef int SerialFieldId;
 
 //describes the fields held by a serial frame. Each frame represents 8 bits.

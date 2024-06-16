@@ -34,6 +34,13 @@ class LinuxTransceiverTest : public RosTest
     pid_t socatProc;
 };
 
+class LinuxSerialProcessorTest : public LinuxTransceiverTest
+{
+    protected:
+    bool waitForFrame(SerialFrameId id, Time startTime);
+    uwrt_gyro::SerialProcessor::SharedPtr processor;
+};
+
 //
 // type1 processor test stuff
 //
@@ -49,7 +56,7 @@ enum Type1SerialFrame1Fields
     TYPE_1_FRAME_1_FIELD_3
 };
 
-class Type1SerialProcessorTest : public LinuxTransceiverTest
+class Type1SerialProcessorTest : public LinuxSerialProcessorTest
 {
     protected:
     void SetUp() override;
@@ -77,7 +84,7 @@ enum Type2SerialFields
     TYPE_2_FIELD_6
 };
 
-class Type2SerialProcessorTest : public LinuxTransceiverTest
+class Type2SerialProcessorTest : public LinuxSerialProcessorTest
 {
     protected:
     void SetUp() override;
@@ -85,7 +92,6 @@ class Type2SerialProcessorTest : public LinuxTransceiverTest
 
     SerialFramesMap frameMap;
     uwrt_gyro::LinuxSerialTransceiver transceiver;
-    uwrt_gyro::SerialProcessor::SharedPtr processor;
 };
 
 #endif
