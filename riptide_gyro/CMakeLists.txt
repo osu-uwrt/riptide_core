@@ -47,6 +47,9 @@ if(BUILD_TESTING)
     file(GLOB test_serial_library_sources RELATIVE ${PROJECT_SOURCE_DIR} 
       test/riptide_gyro/serial_library/*.cpp)
 
+    #
+    # REGULAR SERIAL LIBRARY TEST
+    #
     ament_add_gtest(test_serial_library
       ${test_serial_library_sources}
       test/riptide_gyro/RosTest.cpp
@@ -62,8 +65,30 @@ if(BUILD_TESTING)
       ${deps})
     
     target_link_libraries(test_serial_library serial_library)
+
+    #
+    # ARDUINO SERIAL LIBRARY TEST
+    #
+    ament_add_gtest(test_serial_library_arduino
+      ${test_serial_library_sources}
+      test/riptide_gyro/RosTest.cpp
+      test/riptide_gyro/LinuxTransceiverTest.cpp
+      test/riptide_gyro/SerialProcessorTests.cpp
+      test/riptide_gyro/ExecuteTests.cpp)
     
-    install(TARGETS test_serial_library
+    target_compile_definitions(test_serial_library_arduino PUBLIC
+      FORCE_ARDUINO)
+    
+    target_include_directories(test_serial_library_arduino PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>)
+
+    ament_target_dependencies(test_serial_library_arduino
+      ${deps})
+    
+    target_link_libraries(test_serial_library_arduino serial_library)
+    
+    install(TARGETS test_serial_library_arduino
       DESTINATION lib/${PROJECT_NAME})
   endif()
 endif()

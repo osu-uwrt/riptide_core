@@ -1,7 +1,11 @@
 #pragma once
 
-#if __linux__
+#if __linux__ && !defined(FORCE_ARDUINO)
 #define USE_LINUX
+#endif
+
+#if defined(FORCE_ARDUINO)
+#define USE_ARDUINO
 #endif
 
 #include <limits.h>
@@ -33,6 +37,21 @@
 
     template<typename T>
     using vector = std::vector<T>;
+#elif defined(USE_ARDUINO)
+    #include "riptide_gyro/arduino_library.hpp"
+
+    typedef long Time;
+    typedef arduino_lib::string string;
+    typedef arduino_lib::mutex mutex;
+    
+    template<typename K, typename V>
+    using map = arduino_lib::map<K, V>;
+
+    template<typename T>
+    using list = arduino_lib::vector<T>;
+
+    template<typename T>
+    using vector = arduino_lib::vector<T>;
 #endif
 
 
@@ -59,7 +78,14 @@ class SerialLibraryException
 
 #define THROW_SERIAL_LIB_EXCEPTION_WTIH_LINE(errmsg, line) throw SerialLibraryException(__FILE__ "@" #line ": " errmsg)
 #define THROW_SERIAL_LIB_EXCEPTION(errmsg) THROW_SERIAL_LIB_EXCEPTION_WTIH_LINE(errmsg, __LINE__)
-
+#define SERIAL_LIB_ASSERT(cond, msg) \
+    do \
+    { \
+        if(!(cond)) \
+        { \
+            THROW_SERIAL_LIB_EXCEPTION(#cond ": " msg); \
+        } \
+    } while(0)
 
 
 //

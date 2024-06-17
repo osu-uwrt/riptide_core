@@ -10,7 +10,7 @@ namespace uwrt_gyro
        defaultFrame(defaultFrame),
        valueMap(new SerialValuesMap())
     {
-        transceiver.init();
+        SERIAL_LIB_ASSERT(transceiver.init(), "Transceiver initialization failed!");
 
         memcpy(this->syncValue, syncValue, sizeof(syncValue));
         
@@ -32,6 +32,49 @@ namespace uwrt_gyro
         SerialValuesMap *values = valueMap.lockResource();
         values->insert( {FIELD_SYNC, syncDataStamped} );
         valueMap.unlockResource();
+
+        //do assertions
+        bool
+            frameIdLocsMatch = false,
+            syncLocsMatch = false;
+        
+        SERIAL_LIB_ASSERT(frames.size() > 0, "Must have at least one frame");
+        SERIAL_LIB_ASSERT(frames.find(defaultFrame) != frames.end(), "Default frame must be contained within frames");
+
+        auto syncFieldIt = std::find(frames.at(0).begin(), frames.at(0).end(), FIELD_SYNC);
+        SERIAL_LIB_ASSERT(syncFieldIt != frames.at(0).end(), "Frame 0 does not contain a sync!");
+        size_t syncFieldLoc = syncFieldIt - frames.at(0).begin();
+
+        auto frameFieldIt = std::find(frames.at(0).begin(), frames.at(0).end(), FIELD_FRAME);
+        bool containsFrameField = frameFieldIt != frames.at(0).end();
+        SERIAL_LIB_ASSERT(containsFrameField || frames.size() == 1 , "Field 0 does not contain a frame field, but multiple frames are used!");
+        size_t frameFieldLoc = frameFieldIt - frames.at(0).begin();
+
+        for(size_t i = 0; i < frames.size(); i++)
+        {
+            auto iSyncIt = std::find(frames.at(i).begin(), frames.at(i).end(), FIELD_SYNC);
+            auto iFrameIt = std::find(frames.at(i).begin(), frames.at(i).end(), FIELD_FRAME);
+
+            SERIAL_LIB_ASSERT(iSyncIt - frames.at(i).begin() == syncFieldLoc, "Sync fields not aligned!");
+            SERIAL_LIB_ASSERT(iFrameIt - frames.at(i).begin() == frameFieldLoc, "Frame fields not aligned!");
+            SERIAL_LIB_ASSERT(std::find(iFrameIt + 1, frames.at(i).end(), FIELD_FRAME) == frames.at(i).end(), "Large frame fields are not supported yet.");
+
+            //check that the sync is continuous
+            int syncFrameLen = 1;
+            while(iSyncIt != frames.at(i).end())
+            {
+                auto nextSyncFieldIt = std::find(iSyncIt + 1, frames.at(i).end(), FIELD_SYNC);
+                if(nextSyncFieldIt != frames.at(i).end())
+                {
+                    SERIAL_LIB_ASSERT(nextSyncFieldIt - iSyncIt == 1, "Sync frame is not continuous!");
+                    syncFrameLen++;
+                }
+
+                iSyncIt = nextSyncFieldIt;
+            }
+
+            SERIAL_LIB_ASSERT(syncFrameLen == syncValueLen, "Sync field length is not equal to the sync value length!");
+        }
     }
 
 
@@ -43,6 +86,7 @@ namespace uwrt_gyro
 
     void SerialProcessor::update(const Time& now)
     {
+        //TODO can probably rewrite method and use SERIAL_LIB_ASSERT
         size_t recvd = transceiver.recv(transmissionBuffer, PROCESSOR_BUFFER_SIZE);
         if(recvd == 0)
         {

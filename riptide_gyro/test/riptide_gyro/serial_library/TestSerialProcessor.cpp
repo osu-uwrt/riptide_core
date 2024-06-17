@@ -3,6 +3,27 @@
 
 using namespace std::chrono_literals;
 
+
+class TestTransceiver : public uwrt_gyro::SerialTransceiver
+{
+    public:
+    TestTransceiver(bool initRet)
+     : initRet(initRet) { }
+
+    bool init(void)
+    {
+        return initRet;
+    }
+
+    void send(const char *data, size_t numData) const { }
+    size_t recv(char *data, size_t numData) const { return 0; }
+    void deinit(void) { }
+
+    private:
+    bool initRet;
+};
+
+
 TEST_F(Type1SerialProcessorTest, TestBasicRecvWithManualSendType1)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
@@ -177,22 +198,168 @@ TEST_F(Type2SerialProcessorTest, TestBasicRecvAndSendType2)
     ASSERT_TRUE(compareSerialData(processor->getField(TYPE_2_FIELD_1).data, uwrt_gyro::serialDataFromString("s", 1)));
 }
 
-TEST(GenericType2SerialProcessorTest, TestConstructorNonContinuousSync)
+TEST(GenericType2SerialProcessorTest, TestConstructorSyncValueAssertions)
 {
-    GTEST_SKIP();
+    TestTransceiver trans(true);
+    SerialFramesMap goodFrames = {
+        {Type2SerialFrames1::TYPE_2_FRAME_1,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                FIELD_SYNC,
+                TYPE_2_FIELD_2
+            }
+        }
+    };
+
+    ASSERT_NO_THROW(uwrt_gyro::SerialProcessor proc(trans, goodFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ba", 2));
+    
+    SerialFramesMap nonContinuousSyncFrames = {
+        {Type2SerialFrames1::TYPE_2_FRAME_1,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                TYPE_2_FIELD_2,
+                FIELD_SYNC
+            }
+        }
+    };
+
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, nonContinuousSyncFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
+        SerialLibraryException);
+    
+    //sync too long
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, goodFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "abc", 3),
+        SerialLibraryException);
+    
+    //sync too short
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, goodFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "abc", 3),
+        SerialLibraryException);
 }
 
-TEST(GenericType2SerialProcessorTest, TestConstructorDefaultFrameUndefined)
+TEST(GenericType2SerialProcessorTest, TestConstructorFrameValueAssertions)
 {
-    GTEST_SKIP();
+    TestTransceiver trans(true);
+
+    //good frames
+    SerialFramesMap frames = {
+        {Type2SerialFrames1::TYPE_2_FRAME_1,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                FIELD_SYNC,
+                TYPE_2_FIELD_2,
+            }
+        }
+    };
+
+    //control frame
+    ASSERT_NO_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2));
+
+    //bad default frame
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, frames, Type2SerialFrames1::TYPE_2_FRAME_2, "ab", 2),
+        SerialLibraryException);
+
+    //misaligned frames
+    SerialFramesMap misalignedSyncFrames = {
+        {Type2SerialFrames1::TYPE_2_FRAME_1,
+            {
+                FIELD_SYNC,
+                TYPE_2_FIELD_1,
+                FIELD_FRAME,
+                TYPE_2_FIELD_2,
+            }
+        },
+        {Type2SerialFrames1::TYPE_2_FRAME_2,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                FIELD_FRAME,
+                TYPE_2_FIELD_2,
+            }
+        }
+    };
+
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, misalignedSyncFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
+        SerialLibraryException);
+
+    SerialFramesMap misalignedFrameFrames = {
+        {Type2SerialFrames1::TYPE_2_FRAME_1,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                FIELD_FRAME,
+                TYPE_2_FIELD_2,
+            }
+        },
+        {Type2SerialFrames1::TYPE_2_FRAME_2,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                TYPE_2_FIELD_2,
+                FIELD_FRAME,
+            }
+        }
+    };
+
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, misalignedFrameFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
+        SerialLibraryException);
+    
+    //multiple frames but no frame field
+    SerialFramesMap missingFrameFieldFrames = {
+        {Type2SerialFrames1::TYPE_2_FRAME_1,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                TYPE_2_FIELD_4,
+                TYPE_2_FIELD_2,
+            }
+        },
+        {Type2SerialFrames1::TYPE_2_FRAME_2,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                TYPE_2_FIELD_2,
+                TYPE_2_FIELD_4,
+            }
+        }
+    };
+
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(trans, missingFrameFieldFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
+        SerialLibraryException);
 }
 
-TEST(GenericType2SerialProcessorTest, TestConstructorSyncValueNotInFrameList)
+TEST(GenericType2SerialProcessorTest, TestConstructorTransceiverInitFailed)
 {
-    GTEST_SKIP();
-}
+    TestTransceiver goodTrans(true);
 
-TEST(GenericType2SerialProcessorTest, TestConstructorFrameIdValueNotCommonBetweenFrames)
-{
-    GTEST_SKIP();
+    //good frames
+    SerialFramesMap frames = {
+        {Type2SerialFrames1::TYPE_2_FRAME_1,
+            {
+                TYPE_2_FIELD_1,
+                FIELD_SYNC,
+                FIELD_SYNC,
+                TYPE_2_FIELD_2,
+            }
+        }
+    };
+
+    //control
+    ASSERT_NO_THROW(
+        uwrt_gyro::SerialProcessor proc(goodTrans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2));
+    
+    //bad transceiver
+    TestTransceiver badTrans(false);
+    ASSERT_THROW(
+        uwrt_gyro::SerialProcessor proc(badTrans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
+        SerialLibraryException);
 }
