@@ -1,6 +1,6 @@
 #pragma once
 
-#if __linux__ && !defined(FORCE_ARDUINO)
+#if (__linux__ && !defined(FORCE_ARDUINO)) || defined(ENABLE_TESTING)
 #define USE_LINUX
 #endif
 
@@ -9,6 +9,8 @@
 #endif
 
 #include <limits.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 //
 // settings
@@ -23,8 +25,6 @@
     #include <string>
     #include <rclcpp/rclcpp.hpp>
 
-    #define TESTING_ENABLED
-
     typedef rclcpp::Time Time;
     typedef std::string string;
     typedef std::mutex mutex;
@@ -37,6 +37,13 @@
 
     template<typename T>
     using vector = std::vector<T>;
+
+    template<typename T>
+    inline string to_string(const T& arg)
+    {
+        return std::to_string(arg);
+    }
+
 #elif defined(USE_ARDUINO)
     #include "riptide_gyro/arduino_library.hpp"
 
@@ -52,6 +59,12 @@
 
     template<typename T>
     using vector = arduino_lib::vector<T>;
+
+    template<typename T>
+    inline string to_string(const T& arg)
+    {
+        return arduino_lib::to_string(arg);
+    }
 #endif
 
 
@@ -67,7 +80,7 @@ class SerialLibraryException
     SerialLibraryException(const string& error)
      : error(error) { }
     
-    std::string what()
+    string what()
     {
         return error;
     }
@@ -76,8 +89,12 @@ class SerialLibraryException
     string error;
 };
 
-#define THROW_SERIAL_LIB_EXCEPTION_WTIH_LINE(errmsg, line) throw SerialLibraryException(__FILE__ "@" #line ": " errmsg)
-#define THROW_SERIAL_LIB_EXCEPTION(errmsg) THROW_SERIAL_LIB_EXCEPTION_WTIH_LINE(errmsg, __LINE__)
+inline void ThrowSerialLibExceptionWithFileAndLine(const string& errmsg, const string& file, int line)
+{
+    throw SerialLibraryException(string(file + string("@") + to_string(line) + ": " + errmsg));
+}
+
+#define THROW_SERIAL_LIB_EXCEPTION(errmsg) ThrowSerialLibExceptionWithFileAndLine(errmsg, __FILE__, __LINE__)
 #define SERIAL_LIB_ASSERT(cond, msg) \
     do \
     { \
@@ -110,7 +127,7 @@ struct SerialData
     {
         if(rhs.numData >= MAX_DATA_BYTES)
         {
-            THROW_SERIAL_LIB_EXCEPTION("SerialData being assigned must have less than " + std::to_string(numData) + " data");
+            THROW_SERIAL_LIB_EXCEPTION(string("SerialData being assigned must have less than ") + to_string(numData) + string(" data"));
         }
         numData = rhs.numData;
         memcpy(data, rhs.data, numData);

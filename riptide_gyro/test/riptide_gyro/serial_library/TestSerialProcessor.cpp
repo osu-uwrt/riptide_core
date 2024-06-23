@@ -3,6 +3,7 @@
 
 using namespace std::chrono_literals;
 
+#if defined(TESTING_ENABLED)
 
 class TestTransceiver : public uwrt_gyro::SerialTransceiver
 {
@@ -363,3 +364,5 @@ TEST(GenericType2SerialProcessorTest, TestConstructorTransceiverInitFailed)
         uwrt_gyro::SerialProcessor proc(badTrans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
         SerialLibraryException);
 }
+
+#endif

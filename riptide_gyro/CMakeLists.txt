@@ -60,35 +60,54 @@ if(BUILD_TESTING)
     target_include_directories(test_serial_library PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:include>)
-
+    
     ament_target_dependencies(test_serial_library
       ${deps})
     
+    target_compile_definitions(test_serial_library PUBLIC TESTING_ENABLED)
+    
     target_link_libraries(test_serial_library serial_library)
 
-    #
-    # ARDUINO SERIAL LIBRARY TEST
-    #
-    ament_add_gtest(test_serial_library_arduino
-      ${test_serial_library_sources}
-      test/riptide_gyro/RosTest.cpp
-      test/riptide_gyro/LinuxTransceiverTest.cpp
-      test/riptide_gyro/SerialProcessorTests.cpp
-      test/riptide_gyro/ExecuteTests.cpp)
+    install(TARGETS test_serial_library
+      DESTINATION lib/${PROJECT_NAME})
+
+    # #
+    # # ARDUINO SERIAL LIBRARY TEST
+    # #
+    # ament_add_gtest(test_serial_library_arduino
+    #   ${test_serial_library_sources}
+    #   test/riptide_gyro/RosTest.cpp
+    #   test/riptide_gyro/LinuxTransceiverTest.cpp
+    #   test/riptide_gyro/SerialProcessorTests.cpp
+    #   test/riptide_gyro/ExecuteTests.cpp)
     
-    target_compile_definitions(test_serial_library_arduino PUBLIC
-      FORCE_ARDUINO)
+    # target_compile_definitions(test_serial_library_arduino PUBLIC FORCE_ARDUINO)
     
-    target_include_directories(test_serial_library_arduino PUBLIC
+    # target_include_directories(test_serial_library_arduino PUBLIC
+    #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    #   $<INSTALL_INTERFACE:include>)
+
+    # ament_target_dependencies(test_serial_library_arduino
+    #   ${deps})
+    
+    # target_link_libraries(test_serial_library_arduino serial_library)
+    
+    # install(TARGETS test_serial_library_arduino
+    #   DESTINATION lib/${PROJECT_NAME})
+    
+    ament_add_gtest(test_arduino_lib
+      test/riptide_gyro/TestArduinoLib.cpp)
+    
+    target_compile_definitions(test_arduino_lib PUBLIC FORCE_ARDUINO TESTING_ENABLED)
+
+    target_include_directories(test_arduino_lib PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
       $<INSTALL_INTERFACE:include>)
-
-    ament_target_dependencies(test_serial_library_arduino
+    
+    ament_target_dependencies(test_arduino_lib
       ${deps})
-    
-    target_link_libraries(test_serial_library_arduino serial_library)
-    
-    install(TARGETS test_serial_library_arduino
+
+    install(TARGETS test_arduino_lib
       DESTINATION lib/${PROJECT_NAME})
   endif()
 endif()

@@ -3,7 +3,6 @@
 
 #if defined(TESTING_ENABLED)
 
-
 TEST_F(LinuxTransceiverTest, TestTransceiverRdWr)
 {
     uwrt_gyro::LinuxSerialTransceiver transceiver1(

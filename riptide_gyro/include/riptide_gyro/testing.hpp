@@ -1,10 +1,11 @@
 #pragma once
 
 #include "riptide_gyro/serial_library.hpp"
+#include <gtest/gtest.h>
 
 #if defined(USE_LINUX)
 
-#include <gtest/gtest.h>
+#include <rclcpp/rclcpp.hpp>
 
 class RosTest : public ::testing::Test
 {
