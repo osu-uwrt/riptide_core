@@ -12,9 +12,9 @@ find_package(rclcpp REQUIRED)
 set(deps
   rclcpp)
 
-# build serial library
+# build and install serial library
 file(GLOB serial_library_sources RELATIVE ${PROJECT_SOURCE_DIR}
-  src/serial_library/*.cpp)
+  src/riptide_gyro/serial_library/*.cpp)
 
 add_library(serial_library ${serial_library_sources})
 
@@ -26,6 +26,29 @@ target_include_directories(serial_library PUBLIC
 
 install(TARGETS serial_library
   DESTINATION lib/${PROJECT_NAME})
+
+# build and install driver
+add_executable(gyro_driver
+  src/riptide_gyro/driver.cpp)
+
+ament_target_dependencies(gyro_driver ${deps})
+
+target_link_libraries(gyro_driver
+  serial_library)
+
+target_include_directories(gyro_driver PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+install(TARGETS gyro_driver
+  DESTINATION lib/${PROJECT_NAME})
+
+#install config and launch
+install(DIRECTORY config
+  DESTINATION share/${PROJECT_NAME})
+
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest QUIET) 

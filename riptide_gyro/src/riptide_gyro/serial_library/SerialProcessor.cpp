@@ -26,7 +26,7 @@ namespace uwrt_gyro
         }
 
         //add sync value
-        SerialData syncData = serialDataFromString(syncValue, strlen(syncValue));
+        SerialData syncData = serialDataFromString(syncValue, syncValueLen);
         SerialDataStamped syncDataStamped;
         syncDataStamped.data = syncData;
         SerialValuesMap *values = valueMap.lockResource();

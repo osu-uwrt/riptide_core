@@ -23,7 +23,7 @@
 
 namespace arduino_lib
 {
-    #define NUM_ARGS(_type, ...) (sizeof(( _type []){__VA_ARGS__}) / sizeof( _type ))
+    #define NUM_ARGS(_type, ...) (sizeof((_type []){__VA_ARGS__}) / sizeof( _type ))
 
     size_t countInString(char *str, char c)
     {

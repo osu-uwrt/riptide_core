@@ -16,7 +16,7 @@
 // settings
 //
 #define MAX_DATA_BYTES 4 
-#define PROCESSOR_BUFFER_SIZE 256
+#define PROCESSOR_BUFFER_SIZE 4096
 
 //
 // platform-dependent includes and typedefs
@@ -72,14 +72,12 @@
 // exception
 //
 class SerialLibraryException
-#if defined(USE_LINUX)
-: public std::exception
-#endif
 {
     public:
     SerialLibraryException(const string& error)
-     : error(error) { }
-    
+     : error(error)
+    { }
+
     string what()
     {
         return error;
@@ -91,7 +89,7 @@ class SerialLibraryException
 
 inline void ThrowSerialLibExceptionWithFileAndLine(const string& errmsg, const string& file, int line)
 {
-    throw SerialLibraryException(string(file + string("@") + to_string(line) + ": " + errmsg));
+    throw SerialLibraryException(string(file) + string("@") + to_string(line) + string(": ") + errmsg);
 }
 
 #define THROW_SERIAL_LIB_EXCEPTION(errmsg) ThrowSerialLibExceptionWithFileAndLine(errmsg, __FILE__, __LINE__)
@@ -127,7 +125,7 @@ struct SerialData
     {
         if(rhs.numData >= MAX_DATA_BYTES)
         {
-            THROW_SERIAL_LIB_EXCEPTION(string("SerialData being assigned must have less than ") + to_string(numData) + string(" data"));
+            THROW_SERIAL_LIB_EXCEPTION(string("SerialData being assigned must have less than ") + to_string(MAX_DATA_BYTES) + string(" data, but has ") + to_string(rhs.numData));
         }
         numData = rhs.numData;
         memcpy(data, rhs.data, numData);

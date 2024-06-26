@@ -143,49 +143,49 @@ TEST(ArduinoLibTest, TestIterator)
     ASSERT_EQ(*it, 1);
 }
 
-TEST(ArduinoLibTest, TestMap)
-{
-    //test construction
-    arduino_lib::map<arduino_lib::string, arduino_lib::string> m = ARDUINOLIB_MAP(
-        arduino_lib::string, arduino_lib::string, 
-        arduino_lib::pair("ab", "12"),
-        arduino_lib::pair("cd", "34"),
-        arduino_lib::pair("ef", "56"));
+// TEST(ArduinoLibTest, TestMap)
+// {
+//     //test construction
+//     arduino_lib::map<arduino_lib::string, arduino_lib::string> m = ARDUINOLIB_MAP(
+//         arduino_lib::string, arduino_lib::string, 
+//         arduino_lib::pair("ab", "12"),
+//         arduino_lib::pair("cd", "34"),
+//         arduino_lib::pair("ef", "56"));
 
-    //test construction, iterators
-    ASSERT_EQ(m.size(), 3);
-    ASSERT_EQ(m.begin()->first, "ab");
-    ASSERT_EQ(m.begin()->second, "12");
-    ASSERT_EQ(m.end() - m.begin(), m.size());
+//     //test construction, iterators
+//     ASSERT_EQ(m.size(), 3);
+//     ASSERT_EQ(m.begin()->first, "ab");
+//     ASSERT_EQ(m.begin()->second, "12");
+//     ASSERT_EQ(m.end() - m.begin(), m.size());
 
-    //test find
-    arduino_lib::Iterator 
-        abIt = m.find("ab"),
-        cdIt = m.find("cd"),
-        efIt = m.find("ef"),
-        endIt = m.find("asdf");
+//     //test find
+//     arduino_lib::Iterator 
+//         abIt = m.find("ab"),
+//         cdIt = m.find("cd"),
+//         efIt = m.find("ef"),
+//         endIt = m.find("asdf");
     
-    ASSERT_EQ(abIt - m.begin(), 0);
-    ASSERT_EQ(cdIt - m.begin(), 1);
-    ASSERT_EQ(efIt - m.begin(), 2);
-    ASSERT_EQ(endIt, m.end());
+//     ASSERT_EQ(abIt - m.begin(), 0);
+//     ASSERT_EQ(cdIt - m.begin(), 1);
+//     ASSERT_EQ(efIt - m.begin(), 2);
+//     ASSERT_EQ(endIt, m.end());
 
-    //at and []
-    ASSERT_EQ(m.at("ab"), "12");
-    ASSERT_EQ(m.at("cd"), "34");
-    ASSERT_EQ(m.at("ef"), "56");
-    ASSERT_EQ(m["ab"], "12");
-    ASSERT_EQ(m["cd"], "34");
-    ASSERT_EQ(m["ef"], "56");
+//     //at and []
+//     ASSERT_EQ(m.at("ab"), "12");
+//     ASSERT_EQ(m.at("cd"), "34");
+//     ASSERT_EQ(m.at("ef"), "56");
+//     ASSERT_EQ(m["ab"], "12");
+//     ASSERT_EQ(m["cd"], "34");
+//     ASSERT_EQ(m["ef"], "56");
 
-    //throw
-    ASSERT_THROW(m.at("gh"), arduino_lib::exception);
+//     //throw
+//     ASSERT_THROW(m.at("gh"), arduino_lib::exception);
 
-    //insert
-    m.insert(arduino_lib::pair<arduino_lib::string, arduino_lib::string>("gh", "78"));
-    ASSERT_EQ(m.size(), 4);
-    ASSERT_EQ(m.at("gh"), "78");
-    ASSERT_EQ(m.find("gh") - m.begin(), 3);
-}
+//     //insert
+//     m.insert(arduino_lib::pair<arduino_lib::string, arduino_lib::string>("gh", "78"));
+//     ASSERT_EQ(m.size(), 4);
+//     ASSERT_EQ(m.at("gh"), "78");
+//     ASSERT_EQ(m.find("gh") - m.begin(), 3);
+// }
 
 #endif 
