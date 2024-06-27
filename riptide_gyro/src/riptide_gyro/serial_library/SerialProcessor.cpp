@@ -2,10 +2,11 @@
 
 namespace uwrt_gyro
 {
-    SerialProcessor::SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen)
+    SerialProcessor::SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen, CheckFunc checker)
      : transceiver(transceiver),
        msgBufferCursorPos(0),
        syncValueLen(syncValueLen),
+       checker(checker),
        frameMap(frames),
        defaultFrame(defaultFrame),
        valueMap(new SerialValuesMap())
@@ -21,7 +22,7 @@ namespace uwrt_gyro
             SerialFrame frame = frames.at(i);
             if(std::find(frame.begin(), frame.end(), FIELD_SYNC) == frame.end())
             {
-                THROW_SERIAL_LIB_EXCEPTION("No sync field provided in frame " + std::to_string(i) + " of the map.");
+                THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("No sync field provided in frame " + std::to_string(i) + " of the map.");
             }
         }
 
@@ -132,7 +133,8 @@ namespace uwrt_gyro
                 *msgStart = syncLocation,
                 *msgEnd = msgBuffer + msgBufferCursorPos;
 
-            if(msgStartOffsetFromSync <= syncOffsetFromBuffer) //todo also add msg checker function to this condition
+            bool msgPassesUserTest = checker(msgStart, frameToUse);
+            if(msgStartOffsetFromSync <= syncOffsetFromBuffer && msgPassesUserTest) //todo also add msg checker function to this condition
             {
                 //message good and parsable
                 msgStart = syncLocation - msgStartOffsetFromSync;
@@ -152,14 +154,14 @@ namespace uwrt_gyro
                     size_t bytes = extractFieldFromBuffer(msgStart, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, MAX_DATA_BYTES);
                     if(bytes == 0)
                     {
-                        THROW_SERIAL_LIB_EXCEPTION("No frame id found in message");
+                        THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("No frame id found in message");
                     }
 
                     SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
 
                     if(frameMap.find(frameId) == frameMap.end())
                     {
-                        THROW_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
+                        THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
                     }
 
                     frameToUse = frameMap.at(frameId);
@@ -264,7 +266,7 @@ namespace uwrt_gyro
     {
         if(frameMap.find(frameId) == frameMap.end())
         {
-            THROW_SERIAL_LIB_EXCEPTION("Cannot send message with unknown frame id " + std::to_string(frameId));
+            THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot send message with unknown frame id " + std::to_string(frameId));
         }
 
         SerialFrame frame = frameMap.at(frameId);
@@ -291,7 +293,7 @@ namespace uwrt_gyro
                 } else
                 {
                     //if it is a custom type, throw exception because it is undefined
-                    THROW_SERIAL_LIB_EXCEPTION("Cannot send serial frame because it is missing field " + std::to_string(*fieldIt));
+                    THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot send serial frame because it is missing field " + std::to_string(*fieldIt));
                 }
             }
 

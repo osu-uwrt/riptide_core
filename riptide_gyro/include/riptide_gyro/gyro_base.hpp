@@ -15,12 +15,13 @@
 //
 // settings
 //
-#define MAX_DATA_BYTES 4 
+#define MAX_DATA_BYTES 8
 #define PROCESSOR_BUFFER_SIZE 4096
 
 //
 // platform-dependent includes and typedefs
 //
+
 #if defined(USE_LINUX)
     #include <string>
     #include <rclcpp/rclcpp.hpp>
@@ -87,18 +88,28 @@ class SerialLibraryException
     string error;
 };
 
-inline void ThrowSerialLibExceptionWithFileAndLine(const string& errmsg, const string& file, int line)
+class NonFatalSerialLibraryException : public SerialLibraryException
 {
-    throw SerialLibraryException(string(file) + string("@") + to_string(line) + string(": ") + errmsg);
-}
+    public:
+    NonFatalSerialLibraryException(const string& error)
+     : SerialLibraryException(error) { }
+};
 
-#define THROW_SERIAL_LIB_EXCEPTION(errmsg) ThrowSerialLibExceptionWithFileAndLine(errmsg, __FILE__, __LINE__)
+class FatalSerialLibraryException : public SerialLibraryException
+{
+    public:
+    FatalSerialLibraryException(const string& error)
+     : SerialLibraryException(error) { }
+};
+
+#define THROW_FATAL_SERIAL_LIB_EXCEPTION(errmsg) throw FatalSerialLibraryException(string(__FILE__) + string("@") + to_string(__LINE__) + string(": ") + errmsg);
+#define THROW_NON_FATAL_SERIAL_LIB_EXCEPTION(errmsg) throw NonFatalSerialLibraryException(string(__FILE__) + string("@") + to_string(__LINE__) + string(": ") + errmsg);
 #define SERIAL_LIB_ASSERT(cond, msg) \
     do \
     { \
         if(!(cond)) \
         { \
-            THROW_SERIAL_LIB_EXCEPTION(#cond ": " msg); \
+            THROW_FATAL_SERIAL_LIB_EXCEPTION(#cond ": " msg); \
         } \
     } while(0)
 
@@ -116,6 +127,8 @@ typedef int SerialFieldId;
 typedef vector<SerialFieldId> SerialFrame;
 typedef map<SerialFrameId, SerialFrame> SerialFramesMap;
 
+typedef bool(*CheckFunc)(const char *msgStart, const SerialFrame& frame);
+
 struct SerialData
 {
     size_t numData;
@@ -125,7 +138,7 @@ struct SerialData
     {
         if(rhs.numData >= MAX_DATA_BYTES)
         {
-            THROW_SERIAL_LIB_EXCEPTION(string("SerialData being assigned must have less than ") + to_string(MAX_DATA_BYTES) + string(" data, but has ") + to_string(rhs.numData));
+            THROW_FATAL_SERIAL_LIB_EXCEPTION(string("SerialData being assigned must have less than ") + to_string(MAX_DATA_BYTES) + string(" data, but has ") + to_string(rhs.numData));
         }
         numData = rhs.numData;
         memcpy(data, rhs.data, numData);

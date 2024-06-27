@@ -55,6 +55,11 @@ TEST(UtilTest, testConvertFromCString)
     //good test of packing string smaller than T
     i = uwrt_gyro::convertFromCString<int>(str, 3);
     ASSERT_EQ(i, 66051);
+
+    //had issues with this
+    const char ffTest[2] = {0x30, 0x02};
+    i = uwrt_gyro::convertFromCString<uint16_t>(ffTest, 2);
+    ASSERT_EQ(i, 0x3002);
 }
 
 TEST(UtilTest, testConvertToCString)

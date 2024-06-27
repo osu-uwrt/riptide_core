@@ -89,7 +89,7 @@ namespace uwrt_gyro
         for(size_t i = 1; i < placesToShift; i++)
         {
             val = val << sizeof(*str) * 8;
-            val |= str[i];
+            val |= str[i] & 0xFF;
         }
 
         return val;
@@ -139,6 +139,12 @@ namespace uwrt_gyro
     };
 
 
+    static bool defaultCheckFunc(const char*, const SerialFrame&)
+    {
+        return true;
+    }
+
+
     class SerialProcessor
     {
         public:
@@ -147,7 +153,7 @@ namespace uwrt_gyro
         #endif
 
         SerialProcessor() = default;
-        SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen);
+        SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen, CheckFunc checker = &defaultCheckFunc);
         ~SerialProcessor();
         void update(const Time& now);
         bool hasDataForField(SerialFieldId field);
@@ -168,6 +174,7 @@ namespace uwrt_gyro
 
         const SerialFramesMap frameMap;
         const SerialFrameId defaultFrame;
+        const CheckFunc checker;
         
         // "thread-safe" resources 
         ProtectedResource<SerialValuesMap*> valueMap;

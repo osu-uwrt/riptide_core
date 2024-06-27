@@ -8,9 +8,11 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(riptide_msgs2 REQUIRED)
 
 set(deps
-  rclcpp)
+  rclcpp
+  riptide_msgs2)
 
 # build and install serial library
 file(GLOB serial_library_sources RELATIVE ${PROJECT_SOURCE_DIR}
