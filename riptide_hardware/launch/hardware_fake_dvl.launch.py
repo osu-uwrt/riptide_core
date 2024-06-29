@@ -82,7 +82,6 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
-
             Node(
                 package='riptide_hardware2',
                 executable='simple_actuator_interface',
