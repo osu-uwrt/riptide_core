@@ -1,6 +1,9 @@
+#include "riptide_gyro/serial_library.hpp"
+
+// #if defined(USE_LINUX)
 #include <rclcpp/rclcpp.hpp>
 #include <riptide_msgs2/msg/int32_stamped.hpp>
-#include "riptide_gyro/serial_library.hpp"
+
 
 using namespace std::chrono_literals;
 
@@ -163,7 +166,7 @@ namespace uwrt_gyro {
             //initialize serial library
             std::string port = get_parameter("gyro_port").as_string();
             RCLCPP_INFO(get_logger(), "Gyro port: %s", port.c_str());
-            transceiver = std::make_shared<LinuxSerialTransceiver>(shared_from_this(), "/dev/ttyUSB0", GYRO_BAUD, 1, 0, O_RDONLY);
+            transceiver = std::make_shared<LinuxSerialTransceiver>("/dev/ttyUSB0", GYRO_BAUD, 1, 0, O_RDONLY);
             processor = std::make_shared<SerialProcessor>(*transceiver, GYRO_FRAME_MAP, UwrtGyroFrame::TEMP_HIGH_FRAME, GYRO_SYNC, sizeof(GYRO_SYNC), &gyroChecker);
             procThread = std::make_unique<std::thread>(std::bind(&GyroDriver::threadFunc, this));
             RCLCPP_INFO(get_logger(), "Gyro driver started.");
@@ -208,12 +211,10 @@ namespace uwrt_gyro {
         {
             while(rclcpp::ok())
             {
-                try
+                SerialLibErrorCode code = processor->update(get_clock()->now());
+                if(code != SERIAL_LIB_NO_ERROR)
                 {
-                    processor->update(get_clock()->now());
-                } catch(NonFatalSerialLibraryException& ex)
-                {
-                    RCLCPP_WARN(get_logger(), "Caught serial lib exception: %s", ex.what().c_str());
+                    RCLCPP_WARN(get_logger(), "Caught serial lib exception: %s", serialliberror.c_str());
                 }
             }
         }
@@ -232,15 +233,9 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
     std::shared_ptr<uwrt_gyro::GyroDriver> driver = std::make_shared<uwrt_gyro::GyroDriver>();
-
-    try
-    {
-        driver->init();
-        rclcpp::spin(driver);
-    } catch(SerialLibraryException& ex)
-    {
-        RCLCPP_FATAL(driver->get_logger(), "Caught SerialLibraryException during execution! what(): %s", ex.what().c_str());
-    }   
-
+    driver->init();
+    rclcpp::spin(driver);
     rclcpp::shutdown();
 }
+
+// #endif

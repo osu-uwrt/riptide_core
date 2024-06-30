@@ -20,26 +20,26 @@ namespace uwrt_gyro
 
     size_t extractFieldFromBuffer(const char *src, size_t srcLen, SerialFrame frame, SerialFieldId field, char *dst, size_t dstLen)
     {
-        auto it = frame.begin();
-        size_t nextUnusedCharacter = 0; //for dst
+        size_t
+            loc = 0,
+            nextUnusedCharacter = 0; //for dst
 
-        while(it != frame.end() && nextUnusedCharacter < dstLen)
+        while(loc < frame.size() && nextUnusedCharacter < dstLen)
         {
             //find next location of the field in the frame
-            it = std::find(it, frame.end(), field);
-            if(it == frame.end())
+            loc = find<SerialFieldId>(frame, field, loc);
+            if(loc >= frame.size())
             {
                 break;
             }
 
-            int idx = it - frame.begin();
-            if(idx < srcLen)
+            if(loc < srcLen)
             {
-                dst[nextUnusedCharacter] = src[idx];
+                dst[nextUnusedCharacter] = src[loc];
             }
 
             nextUnusedCharacter++;
-            it++;
+            loc++;
         }
 
         return nextUnusedCharacter;
@@ -47,28 +47,27 @@ namespace uwrt_gyro
 
     void insertFieldToBuffer(char *dst, size_t dstLen, SerialFrame frame, SerialFieldId field, const char *src, size_t srcLen)
     {
-        auto it = frame.begin();
-        size_t nextUnusedCharacter = 0; //for src
+        size_t
+            loc = 0,
+            nextUnusedCharacter = 0; //for src
 
-        while(it != frame.end() && nextUnusedCharacter < dstLen)
+        while(loc < frame.size() && nextUnusedCharacter < dstLen)
         {
             //find next location of the field in the frame
-            it = std::find(it, frame.end(), field);
-            if(it == frame.end())
+            loc = find<SerialFieldId>(frame, field, loc);
+            if(loc >= frame.size())
             {
                 break;
             }
 
-            int idx = it - frame.begin();
-
             //we know where to put the next character from src; now put it there
-            if(idx < dstLen)
+            if(loc < dstLen)
             {
-                dst[idx] = src[nextUnusedCharacter];
+                dst[loc] = src[nextUnusedCharacter];
                 nextUnusedCharacter++;
             }
 
-            it++;
+            loc++;
         }
     }
 
@@ -81,33 +80,33 @@ namespace uwrt_gyro
     }
 
 
-    SerialFrame normalizeSerialFrame(const SerialFrame& frame)
-    {
-        auto syncIt = std::find(frame.begin(), frame.end(), FIELD_SYNC);
+    // SerialFrame normalizeSerialFrame(const SerialFrame& frame)
+    // {
+    //     size_t syncLoc = find<SerialFieldId>(frame, FIELD_SYNC);
 
-        //start with frame from sync field to end
-        SerialFrame normalizedFrame(syncIt, frame.end());
+    //     //start with frame from sync field to end
+    //     SerialFrame normalizedFrame(syncLoc, frame.end());
 
-        //add frame begin to sync field
-        normalizedFrame.insert(normalizedFrame.end(),frame.begin(), syncIt);
+    //     //add frame begin to sync field
+    //     normalizedFrame.insert(normalizedFrame.end(),frame.begin(), syncIt);
 
-        return normalizedFrame;
-    }
+    //     return normalizedFrame;
+    // }
 
 
-    SerialFramesMap normalizeSerialFramesMap(const SerialFramesMap& map)
-    {
-        SerialFramesMap normalizedFrameMap;
+    // SerialFramesMap normalizeSerialFramesMap(const SerialFramesMap& map)
+    // {
+    //     SerialFramesMap normalizedFrameMap;
         
-        //compute normalized frames and add them to map
-        for(auto pair : map)
-        {
-            SerialFrame normalizedFrame = normalizeSerialFrame(pair.second);
-            normalizedFrameMap.insert({ pair.first, normalizedFrame });
-        }
+    //     //compute normalized frames and add them to map
+    //     for(auto pair : map)
+    //     {
+    //         SerialFrame normalizedFrame = normalizeSerialFrame(pair.second);
+    //         normalizedFrameMap.insert({ pair.first, normalizedFrame });
+    //     }
 
-        return normalizedFrameMap;
-    }
+    //     return normalizedFrameMap;
+    // }
 }
 
 

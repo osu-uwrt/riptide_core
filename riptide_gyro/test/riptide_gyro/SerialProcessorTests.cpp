@@ -24,7 +24,6 @@ void Type1SerialProcessorTest::SetUp()
 {
     LinuxTransceiverTest::SetUp();
     transceiver = uwrt_gyro::LinuxSerialTransceiver(
-        rosNode,
         homeDir() + "virtualsp1",
         9600,
         0, 
@@ -61,7 +60,6 @@ void Type2SerialProcessorTest::SetUp()
 {
     LinuxTransceiverTest::SetUp();
     transceiver = uwrt_gyro::LinuxSerialTransceiver(
-        rosNode,
         homeDir() + "virtualsp1",
         9600,
         0,

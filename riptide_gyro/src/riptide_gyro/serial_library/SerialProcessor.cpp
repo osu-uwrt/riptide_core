@@ -20,10 +20,10 @@ namespace uwrt_gyro
         for(int i = 0; i < frames.size(); i++)
         {
             SerialFrame frame = frames.at(i);
-            if(std::find(frame.begin(), frame.end(), FIELD_SYNC) == frame.end())
-            {
-                THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("No sync field provided in frame " + std::to_string(i) + " of the map.");
-            }
+
+            SERIAL_LIB_ASSERT(
+                find(frame, FIELD_SYNC) != frame.size(), 
+                "Frame was provided with no sync field");
         }
 
         //add sync value
@@ -42,36 +42,34 @@ namespace uwrt_gyro
         SERIAL_LIB_ASSERT(frames.size() > 0, "Must have at least one frame");
         SERIAL_LIB_ASSERT(frames.find(defaultFrame) != frames.end(), "Default frame must be contained within frames");
 
-        auto syncFieldIt = std::find(frames.at(0).begin(), frames.at(0).end(), FIELD_SYNC);
-        SERIAL_LIB_ASSERT(syncFieldIt != frames.at(0).end(), "Frame 0 does not contain a sync!");
-        size_t syncFieldLoc = syncFieldIt - frames.at(0).begin();
+        size_t syncFieldLoc = find<SerialFieldId>(frames.at(0), FIELD_SYNC);
+        SERIAL_LIB_ASSERT(syncFieldLoc != frames.at(0).size(), "Frame 0 does not contain a sync!");
 
-        auto frameFieldIt = std::find(frames.at(0).begin(), frames.at(0).end(), FIELD_FRAME);
-        bool containsFrameField = frameFieldIt != frames.at(0).end();
+        size_t frameFieldLoc = find<SerialFieldId>(frames.at(0), FIELD_FRAME);
+        bool containsFrameField = frameFieldLoc != frames.at(0).size();
         SERIAL_LIB_ASSERT(containsFrameField || frames.size() == 1 , "Field 0 does not contain a frame field, but multiple frames are used!");
-        size_t frameFieldLoc = frameFieldIt - frames.at(0).begin();
 
         for(size_t i = 0; i < frames.size(); i++)
         {
-            auto iSyncIt = std::find(frames.at(i).begin(), frames.at(i).end(), FIELD_SYNC);
-            auto iFrameIt = std::find(frames.at(i).begin(), frames.at(i).end(), FIELD_FRAME);
+            size_t iSyncLoc = find<SerialFieldId>(frames.at(i), FIELD_SYNC);
+            size_t iFrameLoc = find<SerialFieldId>(frames.at(i), FIELD_FRAME);
 
-            SERIAL_LIB_ASSERT(iSyncIt - frames.at(i).begin() == syncFieldLoc, "Sync fields not aligned!");
-            SERIAL_LIB_ASSERT(iFrameIt - frames.at(i).begin() == frameFieldLoc, "Frame fields not aligned!");
-            SERIAL_LIB_ASSERT(std::find(iFrameIt + 1, frames.at(i).end(), FIELD_FRAME) == frames.at(i).end(), "Large frame fields are not supported yet.");
+            SERIAL_LIB_ASSERT(iSyncLoc == syncFieldLoc, "Sync fields not aligned!");
+            SERIAL_LIB_ASSERT(iFrameLoc == frameFieldLoc, "Frame fields not aligned!");
+            SERIAL_LIB_ASSERT(find<SerialFieldId>(frames.at(i), FIELD_FRAME, iFrameLoc + 1) == frames.at(i).size(), "Large frame fields are not supported yet.");
 
             //check that the sync is continuous
             int syncFrameLen = 1;
-            while(iSyncIt != frames.at(i).end())
+            while(iSyncLoc < frames.at(i).size())
             {
-                auto nextSyncFieldIt = std::find(iSyncIt + 1, frames.at(i).end(), FIELD_SYNC);
-                if(nextSyncFieldIt != frames.at(i).end())
+                size_t nextSyncFieldLoc = find<SerialFieldId>(frames.at(i), FIELD_SYNC, iSyncLoc + 1);
+                if(nextSyncFieldLoc != frames.at(i).size())
                 {
-                    SERIAL_LIB_ASSERT(nextSyncFieldIt - iSyncIt == 1, "Sync frame is not continuous!");
+                    SERIAL_LIB_ASSERT(nextSyncFieldLoc - iSyncLoc == 1, "Sync frame is not continuous!");
                     syncFrameLen++;
                 }
 
-                iSyncIt = nextSyncFieldIt;
+                iSyncLoc = nextSyncFieldLoc;
             }
 
             SERIAL_LIB_ASSERT(syncFrameLen == syncValueLen, "Sync field length is not equal to the sync value length!");
@@ -85,13 +83,13 @@ namespace uwrt_gyro
     }
 
 
-    void SerialProcessor::update(const Time& now)
+    SerialLibErrorCode SerialProcessor::update(const Time& now)
     {
         //TODO can probably rewrite method and use SERIAL_LIB_ASSERT
         size_t recvd = transceiver.recv(transmissionBuffer, PROCESSOR_BUFFER_SIZE);
         if(recvd == 0)
         {
-            return;
+            return SERIAL_LIB_NO_ERROR;
         }
 
         // append new contents to buffer
@@ -112,7 +110,7 @@ namespace uwrt_gyro
             syncLocation = memstr(msgBuffer, msgBufferCursorPos, syncValue, syncValueLen);
             if(!syncLocation)
             {
-                return;
+                return SERIAL_LIB_NO_ERROR;
             }
 
             size_t msgSz = msgBufferCursorPos + (size_t) msgBuffer - (size_t) syncLocation;
@@ -126,7 +124,7 @@ namespace uwrt_gyro
 
             //determine the message string based on the sync location. then process it
             int
-                msgStartOffsetFromSync = std::find(frameToUse.begin(), frameToUse.end(), FIELD_SYNC) - frameToUse.begin(),
+                msgStartOffsetFromSync = find<SerialFieldId>(frameToUse, FIELD_SYNC),
                 syncOffsetFromBuffer = syncLocation - msgBuffer;
 
             char 
@@ -154,14 +152,14 @@ namespace uwrt_gyro
                     size_t bytes = extractFieldFromBuffer(msgStart, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, MAX_DATA_BYTES);
                     if(bytes == 0)
                     {
-                        THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("No frame id found in message");
+                        return slReportNonFatalError("No frame id found in message");
                     }
 
                     SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
 
                     if(frameMap.find(frameId) == frameMap.end())
                     {
-                        THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
+                        return slReportNonFatalError("Cannot parse message because frame " + to_string(frameId) + " does not exist");
                     }
 
                     frameToUse = frameMap.at(frameId);
@@ -219,6 +217,8 @@ namespace uwrt_gyro
             size_t amountRemoved = msgEnd - msgStart;
             msgBufferCursorPos -= amountRemoved;
         } while(syncLocation);
+
+        return SERIAL_LIB_NO_ERROR;
     }
     
     
@@ -262,17 +262,17 @@ namespace uwrt_gyro
     }
     
     
-    void SerialProcessor::send(SerialFrameId frameId)
+    SerialLibErrorCode SerialProcessor::send(SerialFrameId frameId)
     {
         if(frameMap.find(frameId) == frameMap.end())
         {
-            THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot send message with unknown frame id " + std::to_string(frameId));
+            slReportNonFatalError("Cannot send message with unknown frame id " + to_string(frameId));
         }
 
         SerialFrame frame = frameMap.at(frameId);
 
         //loop through minimal set of frames and pack each frame into the transmission buffer
-        std::set<SerialFieldId> frameSet(frame.begin(), frame.end());
+        slvector<SerialFieldId> frameSet = getMinimalSet<SerialFieldId>(frame);
         for(auto fieldIt = frameSet.begin(); fieldIt != frameSet.end(); fieldIt++)
         {
             SerialData dataToInsert;
@@ -293,7 +293,7 @@ namespace uwrt_gyro
                 } else
                 {
                     //if it is a custom type, throw exception because it is undefined
-                    THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot send serial frame because it is missing field " + std::to_string(*fieldIt));
+                    return slReportNonFatalError("Cannot send serial frame because it is missing field " + to_string(*fieldIt));
                 }
             }
 

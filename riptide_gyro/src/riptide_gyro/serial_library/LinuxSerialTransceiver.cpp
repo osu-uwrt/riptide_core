@@ -1,6 +1,6 @@
 #include "riptide_gyro/serial_library.hpp"
 
-#if defined(USE_LINUX)
+#if defined(BUILD_LINUX)
 
 // linux serial port implementation: https://blog.mbedded.ninja/programming/operating-systems/linux/linux-serial-ports-using-c-cpp/
 
@@ -8,8 +8,7 @@ namespace uwrt_gyro
 {
 
     LinuxSerialTransceiver::LinuxSerialTransceiver(
-        const rclcpp::Node::SharedPtr node, 
-        const std::string& fileName, 
+        const slstring& fileName, 
         int baud,
         int minimumBytes,
         int maximumTimeout,
@@ -17,8 +16,7 @@ namespace uwrt_gyro
         int bitsPerByte,
         bool twoStopBits,
         bool parityBit)
-          : rosNode(node),
-            fileName(fileName),
+          : fileName(fileName),
             baud(baud),
             mode(mode),
             bitsPerByte(bitsPerByte),
@@ -29,7 +27,7 @@ namespace uwrt_gyro
             parityBit(parityBit) { }
     
 
-    bool LinuxSerialTransceiver::init(void)
+    SerialLibErrorCode LinuxSerialTransceiver::init(void)
     {
         //
         // SERIAL PORT OPEN
@@ -37,9 +35,7 @@ namespace uwrt_gyro
         file = open(fileName.c_str(), mode);
         if(file < 0)
         {
-            RCLCPP_FATAL(rosNode->get_logger(), "Could not open file %s: %s", fileName.c_str(), strerror(errno));
-            initialized = false;
-            return false;
+            return slReportFatalError(slstring("Could not open file") + slstring(fileName.c_str()) + slstring(": ") + slstring(strerror(errno)));
         }
 
         //
@@ -50,9 +46,7 @@ namespace uwrt_gyro
         //init config with current settings
         if(tcgetattr(file, &config) < 0)
         {
-            RCLCPP_FATAL(rosNode->get_logger(), "tcgetattr() failed: %s", strerror(errno));
-            initialized = false;
-            return false;
+            return slReportFatalError("tcgetattr() failed: " + slstring(strerror(errno)));
         }
 
         //configure bits per byte
@@ -84,9 +78,7 @@ namespace uwrt_gyro
 
         if(tcsetattr(file, TCSANOW, &config))
         {
-            RCLCPP_FATAL(rosNode->get_logger(), "tcsetattr() failed: %s", strerror(errno));
-            initialized = false;
-            return false;
+            return slReportFatalError("tcsetattr() failed: " + slstring(strerror(errno)));
         }
 
         initialized = true;

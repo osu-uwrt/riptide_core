@@ -1,10 +1,11 @@
 #pragma once
 
+#if __linux__
 #include "riptide_gyro/gyro_base.hpp"
-
-#if defined(USE_LINUX)
 #include <termios.h>
 #include <fcntl.h>
+#else
+#include "gyro_base.hpp"
 #endif
 
 namespace uwrt_gyro
@@ -12,22 +13,21 @@ namespace uwrt_gyro
     class SerialTransceiver
     {
         public:
-        virtual bool init(void) = 0;
+        virtual SerialLibErrorCode init(void) = 0;
         virtual void send(const char *data, size_t numData) const = 0;
         virtual size_t recv(char *data, size_t numData) const = 0;
         virtual void deinit(void) = 0;
     };
 
 
-    #if defined(USE_LINUX)
+    #if defined(BUILD_LINUX)
 
     class LinuxSerialTransceiver : public SerialTransceiver
     {
         public:
         LinuxSerialTransceiver() = default;
         LinuxSerialTransceiver(
-            const rclcpp::Node::SharedPtr node,
-            const std::string& fileName,
+            const slstring& fileName,
             int baud,
             int minimumBytes,
             int maximumTimeout,
@@ -36,14 +36,13 @@ namespace uwrt_gyro
             bool twoStopBits = false,
             bool parityBit = false);
 
-        bool init(void) override;
+        SerialLibErrorCode init(void) override;
         void send(const char *data, size_t numData) const override;
         size_t recv(char *data, size_t numData) const override;
         void deinit(void) override;
 
         private:
-        rclcpp::Node::SharedPtr rosNode;
-        std::string fileName;
+        slstring fileName;
         int
             file,
             baud,
@@ -58,6 +57,33 @@ namespace uwrt_gyro
             parityBit;
     };
 
+    #elif defined(BUILD_ARDUINO)
+
+    class ArduinoSerialTransceiver : public SerialTransceiver
+    {
+        public:
+        ArduinoSerialTransceiver(int baud)
+         : baud(baud) { }
+
+        SerialLibErrorCode init(void) override
+        {
+            Serial.begin(baud);
+            Serial.setTimeout(1);
+        }
+        void send(const char *data, size_t numData) const override
+        {
+            Serial.write(data, numData);
+        }
+        size_t recv(char *data, size_t numData) const override
+        {
+            Serial.readBytes(data, numData);
+        }
+        void deinit(void) override { }
+
+        private:
+        int baud;
+    };
+
     #endif
 
     char *memstr(const char *haystack, size_t numHaystack, const char *needle, size_t numNeedle);
@@ -66,8 +92,8 @@ namespace uwrt_gyro
     SerialData serialDataFromString(const char *str, size_t numData);
     
     // "normalized" in this case means that the frame starts with a sync, makes processing easier
-    SerialFrame normalizeSerialFrame(const SerialFrame& frame);
-    SerialFramesMap normalizeSerialFramesMap(const SerialFramesMap& map);
+    // SerialFrame normalizeSerialFrame(const SerialFrame& frame);
+    // SerialFramesMap normalizeSerialFramesMap(const SerialFramesMap& map);
 
     // packs c string into primitive type. 0 is most significant
     template<typename T>
@@ -134,7 +160,7 @@ namespace uwrt_gyro
         }
 
         private:
-        mutex lock;
+        slmutex lock;
         T resource;
     };
 
@@ -155,11 +181,11 @@ namespace uwrt_gyro
         SerialProcessor() = default;
         SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen, CheckFunc checker = &defaultCheckFunc);
         ~SerialProcessor();
-        void update(const Time& now);
+        SerialLibErrorCode update(const Time& now);
         bool hasDataForField(SerialFieldId field);
         SerialDataStamped getField(SerialFieldId field);
         void setField(SerialFieldId field, SerialData data, const Time& now);
-        void send(SerialFrameId frameId);
+        SerialLibErrorCode send(SerialFrameId frameId);
 
         private:
         // regular member vars

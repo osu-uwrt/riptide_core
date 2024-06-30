@@ -20,6 +20,8 @@ file(GLOB serial_library_sources RELATIVE ${PROJECT_SOURCE_DIR}
 
 add_library(serial_library ${serial_library_sources})
 
+# target_compile_definitions(serial_library PUBLIC LINUX_BUILD)
+
 ament_target_dependencies(serial_library ${deps})
 
 target_include_directories(serial_library PUBLIC
@@ -51,6 +53,13 @@ install(DIRECTORY config
 
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
+
+#install serial library code to share, for cal table
+install(DIRECTORY include/riptide_gyro
+  DESTINATION share/${PROJECT_NAME}/serial_library)
+
+install(DIRECTORY src/riptide_gyro/serial_library
+  DESTINATION share/${PROJECT_NAME}/serial_library)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest QUIET) 

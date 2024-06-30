@@ -11,21 +11,24 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define ARDUSTRING_MAX_LEN 64
-#define ARDUVECTOR_MAX_LEN 16
+#define ARDUSTRING_MAX_LEN 24
+#define ARDUVECTOR_MAX_LEN 8
 
 #if __linux__
 #include <unistd.h>
 #define SLEEP(usec) usleep(usec)
-#else
+#define BUILD_LINUX
+#elif defined(ARDUINO)
+#include <Arduino.h>
 #define SLEEP(usec) delay(usec / 1000)
+#define BUILD_ARDUINO
 #endif
 
 namespace arduino_lib
 {
     #define NUM_ARGS(_type, ...) (sizeof((_type []){__VA_ARGS__}) / sizeof( _type ))
 
-    size_t countInString(char *str, char c)
+    static size_t countInString(char *str, char c)
     {
         char *next = strchr(str, c);
         size_t i = 0;
@@ -114,12 +117,12 @@ namespace arduino_lib
         char impl[ARDUSTRING_MAX_LEN];
     };
 
-    string to_string(size_t i)
+    static string to_string(size_t i)
     {
         return "";
     }
 
-    string operator+(const string& a, const string& b)
+    inline string operator+(const string& a, const string& b)
     {
         string c = a;
         c.append(b);
@@ -140,6 +143,19 @@ namespace arduino_lib
         private:
         const string msg;
     };
+
+    inline void alFatalError(const string& msg)
+    {
+        #if defined(BUILD_LINUX)
+            throw exception(msg);
+        #else
+            while(true)
+            {
+                Serial.println(msg.c_str());
+                SLEEP(1000);
+            }
+        #endif
+    }
 
     class mutex
     {
@@ -234,7 +250,8 @@ namespace arduino_lib
 
         Iterator<Container, T> operator++(int)
         {
-            return *this + 1;
+            i += 1;
+            return *this;
         }
         
         private:
@@ -251,6 +268,10 @@ namespace arduino_lib
     {
         public:
         typedef arduino_lib::Iterator<arduino_lib::vector<T>, T> Iterator;
+
+        vector() 
+         : impl(new T[ARDUVECTOR_MAX_LEN]),
+           sz(0) { }
 
         vector(const vector& v)
          : impl(new T[ARDUVECTOR_MAX_LEN])
@@ -305,7 +326,7 @@ namespace arduino_lib
         {
             if(idx >= sz)
             {
-                throw exception(string("Index out of bounds: ") + to_string(idx));
+                alFatalError(string("Index out of bounds: ") + to_string(idx));
             }
 
             return &impl[idx];
@@ -397,7 +418,12 @@ namespace arduino_lib
 
 
     #define ARDUINOLIB_MAP(keyType, valueType, ...) \
-        arduino_lib::map<keyType, valueType>(ARDUINOLIB_VECTOR(ARDUINOLIB_PAIR_TYPE(keyType, valueType), __VA_ARGS__))
+        arduino_lib::map<keyType, valueType>( \
+            arduino_lib::vector<arduino_lib::pair<keyType, valueType>>( \
+                sizeof((arduino_lib::pair<keyType, valueType>[]) {__VA_ARGS__}) / sizeof(arduino_lib::pair<keyType, valueType>), \
+                __VA_ARGS__ \
+            ) \
+        ) 
 
     template<typename K, typename V>
     class map
@@ -406,6 +432,9 @@ namespace arduino_lib
         typedef arduino_lib::pair<K, V> PairT;
         typedef arduino_lib::vector<PairT> VectorT;
         typedef arduino_lib::Iterator<VectorT, PairT> Iterator; //TODO custom iterator type, pointers increment by a byte, we need more than that
+
+        map()
+         : impl(vector<pair<K, V>>()) { }
 
         map(const vector<pair<K, V>>& pairs)
          : impl(pairs) { }
@@ -443,7 +472,7 @@ namespace arduino_lib
             Iterator it = find(key);
             if(it == end())
             {
-                throw exception("Key not found!");
+                alFatalError("Key not found!");
             }
 
             return &(it->second);

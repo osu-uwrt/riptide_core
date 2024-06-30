@@ -11,7 +11,7 @@ class TestTransceiver : public uwrt_gyro::SerialTransceiver
     TestTransceiver(bool initRet)
      : initRet(initRet) { }
 
-    bool init(void)
+    SerialLibErrorCode init(void)
     {
         return initRet;
     }
@@ -28,7 +28,6 @@ class TestTransceiver : public uwrt_gyro::SerialTransceiver
 TEST_F(Type1SerialProcessorTest, TestBasicRecvWithManualSendType1)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
@@ -53,7 +52,6 @@ TEST_F(Type1SerialProcessorTest, TestBasicRecvWithManualSendType1)
 TEST_F(Type1SerialProcessorTest, TestBasicSendWithManualRecvType1)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
@@ -77,7 +75,6 @@ TEST_F(Type1SerialProcessorTest, TestBasicSendWithManualRecvType1)
 TEST_F(Type2SerialProcessorTest, TestBasicRecvWithManualSendType2)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
@@ -133,7 +130,6 @@ TEST_F(Type2SerialProcessorTest, TestBasicRecvAndSendType2)
 {
     //create another processor to recv
     uwrt_gyro::LinuxSerialTransceiver sender(
-        rosNode, 
         homeDir() + "/virtualsp2",
         9600,
         1,
@@ -226,19 +222,16 @@ TEST(GenericType2SerialProcessorTest, TestConstructorSyncValueAssertions)
         }
     };
 
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(trans, nonContinuousSyncFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(trans, nonContinuousSyncFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2), ::testing::ExitedWithCode(1), "");
     
     //sync too long
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(trans, goodFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "abc", 3),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(trans, goodFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "abc", 3), ::testing::ExitedWithCode(1), "");
     
     //sync too short
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(trans, goodFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "abc", 3),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(trans, goodFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "abc", 3), ::testing::ExitedWithCode(1), "");
 }
 
 TEST(GenericType2SerialProcessorTest, TestConstructorFrameValueAssertions)
@@ -258,13 +251,12 @@ TEST(GenericType2SerialProcessorTest, TestConstructorFrameValueAssertions)
     };
 
     //control frame
-    ASSERT_NO_THROW(
+    ASSERT_NO_FATAL_FAILURE(
         uwrt_gyro::SerialProcessor proc(trans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2));
 
     //bad default frame
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(trans, frames, Type2SerialFrames1::TYPE_2_FRAME_2, "ab", 2),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(trans, frames, Type2SerialFrames1::TYPE_2_FRAME_2, "ab", 2), ::testing::ExitedWithCode(1), "");
 
     //misaligned frames
     SerialFramesMap misalignedSyncFrames = {
@@ -286,9 +278,8 @@ TEST(GenericType2SerialProcessorTest, TestConstructorFrameValueAssertions)
         }
     };
 
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(trans, misalignedSyncFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(trans, misalignedSyncFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2), ::testing::ExitedWithCode(1), "");
 
     SerialFramesMap misalignedFrameFrames = {
         {Type2SerialFrames1::TYPE_2_FRAME_1,
@@ -309,9 +300,8 @@ TEST(GenericType2SerialProcessorTest, TestConstructorFrameValueAssertions)
         }
     };
 
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(trans, misalignedFrameFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(trans, misalignedFrameFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2), ::testing::ExitedWithCode(1), "");
     
     //multiple frames but no frame field
     SerialFramesMap missingFrameFieldFrames = {
@@ -333,9 +323,8 @@ TEST(GenericType2SerialProcessorTest, TestConstructorFrameValueAssertions)
         }
     };
 
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(trans, missingFrameFieldFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(trans, missingFrameFieldFrames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2), ::testing::ExitedWithCode(1), "");
 }
 
 TEST(GenericType2SerialProcessorTest, TestConstructorTransceiverInitFailed)
@@ -355,14 +344,13 @@ TEST(GenericType2SerialProcessorTest, TestConstructorTransceiverInitFailed)
     };
 
     //control
-    ASSERT_NO_THROW(
+    ASSERT_NO_FATAL_FAILURE(
         uwrt_gyro::SerialProcessor proc(goodTrans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2));
     
     //bad transceiver
     TestTransceiver badTrans(false);
-    ASSERT_THROW(
-        uwrt_gyro::SerialProcessor proc(badTrans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2),
-        SerialLibraryException);
+    ASSERT_EXIT(
+        uwrt_gyro::SerialProcessor proc(badTrans, frames, Type2SerialFrames1::TYPE_2_FRAME_1, "ab", 2), ::testing::ExitedWithCode(1), "");
 }
 
 #endif

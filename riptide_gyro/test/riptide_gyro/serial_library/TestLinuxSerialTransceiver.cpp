@@ -6,14 +6,12 @@
 TEST_F(LinuxTransceiverTest, TestTransceiverRdWr)
 {
     uwrt_gyro::LinuxSerialTransceiver transceiver1(
-        rosNode,
         homeDir() + "virtualsp1",
         9600,
         1,
         0);
     
     uwrt_gyro::LinuxSerialTransceiver transceiver2(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
@@ -47,7 +45,6 @@ TEST_F(LinuxTransceiverTest, TestTransceiverRdWr)
 TEST_F(LinuxTransceiverTest, TestTransceiverRoWo)
 {
     uwrt_gyro::LinuxSerialTransceiver transceiver1(
-        rosNode,
         homeDir() + "virtualsp1",
         9600,
         1,
@@ -55,7 +52,6 @@ TEST_F(LinuxTransceiverTest, TestTransceiverRoWo)
         O_WRONLY);
     
     uwrt_gyro::LinuxSerialTransceiver transceiver2(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
