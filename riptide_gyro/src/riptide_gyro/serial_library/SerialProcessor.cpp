@@ -9,6 +9,7 @@ namespace uwrt_gyro
        frameMap(frames),
        defaultFrame(defaultFrame),
        checker(checker),
+       newMsgFunc(nullptr),
        valueMap(new SerialValuesMap())
     {
         SERIAL_LIB_ASSERT(transceiver.init(), "Transceiver initialization failed!");
@@ -42,8 +43,8 @@ namespace uwrt_gyro
         size_t syncFieldLoc = syncFieldIt - frames.at(0).begin();
 
         auto frameFieldIt = std::find(frames.at(0).begin(), frames.at(0).end(), FIELD_FRAME);
-        bool containsFrameField = frameFieldIt != frames.at(0).end();
-        SERIAL_LIB_ASSERT(containsFrameField || frames.size() == 1 , "Field 0 does not contain a frame field, but multiple frames are used!");
+        // bool containsFrameField = frameFieldIt != frames.at(0).end();
+        // SERIAL_LIB_ASSERT(containsFrameField || frames.size() == 1 , "Field 0 does not contain a frame field, but multiple frames are used!");
         size_t frameFieldLoc = frameFieldIt - frames.at(0).begin();
 
         for(size_t i = 0; i < frames.size(); i++)
@@ -77,6 +78,12 @@ namespace uwrt_gyro
     SerialProcessor::~SerialProcessor()
     {
         transceiver.deinit();
+    }
+
+
+    void SerialProcessor::setNewMsgCallback(NewMsgFunc func)
+    {
+        this->newMsgFunc = func;
     }
 
 
@@ -147,26 +154,24 @@ namespace uwrt_gyro
                 {
                     char frameIdBuf[MAX_DATA_BYTES] = {0};
                     size_t bytes = extractFieldFromBuffer(msgStart, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, MAX_DATA_BYTES);
-                    if(bytes == 0)
+                    if(bytes > 0)
                     {
-                        THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("No frame id found in message");
-                    }
+                        SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
 
-                    SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
+                        if(frameMap.find(frameId) == frameMap.end())
+                        {
+                            THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
+                        }
 
-                    if(frameMap.find(frameId) == frameMap.end())
-                    {
-                        THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
-                    }
-
-                    frameToUse = frameMap.at(frameId);
-                    
-                    //check if the frame is parsable
-                    frameSz = frameToUse.size();
-                    if(msgBufferCursorPos < frameSz)
-                    {
-                        //we dont have enough information to parse this frame
-                        continue;
+                        frameToUse = frameMap.at(frameId);
+                        
+                        //check if the frame is parsable
+                        frameSz = frameToUse.size();
+                        if(msgBufferCursorPos < frameSz)
+                        {
+                            //we dont have enough information to parse this frame
+                            continue;
+                        }
                     }
                 }
 
@@ -202,6 +207,12 @@ namespace uwrt_gyro
                 }
 
                 valueMap.unlockResource();
+                
+                //call new message function
+                if(newMsgFunc)
+                {
+                    newMsgFunc();
+                }
             } else
             {
                 //message bad. dont remove like normal, just delete through the sync character
@@ -287,6 +298,7 @@ namespace uwrt_gyro
                 } else
                 {
                     //if it is a custom type, throw exception because it is undefined
+                    valueMap.unlockResource();
                     THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot send serial frame because it is missing field " + std::to_string(*fieldIt));
                 }
             }

@@ -39,6 +39,8 @@
     template<typename T>
     using vector = std::vector<T>;
 
+    typedef std::function<void(void)> NewMsgFunc;
+
     template<typename T>
     inline string to_string(const T& arg)
     {
@@ -60,6 +62,8 @@
 
     template<typename T>
     using vector = arduino_lib::vector<T>;
+
+    typedef void(*NewMsgFunc)(void);
 
     template<typename T>
     inline string to_string(const T& arg)

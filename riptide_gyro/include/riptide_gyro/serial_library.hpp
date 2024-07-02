@@ -153,6 +153,7 @@ namespace uwrt_gyro
         SerialProcessor() = default;
         SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen, CheckFunc checker = &defaultCheckFunc);
         ~SerialProcessor();
+        void setNewMsgCallback(NewMsgFunc func);
         void update(const Time& now);
         bool hasDataForField(SerialFieldId field);
         SerialDataStamped getField(SerialFieldId field);
@@ -174,6 +175,7 @@ namespace uwrt_gyro
         const SerialFramesMap frameMap;
         const SerialFrameId defaultFrame;
         const CheckFunc checker;
+        NewMsgFunc newMsgFunc;
         
         // "thread-safe" resources 
         ProtectedResource<SerialValuesMap*> valueMap;
