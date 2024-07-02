@@ -6,18 +6,18 @@ namespace uwrt_gyro
      : transceiver(transceiver),
        msgBufferCursorPos(0),
        syncValueLen(syncValueLen),
-       checker(checker),
        frameMap(frames),
        defaultFrame(defaultFrame),
+       checker(checker),
        valueMap(new SerialValuesMap())
     {
         SERIAL_LIB_ASSERT(transceiver.init(), "Transceiver initialization failed!");
 
-        memcpy(this->syncValue, syncValue, sizeof(syncValue));
+        memcpy(this->syncValue, syncValue, syncValueLen);
         
         //check that the frames include a sync
         //TODO: must check all individual frames for a sync, not the frame ids
-        for(int i = 0; i < frames.size(); i++)
+        for(size_t i = 0; i < frames.size(); i++)
         {
             SerialFrame frame = frames.at(i);
             if(std::find(frame.begin(), frame.end(), FIELD_SYNC) == frame.end())
@@ -33,11 +33,6 @@ namespace uwrt_gyro
         SerialValuesMap *values = valueMap.lockResource();
         values->insert( {FIELD_SYNC, syncDataStamped} );
         valueMap.unlockResource();
-
-        //do assertions
-        bool
-            frameIdLocsMatch = false,
-            syncLocsMatch = false;
         
         SERIAL_LIB_ASSERT(frames.size() > 0, "Must have at least one frame");
         SERIAL_LIB_ASSERT(frames.find(defaultFrame) != frames.end(), "Default frame must be contained within frames");
@@ -56,12 +51,12 @@ namespace uwrt_gyro
             auto iSyncIt = std::find(frames.at(i).begin(), frames.at(i).end(), FIELD_SYNC);
             auto iFrameIt = std::find(frames.at(i).begin(), frames.at(i).end(), FIELD_FRAME);
 
-            SERIAL_LIB_ASSERT(iSyncIt - frames.at(i).begin() == syncFieldLoc, "Sync fields not aligned!");
-            SERIAL_LIB_ASSERT(iFrameIt - frames.at(i).begin() == frameFieldLoc, "Frame fields not aligned!");
+            SERIAL_LIB_ASSERT((size_t) (iSyncIt - frames.at(i).begin()) == syncFieldLoc, "Sync fields not aligned!");
+            SERIAL_LIB_ASSERT((size_t) (iFrameIt - frames.at(i).begin()) == frameFieldLoc, "Frame fields not aligned!");
             SERIAL_LIB_ASSERT(std::find(iFrameIt + 1, frames.at(i).end(), FIELD_FRAME) == frames.at(i).end(), "Large frame fields are not supported yet.");
 
             //check that the sync is continuous
-            int syncFrameLen = 1;
+            size_t syncFrameLen = 1;
             while(iSyncIt != frames.at(i).end())
             {
                 auto nextSyncFieldIt = std::find(iSyncIt + 1, frames.at(i).end(), FIELD_SYNC);
@@ -189,8 +184,7 @@ namespace uwrt_gyro
 
                 //iterate through known fields and update their values from message
                 SerialValuesMap *values = valueMap.lockResource();
-                const int fieldBufSz = frameMap.size();
-                char fieldBuf[fieldBufSz];
+                int fieldBufSz = frameMap.size();
                 for(auto it = values->begin(); it != values->end(); it++)
                 {
                     memset(fieldBuf, 0, frameMap.size());

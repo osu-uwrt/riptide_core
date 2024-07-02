@@ -26,8 +26,14 @@ target_include_directories(serial_library PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-install(TARGETS serial_library
+install(
+  TARGETS serial_library
+  EXPORT serial_libraryTargets
   DESTINATION lib/${PROJECT_NAME})
+
+  #export serial library
+ament_export_targets(serial_libraryTargets HAS_LIBRARY_TARGET)
+ament_export_dependencies(${deps})
 
 # build and install driver
 add_executable(gyro_driver
@@ -51,6 +57,10 @@ install(DIRECTORY config
 
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
+
+#install include directory for lib
+install(DIRECTORY include/
+  DESTINATION include)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest QUIET) 
@@ -89,6 +99,8 @@ if(BUILD_TESTING)
     ament_target_dependencies(test_serial_library
       ${deps})
     
+    target_compile_options(test_serial_library PUBLIC -Wno-unused-parameter)
+    
     target_compile_definitions(test_serial_library PUBLIC TESTING_ENABLED)
     
     target_link_libraries(test_serial_library serial_library)
@@ -124,6 +136,9 @@ if(BUILD_TESTING)
       test/riptide_gyro/TestArduinoLib.cpp)
     
     target_compile_definitions(test_arduino_lib PUBLIC FORCE_ARDUINO TESTING_ENABLED)
+
+    # dont really care about pedantic iso c++ type warnings for now
+    target_compile_options(test_arduino_lib PUBLIC -Wno-pedantic)
 
     target_include_directories(test_arduino_lib PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

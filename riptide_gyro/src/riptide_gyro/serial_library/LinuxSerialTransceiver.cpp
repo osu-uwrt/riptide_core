@@ -8,7 +8,6 @@ namespace uwrt_gyro
 {
 
     LinuxSerialTransceiver::LinuxSerialTransceiver(
-        const rclcpp::Node::SharedPtr node, 
         const std::string& fileName, 
         int baud,
         int minimumBytes,
@@ -17,8 +16,7 @@ namespace uwrt_gyro
         int bitsPerByte,
         bool twoStopBits,
         bool parityBit)
-          : rosNode(node),
-            fileName(fileName),
+          : fileName(fileName),
             baud(baud),
             mode(mode),
             bitsPerByte(bitsPerByte),
@@ -37,7 +35,7 @@ namespace uwrt_gyro
         file = open(fileName.c_str(), mode);
         if(file < 0)
         {
-            RCLCPP_FATAL(rosNode->get_logger(), "Could not open file %s: %s", fileName.c_str(), strerror(errno));
+            THROW_FATAL_SERIAL_LIB_EXCEPTION("Could not open file " + string(fileName.c_str()) + ": " + string(strerror(errno)));
             initialized = false;
             return false;
         }
@@ -50,7 +48,7 @@ namespace uwrt_gyro
         //init config with current settings
         if(tcgetattr(file, &config) < 0)
         {
-            RCLCPP_FATAL(rosNode->get_logger(), "tcgetattr() failed: %s", strerror(errno));
+            THROW_FATAL_SERIAL_LIB_EXCEPTION("tcgetattr() failed: " + string(strerror(errno)));
             initialized = false;
             return false;
         }
@@ -84,7 +82,7 @@ namespace uwrt_gyro
 
         if(tcsetattr(file, TCSANOW, &config))
         {
-            RCLCPP_FATAL(rosNode->get_logger(), "tcsetattr() failed: %s", strerror(errno));
+            THROW_FATAL_SERIAL_LIB_EXCEPTION("tcsetattr() failed: " + string(strerror(errno)));
             initialized = false;
             return false;
         }

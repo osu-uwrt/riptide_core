@@ -141,14 +141,11 @@ namespace uwrt_gyro {
         GyroDriver()
         : rclcpp::Node("riptide_gyro")
         {
+            RCLCPP_INFO(get_logger(), "Starting gyro driver");
+
             //declare parameters
             declare_parameter<std::string>("gyro_port", DEFAULT_PORT);
             declare_parameter<std::string>("gyro_frame", DEFAULT_FRAME);
-        }
-
-        void init()
-        {
-            RCLCPP_INFO(get_logger(), "Starting gyro driver");
 
             frame = get_parameter("gyro_frame").as_string();
 
@@ -163,7 +160,7 @@ namespace uwrt_gyro {
             //initialize serial library
             std::string port = get_parameter("gyro_port").as_string();
             RCLCPP_INFO(get_logger(), "Gyro port: %s", port.c_str());
-            transceiver = std::make_shared<LinuxSerialTransceiver>(shared_from_this(), "/dev/ttyUSB0", GYRO_BAUD, 1, 0, O_RDONLY);
+            transceiver = std::make_shared<LinuxSerialTransceiver>(port, GYRO_BAUD, 1, 0, O_RDONLY);
             processor = std::make_shared<SerialProcessor>(*transceiver, GYRO_FRAME_MAP, UwrtGyroFrame::TEMP_HIGH_FRAME, GYRO_SYNC, sizeof(GYRO_SYNC), &gyroChecker);
             procThread = std::make_unique<std::thread>(std::bind(&GyroDriver::threadFunc, this));
             RCLCPP_INFO(get_logger(), "Gyro driver started.");
@@ -235,7 +232,6 @@ int main(int argc, char **argv)
 
     try
     {
-        driver->init();
         rclcpp::spin(driver);
     } catch(SerialLibraryException& ex)
     {

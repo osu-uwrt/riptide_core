@@ -23,7 +23,7 @@
 
 namespace arduino_lib
 {
-    #define NUM_ARGS(_type, ...) (sizeof((_type []){__VA_ARGS__}) / sizeof( _type ))
+    #define NUM_ARGS(_type, ...) (sizeof((_type[]){__VA_ARGS__}) / sizeof(_type))
 
     size_t countInString(char *str, char c)
     {
@@ -116,7 +116,17 @@ namespace arduino_lib
 
     string to_string(size_t i)
     {
-        return "";
+        string s;
+        while(i > 0)
+        {
+            size_t digit = i % 10;
+            char c[] = { (char) (digit + 48), '\0' };
+            string p(c);
+            s.append(p);
+            i /= 10;
+        }
+
+        return s;
     }
 
     string operator+(const string& a, const string& b)
@@ -218,6 +228,13 @@ namespace arduino_lib
             return i - other.i;
         }
 
+        Iterator<Container, T>& operator=(const Iterator<Container, T>& other)
+        {
+            c = other.c;
+            i = other.i;
+            return *this;
+        }
+
         Iterator<Container, T> operator-(int x)
         {
             Iterator<Container, T> other(*this);
@@ -273,7 +290,7 @@ namespace arduino_lib
             va_list args;
             va_start(args, numInit);
             
-            for(int i = 0; i < numInit; i++)
+            for(size_t i = 0; i < numInit; i++)
             {
                 impl[i] = va_arg(args, T);
             }
@@ -318,7 +335,7 @@ namespace arduino_lib
 
         void append(const vector& other)
         {
-            for(int i = 0; i < other.size(); i++)
+            for(size_t i = 0; i < other.size(); i++)
             {
                 impl[sz] = other[i];
                 sz++;
@@ -353,7 +370,7 @@ namespace arduino_lib
                 return false;
             }
 
-            for(int i = 0; i < size(); i++)
+            for(size_t i = 0; i < size(); i++)
             {
                 if(at(i) != other[i])
                 {
@@ -375,8 +392,8 @@ namespace arduino_lib
         }
 
         private:
-        size_t sz;
         T *impl;
+        size_t sz;
     };
 
     //definitino macro is needed to avoid comma splicing in map definition

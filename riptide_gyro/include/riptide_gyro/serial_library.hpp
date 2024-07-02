@@ -26,7 +26,6 @@ namespace uwrt_gyro
         public:
         LinuxSerialTransceiver() = default;
         LinuxSerialTransceiver(
-            const rclcpp::Node::SharedPtr node,
             const std::string& fileName,
             int baud,
             int minimumBytes,
@@ -42,7 +41,6 @@ namespace uwrt_gyro
         void deinit(void) override;
 
         private:
-        rclcpp::Node::SharedPtr rosNode;
         std::string fileName;
         int
             file,
@@ -103,7 +101,7 @@ namespace uwrt_gyro
         for(int i = valLen / sizeof(*str) - 1; i >= 0; i--)
         {
             char newC = (char) val & 0xFF;
-            if(i < strLen)
+            if((size_t) i < strLen)
             {
                 str[i] = newC;
                 numData++;
@@ -166,7 +164,8 @@ namespace uwrt_gyro
         SerialTransceiver& transceiver;
         char 
             msgBuffer[PROCESSOR_BUFFER_SIZE],
-            transmissionBuffer[PROCESSOR_BUFFER_SIZE];
+            transmissionBuffer[PROCESSOR_BUFFER_SIZE],
+            fieldBuf[PROCESSOR_BUFFER_SIZE];
         
         size_t msgBufferCursorPos;
         char syncValue[MAX_DATA_BYTES];

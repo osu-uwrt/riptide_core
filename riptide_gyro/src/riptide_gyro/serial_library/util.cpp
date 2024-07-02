@@ -32,7 +32,7 @@ namespace uwrt_gyro
                 break;
             }
 
-            int idx = it - frame.begin();
+            size_t idx = it - frame.begin();
             if(idx < srcLen)
             {
                 dst[nextUnusedCharacter] = src[idx];
@@ -50,7 +50,7 @@ namespace uwrt_gyro
         auto it = frame.begin();
         size_t nextUnusedCharacter = 0; //for src
 
-        while(it != frame.end() && nextUnusedCharacter < dstLen)
+        while(it != frame.end() && nextUnusedCharacter < srcLen)
         {
             //find next location of the field in the frame
             it = std::find(it, frame.end(), field);
@@ -59,7 +59,7 @@ namespace uwrt_gyro
                 break;
             }
 
-            int idx = it - frame.begin();
+            size_t idx = it - frame.begin();
 
             //we know where to put the next character from src; now put it there
             if(idx < dstLen)
@@ -111,3 +111,7 @@ namespace uwrt_gyro
 }
 
 
+// SerialData& operator=(const SerialData& other)
+// {
+    
+// }

@@ -102,8 +102,8 @@ class FatalSerialLibraryException : public SerialLibraryException
      : SerialLibraryException(error) { }
 };
 
-#define THROW_FATAL_SERIAL_LIB_EXCEPTION(errmsg) throw FatalSerialLibraryException(string(__FILE__) + string("@") + to_string(__LINE__) + string(": ") + errmsg);
-#define THROW_NON_FATAL_SERIAL_LIB_EXCEPTION(errmsg) throw NonFatalSerialLibraryException(string(__FILE__) + string("@") + to_string(__LINE__) + string(": ") + errmsg);
+#define THROW_FATAL_SERIAL_LIB_EXCEPTION(errmsg) throw FatalSerialLibraryException(string(__FILE__) + string(":") + to_string(__LINE__) + string(": ") + errmsg);
+#define THROW_NON_FATAL_SERIAL_LIB_EXCEPTION(errmsg) throw NonFatalSerialLibraryException(string(__FILE__) + string(":") + to_string(__LINE__) + string(": ") + errmsg);
 #define SERIAL_LIB_ASSERT(cond, msg) \
     do \
     { \
@@ -131,10 +131,17 @@ typedef bool(*CheckFunc)(const char *msgStart, const SerialFrame& frame);
 
 struct SerialData
 {
+    SerialData() = default;
+    SerialData(const SerialData& other)
+    : numData(other.numData)
+    {
+        memcpy(data, other.data, other.numData);
+    }
+    
     size_t numData;
     char data[MAX_DATA_BYTES];
 
-    void operator=(const SerialData& rhs)
+    SerialData& operator=(const SerialData& rhs)
     {
         if(rhs.numData >= MAX_DATA_BYTES)
         {
@@ -142,18 +149,25 @@ struct SerialData
         }
         numData = rhs.numData;
         memcpy(data, rhs.data, numData);
+        return *this;
     }
 };
 
 struct SerialDataStamped
 {
+    SerialDataStamped() = default;
+    SerialDataStamped(const SerialDataStamped& other)
+    : timestamp(other.timestamp),
+      data(other.data) { }
+
     Time timestamp;
     SerialData data;
 
-    void operator=(const SerialDataStamped& rhs)
+    SerialDataStamped& operator=(const SerialDataStamped& rhs)
     {
         timestamp = rhs.timestamp;
         data = rhs.data;
+        return *this;
     }
 };
 

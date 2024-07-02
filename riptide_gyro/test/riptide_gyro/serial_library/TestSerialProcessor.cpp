@@ -28,7 +28,6 @@ class TestTransceiver : public uwrt_gyro::SerialTransceiver
 TEST_F(Type1SerialProcessorTest, TestBasicRecvWithManualSendType1)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
@@ -53,7 +52,6 @@ TEST_F(Type1SerialProcessorTest, TestBasicRecvWithManualSendType1)
 TEST_F(Type1SerialProcessorTest, TestBasicSendWithManualRecvType1)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
@@ -77,7 +75,6 @@ TEST_F(Type1SerialProcessorTest, TestBasicSendWithManualRecvType1)
 TEST_F(Type2SerialProcessorTest, TestBasicRecvWithManualSendType2)
 {
     uwrt_gyro::LinuxSerialTransceiver client(
-        rosNode,
         homeDir() + "virtualsp2",
         9600,
         1,
@@ -133,7 +130,6 @@ TEST_F(Type2SerialProcessorTest, TestBasicRecvAndSendType2)
 {
     //create another processor to recv
     uwrt_gyro::LinuxSerialTransceiver sender(
-        rosNode, 
         homeDir() + "/virtualsp2",
         9600,
         1,
