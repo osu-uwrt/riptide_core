@@ -110,6 +110,18 @@ namespace uwrt_gyro
             val = val >> sizeof(*str) * 8;
         }
 
+        // for(int i = 0; i < valLen / sizeof(*str); i++)
+        // {
+        //     char newC = (char) val & 0xFF;
+        //     if((size_t) i < strLen)
+        //     {
+        //         str[i] = newC;
+        //         numData++;
+        //     }
+
+        //     val = val >> sizeof(*str) * 8;
+        // }
+
         return numData;
     }
 

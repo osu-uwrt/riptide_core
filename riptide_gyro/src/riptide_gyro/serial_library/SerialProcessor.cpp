@@ -107,7 +107,6 @@ namespace uwrt_gyro
         msgBufferCursorPos += bytesToCopy;
 
         char *syncLocation = nullptr;
-
         do
         {
             // find sync values. having two means we have one potential messages
@@ -189,12 +188,11 @@ namespace uwrt_gyro
 
                 //iterate through known fields and update their values from message
                 SerialValuesMap *values = valueMap.lockResource();
-                int fieldBufSz = frameMap.size();
                 for(auto it = values->begin(); it != values->end(); it++)
                 {
-                    memset(fieldBuf, 0, frameMap.size());
+                    memset(fieldBuf, 0, sizeof(fieldBuf));
                     SerialFieldId field = it->first;
-                    size_t extracted = extractFieldFromBuffer(msgStart, frameSz, frameToUse, field, fieldBuf, fieldBufSz);
+                    size_t extracted = extractFieldFromBuffer(msgStart, frameSz, frameToUse, field, fieldBuf, sizeof(fieldBuf));
                     if(extracted > 0)
                     {
                         SerialDataStamped serialData;
