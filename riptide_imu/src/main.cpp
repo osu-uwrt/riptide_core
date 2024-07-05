@@ -1,24 +1,26 @@
+#include <serialinterface.hpp>
+
 #include <chrono>
 #include <queue>
 
-#include "vn/sensors.h"
-#include "vn/compositedata.h"
-#include "vn/exceptions.h"
+#include <vn/sensors.h>
+#include <vn/compositedata.h>
+#include <vn/exceptions.h>
 
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
-#include "sensor_msgs/msg/imu.hpp"
-#include "std_msgs/msg/float32.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <std_msgs/msg/float32.hpp>
 
 #include <fcntl.h>
 #include <linux/serial.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include "riptide_msgs2/action/mag_cal.hpp"
-#include "riptide_msgs2/msg/imu_config.hpp"
+#include <riptide_msgs2/action/mag_cal.hpp>
+#include <riptide_msgs2/msg/imu_config.hpp>
 
 using namespace vn::sensors;
 using namespace std::placeholders;
@@ -64,6 +66,8 @@ class Vectornav : public rclcpp::Node {
     optimizeSerialConnection(port);
 
     vnConnect(port, baud);
+
+    serial = std::make_shared<SerialInterface>(vs, this);
 
     // Setup spin to monitor connection (since packets are async)
     reconnectTimer = create_wall_timer(reconnectMS, std::bind(&Vectornav::monitorConnection, this));
@@ -571,6 +575,8 @@ class Vectornav : public rclcpp::Node {
   std::thread magCalThread;
 
   bool doingMagCal = false;
+
+  std::shared_ptr<SerialInterface> serial;
 };
 
 int main(int argc, char* argv[]) {
