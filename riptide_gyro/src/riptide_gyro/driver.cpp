@@ -1,5 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <riptide_msgs2/msg/int32_stamped.hpp>
+#include <riptide_msgs2/msg/gyro_status.hpp>
 #include "riptide_gyro/serial_library.hpp"
 
 using namespace std::chrono_literals;
@@ -156,18 +157,25 @@ namespace uwrt_gyro {
             
             //create publishers
             rawDataPub = create_publisher<riptide_msgs2::msg::Int32Stamped>("gyro/raw", rclcpp::SensorDataQoS());
+            statusPub = create_publisher<riptide_msgs2::msg::GyroStatus>("gyro/status", 10);
 
             //initialize serial library
             std::string port = get_parameter("gyro_port").as_string();
             RCLCPP_INFO(get_logger(), "Gyro port: %s", port.c_str());
             transceiver = std::make_shared<LinuxSerialTransceiver>(port, GYRO_BAUD, 1, 0, O_RDONLY);
             processor = std::make_shared<SerialProcessor>(*transceiver, GYRO_FRAME_MAP, UwrtGyroFrame::TEMP_HIGH_FRAME, GYRO_SYNC, sizeof(GYRO_SYNC), &gyroChecker);
+            processor->setNewMsgCallback(std::bind(&GyroDriver::gyroFrameReceived, this));
             procThread = std::make_unique<std::thread>(std::bind(&GyroDriver::threadFunc, this));
             RCLCPP_INFO(get_logger(), "Gyro driver started.");
         }
 
         private:
         void timerCb()
+        {
+            
+        }
+
+        void gyroFrameReceived()
         {
             if(!processor->hasDataForField(UwrtGyroField::VRATE))
             {
@@ -220,6 +228,7 @@ namespace uwrt_gyro {
         SerialProcessor::SharedPtr processor;
         rclcpp::TimerBase::SharedPtr timer;
         rclcpp::Publisher<riptide_msgs2::msg::Int32Stamped>::SharedPtr rawDataPub;
+        rclcpp::Publisher<riptide_msgs2::msg::GyroStatus>::SharedPtr statusPub;
         std::unique_ptr<std::thread> procThread;
     };
 }
