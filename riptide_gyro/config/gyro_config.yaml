@@ -1,3 +1,7 @@
 /**/riptide_gyro:
   ros__parameters:
     gyro_port: /dev/ttyUSB0
+    gyro_frame: talos/base_link
+    gyro_m: -7.1765e-07
+    gyro_b: -0.00037017
+    gyro_variance: 0.0001

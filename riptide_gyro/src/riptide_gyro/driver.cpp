@@ -1,5 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <riptide_msgs2/msg/int32_stamped.hpp>
+#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <riptide_msgs2/msg/gyro_status.hpp>
 #include "riptide_gyro/serial_library.hpp"
 
@@ -147,8 +148,14 @@ namespace uwrt_gyro {
             //declare parameters
             declare_parameter<std::string>("gyro_port", DEFAULT_PORT);
             declare_parameter<std::string>("gyro_frame", DEFAULT_FRAME);
+            declare_parameter<double>("gyro_m", 0);
+            declare_parameter<double>("gyro_b", 0);
+            declare_parameter<double>("gyro_variance", 0);
 
             frame = get_parameter("gyro_frame").as_string();
+            calM = get_parameter("gyro_m").as_double();
+            calB = get_parameter("gyro_b").as_double();
+            gyroVar = get_parameter("gyro_variance").as_double();
 
             //start timer
             timer = create_wall_timer(
@@ -158,6 +165,7 @@ namespace uwrt_gyro {
             //create publishers
             rawDataPub = create_publisher<riptide_msgs2::msg::Int32Stamped>("gyro/raw", rclcpp::SensorDataQoS());
             statusPub = create_publisher<riptide_msgs2::msg::GyroStatus>("gyro/status", 10);
+            twistPub = create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>("gyro/twist", rclcpp::SensorDataQoS());
 
             //initialize serial library
             std::string port = get_parameter("gyro_port").as_string();
@@ -203,10 +211,17 @@ namespace uwrt_gyro {
             int32_t signedRawReading = (unsignedRawReading > 0x800000 ? unsignedRawReading - 0xFFFFFF : unsignedRawReading);
 
             riptide_msgs2::msg::Int32Stamped rawMsg;
-            rawMsg.header.frame_id = DEFAULT_FRAME;
+            rawMsg.header.frame_id = frame;
             rawMsg.header.stamp = data.timestamp;
             rawMsg.data = signedRawReading;
             rawDataPub->publish(rawMsg);
+
+            //publish twist
+            geometry_msgs::msg::TwistWithCovarianceStamped twistMsg;
+            twistMsg.header = rawMsg.header;
+            twistMsg.twist.covariance[35] = gyroVar;
+            twistMsg.twist.twist.angular.z = signedRawReading * calM + calB;
+            twistPub->publish(twistMsg);
         }
 
         void threadFunc()
@@ -222,12 +237,17 @@ namespace uwrt_gyro {
                 }
             }
         }
-
+        
+        double
+            calM,
+            calB,
+            gyroVar;
         std::string frame;
         std::shared_ptr<LinuxSerialTransceiver> transceiver;
         SerialProcessor::SharedPtr processor;
         rclcpp::TimerBase::SharedPtr timer;
         rclcpp::Publisher<riptide_msgs2::msg::Int32Stamped>::SharedPtr rawDataPub;
+        rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr twistPub;
         rclcpp::Publisher<riptide_msgs2::msg::GyroStatus>::SharedPtr statusPub;
         std::unique_ptr<std::thread> procThread;
     };

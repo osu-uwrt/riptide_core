@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(riptide_msgs2 REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 set(deps
   rclcpp
