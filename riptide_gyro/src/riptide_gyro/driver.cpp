@@ -159,7 +159,7 @@ namespace uwrt_gyro {
 
             //start timer
             timer = create_wall_timer(
-                2ms,
+                20ms,
                 std::bind(&GyroDriver::timerCb, this));
             
             //create publishers
@@ -178,8 +178,29 @@ namespace uwrt_gyro {
         }
 
         private:
+
+        //this timer routine publishes diagnostics and everything else that isnt rate
         void timerCb()
         {
+            //create status message
+            riptide_msgs2::msg::GyroStatus status;
+            status.header.frame_id = frame;
+            status.header.stamp = get_clock()->now();
+
+            //pack temperature into status
+            if(processor->hasDataForField(UwrtGyroField::TEMP_HIGH) && processor->hasDataForField(UwrtGyroField::TEMP_LOW))
+            {
+                SerialDataStamped data = processor->getField(UwrtGyroField::TEMP_HIGH);
+                status.temperature = convertFromCString<uint8_t>(data.data.data, data.data.numData);
+                status.temperature = status.temperature << 8;
+                data = processor->getField(UwrtGyroField::TEMP_LOW);
+                status.temperature |= convertFromCString<uint8_t>(data.data.data, data.data.numData);
+            }
+
+            //publish status
+            statusPub->publish(status);
+
+            //diagnostics
             unsigned short failedOfLastTen = processor->failedOfLastTenMessages();
             if(failedOfLastTen > 5)
             {
@@ -246,6 +267,7 @@ namespace uwrt_gyro {
             calM,
             calB,
             gyroVar;
+        
         std::string frame;
         std::shared_ptr<LinuxSerialTransceiver> transceiver;
         SerialProcessor::SharedPtr processor;
