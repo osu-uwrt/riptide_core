@@ -131,7 +131,7 @@ namespace uwrt_gyro {
         }
 
         uint16_t expectedChecksum = convertFromCString<uint16_t>(expectedChecksumBuf, extracted);
-        return checksum == expectedChecksum;
+                return checksum == expectedChecksum;
     }
 
 
@@ -180,7 +180,11 @@ namespace uwrt_gyro {
         private:
         void timerCb()
         {
-            
+            unsigned short failedOfLastTen = processor->failedOfLastTenMessages();
+            if(failedOfLastTen > 5)
+            {
+                RCLCPP_WARN(get_logger(), "Unusually high message drop rate (%d / last 10 messages) detected.", failedOfLastTen);
+            }
         }
 
         void gyroFrameReceived()

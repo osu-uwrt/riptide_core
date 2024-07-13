@@ -5,13 +5,20 @@ namespace uwrt_gyro
     char *memstr(const char *haystack, size_t numHaystack, const char *needle, size_t numNeedle)
     {
         char *search = (char*) haystack;
-        for(size_t i = 0; i <= numHaystack - numNeedle; i++)
+
+        // need this because size_t is unsigned
+        if(numNeedle <= numHaystack)
         {
-            if(memcmp(search, needle, numNeedle) == 0)
+            for(size_t i = 0; i <= numHaystack - numNeedle; i++)
             {
-                return search;
+                if(memcmp(search, needle, numNeedle) == 0)
+                {
+                    return search;
+                }
+
+                //move to next character
+                search = &search[1];
             }
-            search = &search[1];
         }
 
         return nullptr;

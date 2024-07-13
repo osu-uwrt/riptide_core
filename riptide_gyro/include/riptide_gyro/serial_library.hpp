@@ -110,18 +110,6 @@ namespace uwrt_gyro
             val = val >> sizeof(*str) * 8;
         }
 
-        // for(int i = 0; i < valLen / sizeof(*str); i++)
-        // {
-        //     char newC = (char) val & 0xFF;
-        //     if((size_t) i < strLen)
-        //     {
-        //         str[i] = newC;
-        //         numData++;
-        //     }
-
-        //     val = val >> sizeof(*str) * 8;
-        // }
-
         return numData;
     }
 
@@ -171,6 +159,7 @@ namespace uwrt_gyro
         SerialDataStamped getField(SerialFieldId field);
         void setField(SerialFieldId field, SerialData data, const Time& now);
         void send(SerialFrameId frameId);
+        unsigned short failedOfLastTenMessages();
 
         private:
         // regular member vars
@@ -179,6 +168,11 @@ namespace uwrt_gyro
             msgBuffer[PROCESSOR_BUFFER_SIZE],
             transmissionBuffer[PROCESSOR_BUFFER_SIZE],
             fieldBuf[PROCESSOR_BUFFER_SIZE];
+        
+        unsigned short 
+            failedOfLastTen,
+            failedOfLastTenCounter,
+            totalOfLastTenCounter;
         
         size_t msgBufferCursorPos;
         char syncValue[MAX_DATA_BYTES];

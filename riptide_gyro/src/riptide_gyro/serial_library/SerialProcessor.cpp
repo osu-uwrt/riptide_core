@@ -4,6 +4,9 @@ namespace uwrt_gyro
 {
     SerialProcessor::SerialProcessor(SerialTransceiver& transceiver, SerialFramesMap frames, SerialFrameId defaultFrame, const char syncValue[], size_t syncValueLen, CheckFunc checker)
      : transceiver(transceiver),
+       failedOfLastTen(0),
+       failedOfLastTenCounter(0),
+       totalOfLastTenCounter(0),
        msgBufferCursorPos(0),
        syncValueLen(syncValueLen),
        frameMap(frames),
@@ -126,6 +129,7 @@ namespace uwrt_gyro
                 frameSz = frameToUse.size();
 
             //determine the message string based on the sync location. then process it
+
             int
                 msgStartOffsetFromSync = std::find(frameToUse.begin(), frameToUse.end(), FIELD_SYNC) - frameToUse.begin(),
                 syncOffsetFromBuffer = syncLocation - msgBuffer;
@@ -134,34 +138,33 @@ namespace uwrt_gyro
                 *msgStart = syncLocation,
                 *msgEnd = msgBuffer + msgBufferCursorPos;
 
-            bool msgPassesUserTest = checker(msgStart, frameToUse);
-            if(msgStartOffsetFromSync <= syncOffsetFromBuffer && msgPassesUserTest) //todo also add msg checker function to this condition
+            totalOfLastTenCounter++;
+
+            msgStart = syncLocation - msgStartOffsetFromSync;
+            msgEnd = msgStart + frameSz;
+
+            //check that we can parse for a frame id
+            if(msgBufferCursorPos < frameSz)
             {
-                //message good and parsable
-                msgStart = syncLocation - msgStartOffsetFromSync;
-                msgEnd = msgStart + frameSz;
+                //we dont have enough information to parse the default frame for a frame id.
+                break;
+            }
 
-                //check that we can parse for a frame id
-                if(msgBufferCursorPos < frameSz)
+            //parse for a frame id
+            bool hasFrameToUse = true;
+            if(frameMapSz > 1)
+            {
+                char frameIdBuf[MAX_DATA_BYTES] = {0};
+                size_t bytes = extractFieldFromBuffer(msgStart, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, MAX_DATA_BYTES);
+                if(bytes > 0)
                 {
-                    //we dont have enough information to parse the default frame for a frame id.
-                    break;
-                }
+                    SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
 
-                //parse for a frame id
-                if(frameMapSz > 1)
-                {
-                    char frameIdBuf[MAX_DATA_BYTES] = {0};
-                    size_t bytes = extractFieldFromBuffer(msgStart, msgSz, frameToUse, FIELD_FRAME, frameIdBuf, MAX_DATA_BYTES);
-                    if(bytes > 0)
+                    if(frameMap.find(frameId) == frameMap.end())
                     {
-                        SerialFrameId frameId = convertFromCString<SerialFrameId>(frameIdBuf, bytes);
-
-                        if(frameMap.find(frameId) == frameMap.end())
-                        {
-                            THROW_NON_FATAL_SERIAL_LIB_EXCEPTION("Cannot parse message because frame " + std::to_string(frameId) + " does not exist");
-                        }
-
+                        hasFrameToUse = false;
+                    } else
+                    {
                         frameToUse = frameMap.at(frameId);
                         
                         //check if the frame is parsable
@@ -173,7 +176,11 @@ namespace uwrt_gyro
                         }
                     }
                 }
+            }
 
+            bool msgPassesUserTest = checker(msgStart, frameToUse);
+            if(msgStartOffsetFromSync <= syncOffsetFromBuffer && msgPassesUserTest && hasFrameToUse)
+            {
                 //iterate through frame and find all unknown fields
                 for(auto it = frameToUse.begin(); it != frameToUse.end(); it++)
                 {
@@ -215,12 +222,28 @@ namespace uwrt_gyro
             {
                 //message bad. dont remove like normal, just delete through the sync character
                 msgEnd = syncLocation + 1;
+                failedOfLastTenCounter++;
+            }
+
+            if(totalOfLastTenCounter >= 10)
+            {
+                failedOfLastTen = failedOfLastTenCounter;
+                failedOfLastTenCounter = 0;
+                totalOfLastTenCounter = 0;
             }
 
             //remove message from the buffer
             memmove(msgBuffer, msgEnd, PROCESSOR_BUFFER_SIZE - msgBufferCursorPos);
-            size_t amountRemoved = msgEnd - msgStart;
-            msgBufferCursorPos -= amountRemoved;
+            size_t amountRemoved = msgEnd - msgBuffer;
+
+            if(amountRemoved < msgBufferCursorPos)
+            {
+                msgBufferCursorPos -= amountRemoved;
+            } else
+            {
+                msgBufferCursorPos = 0;
+            }
+
         } while(syncLocation);
     }
     
@@ -313,5 +336,10 @@ namespace uwrt_gyro
         }
 
         transceiver.send(transmissionBuffer, frame.size());
+    }
+
+    unsigned short SerialProcessor::failedOfLastTenMessages()
+    {
+        return failedOfLastTen;
     }
 }

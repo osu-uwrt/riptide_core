@@ -9,18 +9,17 @@ TEST(UtilTest, testMemstr)
         *str1Needle = strstr(str1, "de"),
         *str1Needle2 = strstr(str1, "g");
     
-    EXPECT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "de", 2), str1Needle);
-    EXPECT_EQ(uwrt_gyro::memstr(str1, strlen(str1), "g", 1), str1Needle2);
-    EXPECT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "12", 2), nullptr);
+    ASSERT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "de", 2), str1Needle);
+    ASSERT_EQ(uwrt_gyro::memstr(str1, strlen(str1), "g", 1), str1Needle2);
+    ASSERT_EQ(uwrt_gyro::memstr(str1, sizeof(str1), "12", 2), nullptr);
 
     const char
         str3[] = {'a', 0, 'y', 3, 5, 8, 45, 'u'},
         str3Needle[] = {'y', 3},
         *str3NeedleExpected = &str3[2];
     
-    EXPECT_EQ(uwrt_gyro::memstr(str3, sizeof(str3), str3Needle, 2), str3NeedleExpected);
-
-    
+    ASSERT_EQ(uwrt_gyro::memstr(str3, sizeof(str3), str3Needle, 2), str3NeedleExpected);
+    ASSERT_EQ(uwrt_gyro::memstr(str3, 0, str3Needle, 2), nullptr);
 }
 
 
