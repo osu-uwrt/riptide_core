@@ -108,17 +108,17 @@ TEST_F(Type1SerialProcessorTest, testExtractFieldFromBufferBasic)
 
     //1-char extraction of beginning value
     size_t result = uwrt_gyro::extractFieldFromBuffer(testMsg, sizeof(testMsg), frameMap[0], FIELD_SYNC, &dst, 1);
-    ASSERT_EQ(result, 1);
+    ASSERT_EQ(result, 1u);
     ASSERT_EQ(dst, 'A');
 
     //1-char extraction of middle value
     result = uwrt_gyro::extractFieldFromBuffer(testMsg, sizeof(testMsg), frameMap[0], TYPE_1_FRAME_1_FIELD_1, &dst, 1);
-    ASSERT_EQ(result, 1);
+    ASSERT_EQ(result, 1u);
     ASSERT_EQ(dst, 'a');
 
     //1-char extraction of end value
     result = uwrt_gyro::extractFieldFromBuffer(testMsg, sizeof(testMsg), frameMap[0], TYPE_1_FRAME_1_FIELD_3, &dst, 1);
-    ASSERT_EQ(result, 1);
+    ASSERT_EQ(result, 1u);
     ASSERT_EQ(dst, 'c');
 }
 
@@ -130,25 +130,25 @@ TEST_F(Type2SerialProcessorTest, testExtractFieldFromBufferAdvanced)
 
     //1-char extraction of type 2 frame 1 field 1 into bigger buffer (expect "a")
     size_t result = uwrt_gyro::extractFieldFromBuffer(testMsg1, sizeof(testMsg1), frameMap[0], TYPE_2_FIELD_1, dst, sizeof(dst));
-    ASSERT_EQ(result, 1);
+    ASSERT_EQ(result, 1u);
     ASSERT_TRUE(memcmp(dst, "A", 1) == 0);
 
     //3-char extraction of type 2 frame 1 field 2 in sequential order (expect "bcd")
     result = uwrt_gyro::extractFieldFromBuffer(testMsg1, sizeof(testMsg1), frameMap[0], TYPE_2_FIELD_2, dst, sizeof(dst));
-    ASSERT_EQ(result, 3);
+    ASSERT_EQ(result, 3u);
     ASSERT_TRUE(memcmp(dst, "1bd", 3) == 0);
 
     const char *testMsg2 = "a2bcdeA";
 
     //3-char extraction of type 2 frame 1 field 2 (disjointed, expect "abe")
     result = uwrt_gyro::extractFieldFromBuffer(testMsg2, sizeof(testMsg2), frameMap[1], TYPE_2_FIELD_2, dst, sizeof(dst));
-    ASSERT_EQ(result, 3);
+    ASSERT_EQ(result, 3u);
     ASSERT_TRUE(memcmp(dst, "abA", 3) == 0);
 
     //3-char extraction of type 2 frame 1 field 2 (disjointed, expect "abe"), into smaller buffer (expect "ab")
     dst[2] = 'M'; //this tests that this character wasnt touched
     result = uwrt_gyro::extractFieldFromBuffer(testMsg2, sizeof(testMsg2), frameMap[1], TYPE_2_FIELD_2, dst, sizeof(dst) - 1);
-    ASSERT_EQ(result, 3);
+    ASSERT_EQ(result, 3u);
     ASSERT_TRUE(memcmp(dst, "abM", 2) == 0);
 }
 

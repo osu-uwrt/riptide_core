@@ -1,4 +1,5 @@
 #include "riptide_gyro/serial_library.hpp"
+#include <unistd.h>
 
 #if defined(USE_LINUX)
 
