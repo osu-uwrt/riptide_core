@@ -10,10 +10,14 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(riptide_msgs2 REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 
 set(deps
   rclcpp
-  riptide_msgs2)
+  riptide_msgs2
+  diagnostic_msgs
+  diagnostic_updater)
 
 # build and install serial library
 file(GLOB serial_library_sources RELATIVE ${PROJECT_SOURCE_DIR}

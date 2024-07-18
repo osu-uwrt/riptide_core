@@ -2,6 +2,8 @@
 #include <riptide_msgs2/msg/int32_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <riptide_msgs2/msg/gyro_status.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include "riptide_gyro/serial_library.hpp"
 
 using namespace std::chrono_literals;
@@ -13,6 +15,13 @@ using namespace std::placeholders;
 #define GYRO_BAUD 921600
 #define DEFAULT_PORT "/dev/ttyUSB0"
 #define DEFAULT_FRAME "fog_link"
+
+#define VSUPPLY_UPPER 5.1
+#define VSUPPLY_LOWER 4.9
+#define SLDCURRENT_UPPER 0
+#define SLDCURRENT_LOWER 0
+#define DIAG_SIGNAL_LOWER 0
+#define DIAG_SIGNAL_UPPER 0
 
 namespace uwrt_gyro {
 
@@ -121,7 +130,13 @@ namespace uwrt_gyro {
             p10,
             p01,
             p20,
-            p11;
+            p11,
+            rateNormMean,
+            rateNormStd,
+            tempNormMean,
+            tempNormStd;
+        
+        std::vector<int64_t> rawTempLimits; //format: lower, upper
         
         double variance;
     };
@@ -170,11 +185,15 @@ namespace uwrt_gyro {
             declare_parameter<double>("p01", 0);
             declare_parameter<double>("p20", 0);
             declare_parameter<double>("p11", 0);
+            declare_parameter<double>("rate_norm_mean", 0);
+            declare_parameter<double>("rate_norm_std", 0);
+            declare_parameter<double>("temp_norm_mean", 0);
+            declare_parameter<double>("temp_norm_std", 0);
             declare_parameter<double>("variance", 0);
+            declare_parameter<std::vector<int>>("cal_temp_limits");
             add_on_set_parameters_callback(std::bind(&GyroDriver::setParamsCb, this, _1));
             reloadParams();
             
-
             //start timer
             timer = create_wall_timer(
                 20ms,
@@ -208,6 +227,38 @@ namespace uwrt_gyro {
             delete statusResource.lockResource();
         }
 
+        void initDiagnostics()
+        {
+            updater = std::make_shared<diagnostic_updater::Updater>(shared_from_this());
+            updater->setHardwareID("FOG");
+
+            diagnostic_updater::FunctionDiagnosticTask tempTask(
+                    "Temperature",
+                    std::bind(&GyroDriver::temperatureCheck, this, _1));
+            
+            diagnostic_updater::FunctionDiagnosticTask vsupplyTask(
+                    "VSupply",
+                    std::bind(&GyroDriver::vsupplyCheck, this, _1));
+            
+            diagnostic_updater::FunctionDiagnosticTask sldCurrentTask(
+                    "SLDCurrent",
+                    std::bind(&GyroDriver::sldCurrentCheck, this, _1));
+            
+            diagnostic_updater::FunctionDiagnosticTask diagSignalTask(
+                    "Diagnostic Signal",
+                    std::bind(&GyroDriver::diagnosticSignalCheck, this, _1));
+            
+            diagnostic_updater::FunctionDiagnosticTask serialProcTask(
+                    "Serial",
+                    std::bind(&GyroDriver::serialProcessorCheck, this, _1));
+            
+            updater->add(tempTask);
+            updater->add(vsupplyTask);
+            updater->add(sldCurrentTask);
+            updater->add(diagSignalTask);
+            updater->add(serialProcTask);
+        }
+
         private:
 
         void reloadParams()
@@ -219,9 +270,15 @@ namespace uwrt_gyro {
             params->p01 = get_parameter("p01").as_double();
             params->p20 = get_parameter("p20").as_double();
             params->p11 = get_parameter("p11").as_double();
+            params->rateNormMean = get_parameter("rate_norm_mean").as_double();
+            params->rateNormStd = get_parameter("rate_norm_std").as_double();
+            params->tempNormMean = get_parameter("temp_norm_mean").as_double();
+            params->tempNormStd = get_parameter("temp_norm_std").as_double();
             params->variance = get_parameter("variance").as_double();
+            params->rawTempLimits = get_parameter("cal_temp_limits").as_integer_array();
             nodeParamsResource.unlockResource();
         }
+
 
         rcl_interfaces::msg::SetParametersResult setParamsCb(const std::vector<rclcpp::Parameter> &)
         {
@@ -230,6 +287,95 @@ namespace uwrt_gyro {
             rcl_interfaces::msg::SetParametersResult result;
             result.successful = true;
             return result;
+        }
+
+
+        int16_t get16BitDataFromFields(UwrtGyroField field1, UwrtGyroField field2)
+        {
+            if(processor->hasDataForField(field1) && processor->hasDataForField(field2))
+            {
+                SerialDataStamped serialData = processor->getField(field1);
+                int16_t intData = convertFromCString<int8_t>(serialData.data.data, serialData.data.numData);
+                intData = intData << 8;
+                serialData = processor->getField(field2);
+                intData |= convertFromCString<int8_t>(serialData.data.data, serialData.data.numData);
+                return intData;
+            }
+
+            return 0;
+        }
+
+
+        //diagnostic functions
+        
+        template<typename T>
+        void genericCheck(const std::string& name, const T& value, const T& lower, const T& upper, diagnostic_updater::DiagnosticStatusWrapper& stat)
+        {
+            if(value < lower) 
+            {
+                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, name + " too low");
+            } else if(value > upper) 
+            {
+                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, name + " too high");
+            } else
+            {
+                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, name + " OK");
+            }
+
+            stat.add<T>(name, value);
+        }
+
+
+        void temperatureCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
+        {
+            int16_t temperature = statusResource.lockResource()->temperature;
+            statusResource.unlockResource();
+            
+            NodeParameters *params = nodeParamsResource.lockResource();
+            if(params->rawTempLimits.size() < 2)
+            {
+                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Limits not initialized!");
+            }
+
+            genericCheck<int16_t>("Temperature", temperature, params->rawTempLimits[0], params->rawTempLimits[1], stat);
+            nodeParamsResource.unlockResource();
+        }
+
+
+        void vsupplyCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
+        {
+            int16_t vsupply = statusResource.lockResource()->vsupply;
+            statusResource.unlockResource();
+            genericCheck<int16_t>("VSupply", vsupply, VSUPPLY_LOWER, VSUPPLY_UPPER, stat);
+        }
+
+
+        void sldCurrentCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
+        {
+            int16_t sldcurrent = statusResource.lockResource()->sldcurrent;
+            statusResource.unlockResource();
+            genericCheck<int16_t>("SLDCurrent", sldcurrent, SLDCURRENT_LOWER, SLDCURRENT_UPPER, stat);
+        }
+
+
+        void diagnosticSignalCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
+        {
+            int16_t diagSignal = statusResource.lockResource()->diagsignal;
+            statusResource.unlockResource();
+            genericCheck<int16_t>("Diagnostic Signal", diagSignal, DIAG_SIGNAL_LOWER, DIAG_SIGNAL_UPPER, stat);
+        }
+
+
+        void serialProcessorCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
+        {
+            unsigned short failedOfLastTen = processor->failedOfLastTenMessages();
+            if(failedOfLastTen > 5)
+            {
+                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Unusually high message drop rate (%" + std::to_string(failedOfLastTen) + " / last 10 messages) detected.");
+            } else
+            {
+                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Serial OK");
+            }
         }
 
         //this timer routine publishes diagnostics and everything else that isnt rate
@@ -242,15 +388,11 @@ namespace uwrt_gyro {
             statMsg->header.frame_id = frame;
             statMsg->header.stamp = get_clock()->now();
 
-            //pack temperature into status
-            if(processor->hasDataForField(UwrtGyroField::TEMP_HIGH) && processor->hasDataForField(UwrtGyroField::TEMP_LOW))
-            {
-                SerialDataStamped data = processor->getField(UwrtGyroField::TEMP_HIGH);
-                statMsg->temperature = convertFromCString<uint8_t>(data.data.data, data.data.numData);
-                statMsg->temperature = statMsg->temperature << 8;
-                data = processor->getField(UwrtGyroField::TEMP_LOW);
-                statMsg->temperature |= convertFromCString<uint8_t>(data.data.data, data.data.numData);
-            }
+            //pack status from gyro data
+            statMsg->temperature = get16BitDataFromFields(UwrtGyroField::TEMP_HIGH, UwrtGyroField::TEMP_LOW);
+            statMsg->vsupply = get16BitDataFromFields(UwrtGyroField::VSUPPLY_HIGH, UwrtGyroField::VSUPPLY_LOW);
+            statMsg->sldcurrent = get16BitDataFromFields(UwrtGyroField::SLD_CURRENT_HIGH, UwrtGyroField::SLD_CURRENT_LOW);
+            statMsg->diagsignal = get16BitDataFromFields(UwrtGyroField::DIAG_SIGNAL_HIGH, UwrtGyroField::DIAG_SIGNAL_LOW);
 
             //publish status
             statusPub->publish(*statMsg);
@@ -263,6 +405,7 @@ namespace uwrt_gyro {
                 RCLCPP_WARN(get_logger(), "Unusually high message drop rate (%d / last 10 messages) detected.", failedOfLastTen);
             }
         }
+
 
         void gyroFrameReceived()
         {
@@ -291,8 +434,14 @@ namespace uwrt_gyro {
 
             int32_t signedRawReading = (unsignedRawReading > 0x800000 ? unsignedRawReading - 0xFFFFFF : unsignedRawReading);
 
+            //get temperature value from status
+            int gyroTemperature = statusResource.lockResource()->temperature;
+            statusResource.unlockResource();
+
+            //get params struct
             NodeParameters *params = nodeParamsResource.lockResource();
 
+            //publish raw message
             riptide_msgs2::msg::Int32Stamped rawMsg;
             rawMsg.header.frame_id = params->frame;
             rawMsg.header.stamp = data.timestamp;
@@ -304,13 +453,9 @@ namespace uwrt_gyro {
             twistMsg.header = rawMsg.header;
             twistMsg.twist.covariance[35] = params->variance;
 
-            //get temperature value from status
-            int gyroTemperature = statusResource.lockResource()->temperature;
-            statusResource.unlockResource();
-
             double 
-                normalizedRawReading = (signedRawReading - 1192.0) / 1.517e6,
-                normalizedGyroTemperature = (gyroTemperature - 12140.0) / 558.6;
+                normalizedRawReading = (signedRawReading - params->rateNormMean) / params->rateNormStd,
+                normalizedGyroTemperature = (gyroTemperature - params->tempNormMean) / params->tempNormStd;
 
             //fit = p00 + p10*x + p01*y + p20*x^2 + p11*xy, where x is rate and y is temp
             twistMsg.twist.twist.angular.z = 
@@ -321,9 +466,9 @@ namespace uwrt_gyro {
                 params->p11 * normalizedRawReading * normalizedGyroTemperature;
             
             nodeParamsResource.unlockResource();
-
             twistPub->publish(twistMsg);
         }
+
 
         void threadFunc()
         {
@@ -348,6 +493,7 @@ namespace uwrt_gyro {
         //tools
         std::shared_ptr<LinuxSerialTransceiver> transceiver;
         SerialProcessor::SharedPtr processor;
+        std::shared_ptr<diagnostic_updater::Updater> updater;
         rclcpp::TimerBase::SharedPtr timer;
         rclcpp::Publisher<riptide_msgs2::msg::Int32Stamped>::SharedPtr rawDataPub;
         rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr twistPub;
