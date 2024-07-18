@@ -2,6 +2,9 @@
   ros__parameters:
     gyro_port: /dev/ttyUSB0
     gyro_frame: talos/base_link
-    gyro_m: -7.1765e-07
-    gyro_b: -0.00037017
-    gyro_variance: 0.0001
+    p00: 0.0006594
+    p10: 0.9623
+    p01: 4.29e-05
+    p20: 0.0003649
+    p11: 0.001806
+    variance: 0.0001

@@ -26,6 +26,11 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
+gyro_launch_file = os.path.join(
+    get_package_share_directory('riptide_gyro'),
+    "launch", "gyro.launch.py"
+)
+
 zed_launch_file = os.path.join(
     get_package_share_directory('riptide_hardware2'),
     "launch", "zed.launch.py"
@@ -41,12 +46,12 @@ def generate_launch_description():
             PushRosNamespace(
                 LC("robot")
             ),
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(copro_agent_launch_file),
-                launch_arguments=[
-                    ('robot', LC('robot')),
-                ]
-            ),
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(copro_agent_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(diagnostics_launch_file),
                 launch_arguments=[
@@ -68,11 +73,18 @@ def generate_launch_description():
                 ]
             ),
             IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(zed_launch_file),
+                AnyLaunchDescriptionSource(gyro_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
             ),
+            
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(zed_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # ),
 
             Node(
                 package='riptide_hardware2',

@@ -81,6 +81,7 @@ namespace uwrt_gyro
     SerialProcessor::~SerialProcessor()
     {
         transceiver.deinit();
+        delete valueMap.lockResource();
     }
 
 

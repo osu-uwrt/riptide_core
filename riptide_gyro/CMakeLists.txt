@@ -40,6 +40,8 @@ ament_export_dependencies(${deps})
 add_executable(gyro_driver
   src/riptide_gyro/driver.cpp)
 
+target_compile_options(gyro_driver PUBLIC -Wno-unused-result)
+
 ament_target_dependencies(gyro_driver ${deps})
 
 target_link_libraries(gyro_driver

@@ -5,6 +5,7 @@
 #include "riptide_gyro/serial_library.hpp"
 
 using namespace std::chrono_literals;
+using namespace std::placeholders;
 
 //
 // Rigid settings 
@@ -112,6 +113,20 @@ namespace uwrt_gyro {
     };
 
 
+    struct NodeParameters {
+        std::string frame;
+        
+        double
+            p00,
+            p10,
+            p01,
+            p20,
+            p11;
+        
+        double variance;
+    };
+
+
     static bool gyroChecker(const char *msgStart, const SerialFrame& frame)
     {
         uint16_t checksum = 0;
@@ -141,21 +156,24 @@ namespace uwrt_gyro {
     {
         public:
         GyroDriver()
-        : rclcpp::Node("riptide_gyro")
+        : rclcpp::Node("riptide_gyro"),
+          nodeParamsResource(new NodeParameters()),
+          statusResource(new riptide_msgs2::msg::GyroStatus())
         {
             RCLCPP_INFO(get_logger(), "Starting gyro driver");
 
             //declare parameters
             declare_parameter<std::string>("gyro_port", DEFAULT_PORT);
             declare_parameter<std::string>("gyro_frame", DEFAULT_FRAME);
-            declare_parameter<double>("gyro_m", 0);
-            declare_parameter<double>("gyro_b", 0);
-            declare_parameter<double>("gyro_variance", 0);
-
-            frame = get_parameter("gyro_frame").as_string();
-            calM = get_parameter("gyro_m").as_double();
-            calB = get_parameter("gyro_b").as_double();
-            gyroVar = get_parameter("gyro_variance").as_double();
+            declare_parameter<double>("p00", 0);
+            declare_parameter<double>("p10", 0);
+            declare_parameter<double>("p01", 0);
+            declare_parameter<double>("p20", 0);
+            declare_parameter<double>("p11", 0);
+            declare_parameter<double>("variance", 0);
+            add_on_set_parameters_callback(std::bind(&GyroDriver::setParamsCb, this, _1));
+            reloadParams();
+            
 
             //start timer
             timer = create_wall_timer(
@@ -168,37 +186,75 @@ namespace uwrt_gyro {
             twistPub = create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>("gyro/twist", rclcpp::SensorDataQoS());
 
             //initialize serial library
-            std::string port = get_parameter("gyro_port").as_string();
-            RCLCPP_INFO(get_logger(), "Gyro port: %s", port.c_str());
-            transceiver = std::make_shared<LinuxSerialTransceiver>(port, GYRO_BAUD, 1, 0, O_RDONLY);
-            processor = std::make_shared<SerialProcessor>(*transceiver, GYRO_FRAME_MAP, UwrtGyroFrame::TEMP_HIGH_FRAME, GYRO_SYNC, sizeof(GYRO_SYNC), &gyroChecker);
-            processor->setNewMsgCallback(std::bind(&GyroDriver::gyroFrameReceived, this));
-            procThread = std::make_unique<std::thread>(std::bind(&GyroDriver::threadFunc, this));
-            RCLCPP_INFO(get_logger(), "Gyro driver started.");
+            try
+            {
+                std::string port = get_parameter("gyro_port").as_string();
+                RCLCPP_INFO(get_logger(), "Gyro port: %s", port.c_str());
+                transceiver = std::make_shared<LinuxSerialTransceiver>(port, GYRO_BAUD, 1, 0, O_RDONLY);
+                processor = std::make_shared<SerialProcessor>(*transceiver, GYRO_FRAME_MAP, UwrtGyroFrame::TEMP_HIGH_FRAME, GYRO_SYNC, sizeof(GYRO_SYNC), &gyroChecker);
+                processor->setNewMsgCallback(std::bind(&GyroDriver::gyroFrameReceived, this));
+                procThread = std::make_unique<std::thread>(std::bind(&GyroDriver::threadFunc, this));
+                RCLCPP_INFO(get_logger(), "Gyro driver started.");
+            } catch(SerialLibraryException& ex)
+            {
+                RCLCPP_FATAL(get_logger(), "Caught SerialLibraryException during execution! what(): %s", ex.what().c_str());
+                exit(1);
+            }   
+        }
+
+        ~GyroDriver()
+        {
+            delete nodeParamsResource.lockResource();
+            delete statusResource.lockResource();
         }
 
         private:
 
+        void reloadParams()
+        {
+            NodeParameters *params = nodeParamsResource.lockResource();
+            params->frame = get_parameter("gyro_frame").as_string();
+            params->p00 = get_parameter("p00").as_double();
+            params->p10 = get_parameter("p10").as_double();
+            params->p01 = get_parameter("p01").as_double();
+            params->p20 = get_parameter("p20").as_double();
+            params->p11 = get_parameter("p11").as_double();
+            params->variance = get_parameter("variance").as_double();
+            nodeParamsResource.unlockResource();
+        }
+
+        rcl_interfaces::msg::SetParametersResult setParamsCb(const std::vector<rclcpp::Parameter> &)
+        {
+            reloadParams();
+
+            rcl_interfaces::msg::SetParametersResult result;
+            result.successful = true;
+            return result;
+        }
+
         //this timer routine publishes diagnostics and everything else that isnt rate
         void timerCb()
         {
-            //create status message
-            riptide_msgs2::msg::GyroStatus status;
-            status.header.frame_id = frame;
-            status.header.stamp = get_clock()->now();
+            std::string frame = nodeParamsResource.lockResource()->frame;
+            nodeParamsResource.unlockResource();
+
+            riptide_msgs2::msg::GyroStatus *statMsg = statusResource.lockResource();
+            statMsg->header.frame_id = frame;
+            statMsg->header.stamp = get_clock()->now();
 
             //pack temperature into status
             if(processor->hasDataForField(UwrtGyroField::TEMP_HIGH) && processor->hasDataForField(UwrtGyroField::TEMP_LOW))
             {
                 SerialDataStamped data = processor->getField(UwrtGyroField::TEMP_HIGH);
-                status.temperature = convertFromCString<uint8_t>(data.data.data, data.data.numData);
-                status.temperature = status.temperature << 8;
+                statMsg->temperature = convertFromCString<uint8_t>(data.data.data, data.data.numData);
+                statMsg->temperature = statMsg->temperature << 8;
                 data = processor->getField(UwrtGyroField::TEMP_LOW);
-                status.temperature |= convertFromCString<uint8_t>(data.data.data, data.data.numData);
+                statMsg->temperature |= convertFromCString<uint8_t>(data.data.data, data.data.numData);
             }
 
             //publish status
-            statusPub->publish(status);
+            statusPub->publish(*statMsg);
+            statusResource.unlockResource();
 
             //diagnostics
             unsigned short failedOfLastTen = processor->failedOfLastTenMessages();
@@ -235,17 +291,37 @@ namespace uwrt_gyro {
 
             int32_t signedRawReading = (unsignedRawReading > 0x800000 ? unsignedRawReading - 0xFFFFFF : unsignedRawReading);
 
+            NodeParameters *params = nodeParamsResource.lockResource();
+
             riptide_msgs2::msg::Int32Stamped rawMsg;
-            rawMsg.header.frame_id = frame;
+            rawMsg.header.frame_id = params->frame;
             rawMsg.header.stamp = data.timestamp;
             rawMsg.data = signedRawReading;
             rawDataPub->publish(rawMsg);
 
-            //publish twist
+            //calculate and publish twist
             geometry_msgs::msg::TwistWithCovarianceStamped twistMsg;
             twistMsg.header = rawMsg.header;
-            twistMsg.twist.covariance[35] = gyroVar;
-            twistMsg.twist.twist.angular.z = signedRawReading * calM + calB;
+            twistMsg.twist.covariance[35] = params->variance;
+
+            //get temperature value from status
+            int gyroTemperature = statusResource.lockResource()->temperature;
+            statusResource.unlockResource();
+
+            double 
+                normalizedRawReading = (signedRawReading - 1192.0) / 1.517e6,
+                normalizedGyroTemperature = (gyroTemperature - 12140.0) / 558.6;
+
+            //fit = p00 + p10*x + p01*y + p20*x^2 + p11*xy, where x is rate and y is temp
+            twistMsg.twist.twist.angular.z = 
+                params->p00 +
+                params->p10 * normalizedRawReading + 
+                params->p01 * normalizedGyroTemperature + 
+                params->p20 * normalizedRawReading * normalizedRawReading +
+                params->p11 * normalizedRawReading * normalizedGyroTemperature;
+            
+            nodeParamsResource.unlockResource();
+
             twistPub->publish(twistMsg);
         }
 
@@ -262,13 +338,14 @@ namespace uwrt_gyro {
                 }
             }
         }
-        
-        double
-            calM,
-            calB,
-            gyroVar;
-        
-        std::string frame;
+
+        //params
+        ProtectedResource<NodeParameters*> nodeParamsResource;        
+
+        //status
+        ProtectedResource<riptide_msgs2::msg::GyroStatus*> statusResource;
+
+        //tools
         std::shared_ptr<LinuxSerialTransceiver> transceiver;
         SerialProcessor::SharedPtr processor;
         rclcpp::TimerBase::SharedPtr timer;
@@ -283,15 +360,8 @@ namespace uwrt_gyro {
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
+    
     std::shared_ptr<uwrt_gyro::GyroDriver> driver = std::make_shared<uwrt_gyro::GyroDriver>();
-
-    try
-    {
-        rclcpp::spin(driver);
-    } catch(SerialLibraryException& ex)
-    {
-        RCLCPP_FATAL(driver->get_logger(), "Caught SerialLibraryException during execution! what(): %s", ex.what().c_str());
-    }   
-
+    rclcpp::spin(driver);
     rclcpp::shutdown();
 }
