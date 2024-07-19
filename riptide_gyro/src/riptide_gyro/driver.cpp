@@ -173,7 +173,22 @@ namespace uwrt_gyro {
         GyroDriver()
         : rclcpp::Node("riptide_gyro"),
           nodeParamsResource(new NodeParameters()),
-          statusResource(new riptide_msgs2::msg::GyroStatus())
+          statusResource(new riptide_msgs2::msg::GyroStatus()),
+          tempTask(
+            "Temperature",
+            std::bind(&GyroDriver::temperatureCheck, this, _1)),
+          vsupplyTask(
+            "VSupply",
+            std::bind(&GyroDriver::vsupplyCheck, this, _1)),
+          sldCurrentTask(
+            "SLDCurrent",
+            std::bind(&GyroDriver::sldCurrentCheck, this, _1)),
+          diagSignalTask(
+            "Diagnostic Signal",
+            std::bind(&GyroDriver::diagnosticSignalCheck, this, _1)),
+          serialProcTask(
+            "Serial",
+            std::bind(&GyroDriver::serialProcessorCheck, this, _1))
         {
             RCLCPP_INFO(get_logger(), "Starting gyro driver");
 
@@ -190,7 +205,7 @@ namespace uwrt_gyro {
             declare_parameter<double>("temp_norm_mean", 0);
             declare_parameter<double>("temp_norm_std", 0);
             declare_parameter<double>("variance", 0);
-            declare_parameter<std::vector<int>>("cal_temp_limits");
+            declare_parameter<std::vector<int>>("cal_temp_limits", std::vector<int>());
             add_on_set_parameters_callback(std::bind(&GyroDriver::setParamsCb, this, _1));
             reloadParams();
             
@@ -232,25 +247,7 @@ namespace uwrt_gyro {
             updater = std::make_shared<diagnostic_updater::Updater>(shared_from_this());
             updater->setHardwareID("FOG");
 
-            diagnostic_updater::FunctionDiagnosticTask tempTask(
-                    "Temperature",
-                    std::bind(&GyroDriver::temperatureCheck, this, _1));
             
-            diagnostic_updater::FunctionDiagnosticTask vsupplyTask(
-                    "VSupply",
-                    std::bind(&GyroDriver::vsupplyCheck, this, _1));
-            
-            diagnostic_updater::FunctionDiagnosticTask sldCurrentTask(
-                    "SLDCurrent",
-                    std::bind(&GyroDriver::sldCurrentCheck, this, _1));
-            
-            diagnostic_updater::FunctionDiagnosticTask diagSignalTask(
-                    "Diagnostic Signal",
-                    std::bind(&GyroDriver::diagnosticSignalCheck, this, _1));
-            
-            diagnostic_updater::FunctionDiagnosticTask serialProcTask(
-                    "Serial",
-                    std::bind(&GyroDriver::serialProcessorCheck, this, _1));
             
             updater->add(tempTask);
             updater->add(vsupplyTask);
@@ -335,6 +332,8 @@ namespace uwrt_gyro {
             if(params->rawTempLimits.size() < 2)
             {
                 stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Limits not initialized!");
+                nodeParamsResource.unlockResource();
+                return;
             }
 
             genericCheck<int16_t>("Temperature", temperature, params->rawTempLimits[0], params->rawTempLimits[1], stat);
@@ -397,13 +396,6 @@ namespace uwrt_gyro {
             //publish status
             statusPub->publish(*statMsg);
             statusResource.unlockResource();
-
-            //diagnostics
-            unsigned short failedOfLastTen = processor->failedOfLastTenMessages();
-            if(failedOfLastTen > 5)
-            {
-                RCLCPP_WARN(get_logger(), "Unusually high message drop rate (%d / last 10 messages) detected.", failedOfLastTen);
-            }
         }
 
 
@@ -499,6 +491,13 @@ namespace uwrt_gyro {
         rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr twistPub;
         rclcpp::Publisher<riptide_msgs2::msg::GyroStatus>::SharedPtr statusPub;
         std::unique_ptr<std::thread> procThread;
+
+        //diagnostics
+        diagnostic_updater::FunctionDiagnosticTask tempTask;
+        diagnostic_updater::FunctionDiagnosticTask vsupplyTask;
+        diagnostic_updater::FunctionDiagnosticTask sldCurrentTask;
+        diagnostic_updater::FunctionDiagnosticTask diagSignalTask;
+        diagnostic_updater::FunctionDiagnosticTask serialProcTask;
     };
 }
 
@@ -506,8 +505,8 @@ namespace uwrt_gyro {
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    
     std::shared_ptr<uwrt_gyro::GyroDriver> driver = std::make_shared<uwrt_gyro::GyroDriver>();
+    driver->initDiagnostics();
     rclcpp::spin(driver);
     rclcpp::shutdown();
 }
