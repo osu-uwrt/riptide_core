@@ -46,12 +46,12 @@ def generate_launch_description():
             PushRosNamespace(
                 LC("robot")
             ),
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(copro_agent_launch_file),
-            #     launch_arguments=[
-            #         ('robot', LC('robot')),
-            #     ]
-            # ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(copro_agent_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(diagnostics_launch_file),
                 launch_arguments=[
@@ -79,12 +79,12 @@ def generate_launch_description():
                 ]
             ),
             
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(zed_launch_file),
-            #     launch_arguments=[
-            #         ('robot', LC('robot')),
-            #     ]
-            # ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(zed_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
 
             Node(
                 package='riptide_hardware2',
