@@ -15,7 +15,7 @@ TEST(ArduinoLibTest, TestString)
     ASSERT_TRUE(strcmp(s.c_str(), cs) == 0);
     
     //test length
-    ASSERT_EQ(s.length(), 12);
+    ASSERT_EQ(s.length(), 12U);
 
     //test == and !=
     ASSERT_TRUE(s == cs);
@@ -32,7 +32,7 @@ TEST(ArduinoLibTest, TestString)
     ASSERT_EQ(s3, "hello world!1!1!");
     ASSERT_EQ(s, "hello world!");
 
-    ASSERT_EQ(s3.length(), 16);
+    ASSERT_EQ(s3.length(), 16u);
 }
 
 
@@ -73,7 +73,7 @@ TEST(ArduinoLibTest, TestVector)
 {
     //test constructor and access
     arduino_lib::vector<int> v = ARDUINOLIB_VECTOR(int, 1, 2, 7, 4);
-    ASSERT_EQ(v.size(), 4);
+    ASSERT_EQ(v.size(), 4u);
     ASSERT_EQ(v.at(0), 1);
     ASSERT_EQ(v[2], 7);
     ASSERT_EQ(v.at(2), 7);
@@ -94,7 +94,7 @@ TEST(ArduinoLibTest, TestVector)
     arduino_lib::vector<int> v2 = v + other;
     arduino_lib::vector<int> expected2 = ARDUINOLIB_VECTOR(int, 1, 2, 7, 4, 9, 8, 0, 9, 8, 0);
     ASSERT_EQ(v2, expected2);
-    ASSERT_EQ(v2.size(), 10);
+    ASSERT_EQ(v2.size(), 10u);
     ASSERT_EQ(v, expected);
 
     //test push_back
@@ -114,12 +114,12 @@ TEST(ArduinoLibTest, TestIterator)
     arduino_lib::Iterator<arduino_lib::vector<int>, int> it = v.begin();
     
     //access
-    ASSERT_EQ(it.idx(), 0);
+    ASSERT_EQ(it.idx(), 0u);
     ASSERT_EQ(*it, 1);
     
     //addition
     it = it + 1;
-    ASSERT_EQ(it.idx(), 1);
+    ASSERT_EQ(it.idx(), 1u);
     ASSERT_EQ(*it, 2);
     
     //comparison
@@ -134,7 +134,7 @@ TEST(ArduinoLibTest, TestIterator)
     //subtraction of another operator
     ASSERT_EQ(it - it, 0);
     ASSERT_EQ(beginIt + 1 - beginIt, 1);
-    ASSERT_EQ(endIt - beginIt, v.size());
+    ASSERT_EQ((size_t) (endIt - beginIt), v.size());
 
     //increment
     ASSERT_EQ(*beginIt, 1);

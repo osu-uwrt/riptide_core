@@ -1,5 +1,5 @@
 std_msgs/Header header
-int16 temperature
-int16 vsupply
-int16 sldcurrent
-int16 diagsignal
+uint16 temperature
+uint16 vsupply
+uint16 sldcurrent
+uint16 diagsignal

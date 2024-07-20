@@ -247,8 +247,6 @@ namespace uwrt_gyro {
             updater = std::make_shared<diagnostic_updater::Updater>(shared_from_this());
             updater->setHardwareID("FOG");
 
-            
-            
             updater->add(tempTask);
             updater->add(vsupplyTask);
             updater->add(sldCurrentTask);
