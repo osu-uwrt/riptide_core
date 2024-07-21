@@ -18,4 +18,4 @@
     variance: 0.0001
 
     #calibration limits
-    cal_temp_limits: [11000, 13500]
+    cal_temp_limits: [15.0, 30.0]

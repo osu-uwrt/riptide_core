@@ -18,10 +18,10 @@ using namespace std::placeholders;
 
 #define VSUPPLY_UPPER 5.1
 #define VSUPPLY_LOWER 4.9
-#define SLDCURRENT_UPPER 0
-#define SLDCURRENT_LOWER 0
-#define DIAG_SIGNAL_LOWER 0
-#define DIAG_SIGNAL_UPPER 0
+#define SLDCURRENT_UPPER 0.1
+#define SLDCURRENT_LOWER 0.7
+#define DIAG_SIGNAL_LOWER 1.05
+#define DIAG_SIGNAL_UPPER 0.95
 
 namespace uwrt_gyro {
 
@@ -136,7 +136,7 @@ namespace uwrt_gyro {
             tempNormMean,
             tempNormStd;
         
-        std::vector<int64_t> rawTempLimits; //format: lower, upper
+        std::vector<double> tempLimits; //format: lower, upper
         
         double variance;
     };
@@ -173,22 +173,7 @@ namespace uwrt_gyro {
         GyroDriver()
         : rclcpp::Node("riptide_gyro"),
           nodeParamsResource(new NodeParameters()),
-          statusResource(new riptide_msgs2::msg::GyroStatus()),
-          tempTask(
-            "Temperature",
-            std::bind(&GyroDriver::temperatureCheck, this, _1)),
-          vsupplyTask(
-            "VSupply",
-            std::bind(&GyroDriver::vsupplyCheck, this, _1)),
-          sldCurrentTask(
-            "SLDCurrent",
-            std::bind(&GyroDriver::sldCurrentCheck, this, _1)),
-          diagSignalTask(
-            "Diagnostic Signal",
-            std::bind(&GyroDriver::diagnosticSignalCheck, this, _1)),
-          serialProcTask(
-            "Serial",
-            std::bind(&GyroDriver::serialProcessorCheck, this, _1))
+          statusResource(new riptide_msgs2::msg::GyroStatus())
         {
             RCLCPP_INFO(get_logger(), "Starting gyro driver");
 
@@ -205,7 +190,7 @@ namespace uwrt_gyro {
             declare_parameter<double>("temp_norm_mean", 0);
             declare_parameter<double>("temp_norm_std", 0);
             declare_parameter<double>("variance", 0);
-            declare_parameter<std::vector<int>>("cal_temp_limits", std::vector<int>());
+            declare_parameter<std::vector<double>>("cal_temp_limits", std::vector<double>());
             add_on_set_parameters_callback(std::bind(&GyroDriver::setParamsCb, this, _1));
             reloadParams();
             
@@ -242,18 +227,6 @@ namespace uwrt_gyro {
             delete statusResource.lockResource();
         }
 
-        void initDiagnostics()
-        {
-            updater = std::make_shared<diagnostic_updater::Updater>(shared_from_this());
-            updater->setHardwareID("FOG");
-
-            updater->add(tempTask);
-            updater->add(vsupplyTask);
-            updater->add(sldCurrentTask);
-            updater->add(diagSignalTask);
-            updater->add(serialProcTask);
-        }
-
         private:
 
         void reloadParams()
@@ -270,7 +243,7 @@ namespace uwrt_gyro {
             params->tempNormMean = get_parameter("temp_norm_mean").as_double();
             params->tempNormStd = get_parameter("temp_norm_std").as_double();
             params->variance = get_parameter("variance").as_double();
-            params->rawTempLimits = get_parameter("cal_temp_limits").as_integer_array();
+            params->tempLimits = get_parameter("cal_temp_limits").as_double_array();
             nodeParamsResource.unlockResource();
         }
 
@@ -293,103 +266,42 @@ namespace uwrt_gyro {
                 int16_t intData = convertFromCString<int8_t>(serialData.data.data, serialData.data.numData);
                 intData = intData << 8;
                 serialData = processor->getField(field2);
-                intData |= convertFromCString<int8_t>(serialData.data.data, serialData.data.numData);
+                intData |= convertFromCString<int8_t>(serialData.data.data, serialData.data.numData) & 0xFF;
                 return intData;
             }
 
             return 0;
         }
 
-
-        //diagnostic functions
-        
-        template<typename T>
-        void genericCheck(const std::string& name, const T& value, const T& lower, const T& upper, diagnostic_updater::DiagnosticStatusWrapper& stat)
-        {
-            if(value < lower) 
-            {
-                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, name + " too low");
-            } else if(value > upper) 
-            {
-                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, name + " too high");
-            } else
-            {
-                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, name + " OK");
-            }
-
-            stat.add<T>(name, value);
-        }
-
-
-        void temperatureCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
-        {
-            int16_t temperature = statusResource.lockResource()->temperature;
-            statusResource.unlockResource();
-            
-            NodeParameters *params = nodeParamsResource.lockResource();
-            if(params->rawTempLimits.size() < 2)
-            {
-                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Limits not initialized!");
-                nodeParamsResource.unlockResource();
-                return;
-            }
-
-            genericCheck<int16_t>("Temperature", temperature, params->rawTempLimits[0], params->rawTempLimits[1], stat);
-            nodeParamsResource.unlockResource();
-        }
-
-
-        void vsupplyCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
-        {
-            int16_t vsupply = statusResource.lockResource()->vsupply;
-            statusResource.unlockResource();
-            genericCheck<int16_t>("VSupply", vsupply, VSUPPLY_LOWER, VSUPPLY_UPPER, stat);
-        }
-
-
-        void sldCurrentCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
-        {
-            int16_t sldcurrent = statusResource.lockResource()->sldcurrent;
-            statusResource.unlockResource();
-            genericCheck<int16_t>("SLDCurrent", sldcurrent, SLDCURRENT_LOWER, SLDCURRENT_UPPER, stat);
-        }
-
-
-        void diagnosticSignalCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
-        {
-            int16_t diagSignal = statusResource.lockResource()->diagsignal;
-            statusResource.unlockResource();
-            genericCheck<int16_t>("Diagnostic Signal", diagSignal, DIAG_SIGNAL_LOWER, DIAG_SIGNAL_UPPER, stat);
-        }
-
-
-        void serialProcessorCheck(diagnostic_updater::DiagnosticStatusWrapper& stat)
-        {
-            unsigned short failedOfLastTen = processor->failedOfLastTenMessages();
-            if(failedOfLastTen > 5)
-            {
-                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Unusually high message drop rate (%" + std::to_string(failedOfLastTen) + " / last 10 messages) detected.");
-            } else
-            {
-                stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Serial OK");
-            }
-        }
-
         //this timer routine publishes diagnostics and everything else that isnt rate
         void timerCb()
         {
-            std::string frame = nodeParamsResource.lockResource()->frame;
+            NodeParameters *params = nodeParamsResource.lockResource();
+            std::string frame = params->frame;
+            std::vector<double> tempLimits = params->tempLimits;
             nodeParamsResource.unlockResource();
 
             riptide_msgs2::msg::GyroStatus *statMsg = statusResource.lockResource();
             statMsg->header.frame_id = frame;
             statMsg->header.stamp = get_clock()->now();
 
-            //pack status from gyro data
-            statMsg->temperature = get16BitDataFromFields(UwrtGyroField::TEMP_HIGH, UwrtGyroField::TEMP_LOW);
-            statMsg->vsupply = get16BitDataFromFields(UwrtGyroField::VSUPPLY_HIGH, UwrtGyroField::VSUPPLY_LOW);
-            statMsg->sldcurrent = get16BitDataFromFields(UwrtGyroField::SLD_CURRENT_HIGH, UwrtGyroField::SLD_CURRENT_LOW);
-            statMsg->diagsignal = get16BitDataFromFields(UwrtGyroField::DIAG_SIGNAL_HIGH, UwrtGyroField::DIAG_SIGNAL_LOW);
+            //pack status with raw gyro data
+            statMsg->raw_temperature = get16BitDataFromFields(UwrtGyroField::TEMP_HIGH, UwrtGyroField::TEMP_LOW);
+            statMsg->raw_vsupply = get16BitDataFromFields(UwrtGyroField::VSUPPLY_HIGH, UwrtGyroField::VSUPPLY_LOW);
+            statMsg->raw_sldcurrent = get16BitDataFromFields(UwrtGyroField::SLD_CURRENT_HIGH, UwrtGyroField::SLD_CURRENT_LOW);
+            statMsg->raw_diagsignal = get16BitDataFromFields(UwrtGyroField::DIAG_SIGNAL_HIGH, UwrtGyroField::DIAG_SIGNAL_LOW);
+
+            //pack status with processed gyro data
+            statMsg->temperature = statMsg->raw_temperature * (250 / (float) 0x8000) - 50.0;
+            statMsg->vsupply = statMsg->raw_vsupply * (10 / (float) 0x8000);
+            statMsg->sldcurrent = statMsg->raw_sldcurrent * (0.25 / (float) 0x8000);
+            statMsg->diagsignal = statMsg->raw_diagsignal * (2.5 / (float) 0x8000);
+
+            //diagnostic checks
+            statMsg->temp_good = statMsg->temperature > tempLimits[0] && statMsg->temperature < tempLimits[1];
+            statMsg->vsupply_good = statMsg->vsupply > VSUPPLY_LOWER && statMsg->vsupply < VSUPPLY_UPPER;
+            statMsg->sldcurrent_good = statMsg->sldcurrent > SLDCURRENT_LOWER && statMsg->sldcurrent < SLDCURRENT_UPPER;
+            statMsg->diagsignal_good = statMsg->diagsignal > DIAG_SIGNAL_LOWER && statMsg->diagsignal < DIAG_SIGNAL_UPPER;
 
             //publish status
             statusPub->publish(*statMsg);
@@ -483,19 +395,11 @@ namespace uwrt_gyro {
         //tools
         std::shared_ptr<LinuxSerialTransceiver> transceiver;
         SerialProcessor::SharedPtr processor;
-        std::shared_ptr<diagnostic_updater::Updater> updater;
         rclcpp::TimerBase::SharedPtr timer;
         rclcpp::Publisher<riptide_msgs2::msg::Int32Stamped>::SharedPtr rawDataPub;
         rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr twistPub;
         rclcpp::Publisher<riptide_msgs2::msg::GyroStatus>::SharedPtr statusPub;
         std::unique_ptr<std::thread> procThread;
-
-        //diagnostics
-        diagnostic_updater::FunctionDiagnosticTask tempTask;
-        diagnostic_updater::FunctionDiagnosticTask vsupplyTask;
-        diagnostic_updater::FunctionDiagnosticTask sldCurrentTask;
-        diagnostic_updater::FunctionDiagnosticTask diagSignalTask;
-        diagnostic_updater::FunctionDiagnosticTask serialProcTask;
     };
 }
 
@@ -504,7 +408,6 @@ int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
     std::shared_ptr<uwrt_gyro::GyroDriver> driver = std::make_shared<uwrt_gyro::GyroDriver>();
-    driver->initDiagnostics();
     rclcpp::spin(driver);
     rclcpp::shutdown();
 }
