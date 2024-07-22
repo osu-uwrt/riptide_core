@@ -10,12 +10,12 @@
     p01: 4.29e-05
     p20: 0.0003649
     p11: 0.001806
-    rate_norm_mean: 1192.0
-    rate_norm_std: 1517000.0
-    temp_norm_mean: 12140.0
-    temp_norm_std: 558.6
+    rate_norm_mean: 463.5
+    rate_norm_std: 1607000.0
+    temp_norm_mean: 44.04
+    temp_norm_std: 3.973
 
     variance: 0.0001
 
     #calibration limits
-    cal_temp_limits: [15.0, 30.0]
+    cal_temp_limits: [37.57019, 51.303101]
