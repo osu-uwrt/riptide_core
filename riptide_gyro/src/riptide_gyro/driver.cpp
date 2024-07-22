@@ -1,5 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
 #include <riptide_msgs2/msg/int32_stamped.hpp>
+#include <riptide_msgs2/action/tare_gyro.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <riptide_msgs2/msg/gyro_status.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
@@ -141,6 +143,20 @@ namespace uwrt_gyro {
         double variance;
     };
 
+    struct TareStatus {
+        TareStatus()
+         : offset(0),
+           active(false),
+           acquiredSamples(0),
+           desiredSamples(0) { }
+
+        double offset;
+        bool active;
+        int
+            acquiredSamples,
+            desiredSamples;
+    };
+
 
     static bool gyroChecker(const char *msgStart, const SerialFrame& frame)
     {
@@ -170,10 +186,14 @@ namespace uwrt_gyro {
     class GyroDriver : public rclcpp::Node
     {
         public:
+        using TareGyro = riptide_msgs2::action::TareGyro;
+        using TareGyroGH = rclcpp_action::ServerGoalHandle<TareGyro>;
+
         GyroDriver()
         : rclcpp::Node("riptide_gyro"),
           nodeParamsResource(new NodeParameters()),
-          statusResource(new riptide_msgs2::msg::GyroStatus())
+          statusResource(new riptide_msgs2::msg::GyroStatus()),
+          tareStatusResource(new TareStatus())
         {
             RCLCPP_INFO(get_logger(), "Starting gyro driver");
 
@@ -204,6 +224,14 @@ namespace uwrt_gyro {
             statusPub = create_publisher<riptide_msgs2::msg::GyroStatus>("gyro/status", 10);
             twistPub = create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>("gyro/twist", rclcpp::SensorDataQoS());
 
+            //create tare server
+            tareServer = rclcpp_action::create_server<TareGyro>(
+                this,
+                "gyro/tare",
+                std::bind(&GyroDriver::handleTareGoal, this, _1, _2),
+                std::bind(&GyroDriver::handleTareCancel, this, _1),
+                std::bind(&GyroDriver::handleTareAccepted, this, _1));
+
             //initialize serial library
             try
             {
@@ -225,6 +253,7 @@ namespace uwrt_gyro {
         {
             delete nodeParamsResource.lockResource();
             delete statusResource.lockResource();
+            delete tareStatusResource.lockResource();
         }
 
         private:
@@ -336,6 +365,17 @@ namespace uwrt_gyro {
 
             int32_t signedRawReading = (unsignedRawReading > 0x800000 ? unsignedRawReading - 0xFFFFFF : unsignedRawReading);
 
+            //add to tare if necessary
+            TareStatus *tareStatus = tareStatusResource.lockResource();
+            if(tareStatus->active && tareStatus->acquiredSamples < tareStatus->desiredSamples)
+            {
+                tareStatus->offset += signedRawReading / (double) tareStatus->desiredSamples;
+            }
+
+            //apply tare to signed raw reading before processing it
+            signedRawReading -= (int32_t) tareStatus->offset;
+            tareStatusResource.unlockResource();
+
             //get temperature value from status
             int gyroTemperature = statusResource.lockResource()->temperature;
             statusResource.unlockResource();
@@ -386,11 +426,124 @@ namespace uwrt_gyro {
             }
         }
 
+        rclcpp_action::GoalResponse handleTareGoal(
+            const rclcpp_action::GoalUUID & uuid,
+            std::shared_ptr<const TareGyro::Goal> goal)
+        {
+            RCLCPP_INFO(get_logger(), "Received gyro tare goal");
+            (void)uuid;
+            (void)goal;
+
+            bool isTaring = tareStatusResource.lockResource()->active;
+            tareStatusResource.unlockResource();
+            if(!isTaring)
+            {
+                RCLCPP_INFO(get_logger(), "Accepting and executing tare");
+                return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+            } else 
+            {
+                RCLCPP_ERROR(get_logger(), "Rejecting tare because another is in progress");
+                return rclcpp_action::GoalResponse::REJECT;
+            }
+        }
+
+
+        rclcpp_action::CancelResponse handleTareCancel(
+            const std::shared_ptr<TareGyroGH> goalHandle)
+        {
+            RCLCPP_INFO(this->get_logger(), "Received request to cancel tare");
+            (void) goalHandle;
+            return rclcpp_action::CancelResponse::ACCEPT;
+        }
+
+
+        void handleTareAccepted(const std::shared_ptr<TareGyroGH> goalHandle)
+        {
+            std::thread{std::bind(&GyroDriver::doTare, this, _1), goalHandle}.detach();
+        }
+
+
+        void doTare(const std::shared_ptr<TareGyroGH> goalHandle)
+        {
+            TareGyro::Goal::ConstSharedPtr goal = goalHandle->get_goal();
+            RCLCPP_INFO(get_logger(), "Beginning tare using %d samples with a timeout of %f seconds",
+                        goal->num_samples, goal->timeout_seconds);
+
+            //reset offset, set tare parameters, and activate
+            TareStatus *status = tareStatusResource.lockResource();
+            double oldOffset = status->offset;
+            status->offset = 0;
+            status->acquiredSamples = 0;
+            status->desiredSamples = goal->num_samples;
+            status->active = true; //setting this flag causes the tare to be updated by the serial callback
+            tareStatusResource.unlockResource();
+
+            //wait for tare to complete
+            rclcpp::Time startTime = get_clock()->now();
+            while((get_clock()->now() - startTime).seconds() < goal->timeout_seconds)
+            {
+                usleep(1000); //sleep 1ms
+                status = tareStatusResource.lockResource();
+                bool shouldBreak = status->acquiredSamples >= status->desiredSamples || goalHandle->is_canceling();
+                tareStatusResource.unlockResource();
+                if(shouldBreak)
+                {
+                    break;
+                }
+            }
+
+            //deactivate tare
+            RCLCPP_INFO(get_logger(), "Stopping tare");
+            status = tareStatusResource.lockResource();
+            status->active = false;
+            tareStatusResource.unlockResource();
+
+            //compose result
+            TareGyro::Result::SharedPtr result = std::make_shared<TareGyro::Result>();
+
+            if(goalHandle->is_canceling())
+            {
+                RCLCPP_INFO(get_logger(), "Tare canceled");
+
+                //restore old tare offset
+                status = tareStatusResource.lockResource();
+                status->offset = oldOffset;
+                tareStatusResource.unlockResource();
+
+                result->success = false;
+                result->result = "Tare canceled";
+                goalHandle->canceled(result);
+                return;
+            }
+            
+            rclcpp::Duration elapsedTime = get_clock()->now() - startTime;
+            if(elapsedTime.seconds() > goal->timeout_seconds)
+            {
+                RCLCPP_ERROR(get_logger(), "Tare timed out");
+
+                //restore old tare offset
+                status = tareStatusResource.lockResource();
+                status->offset = oldOffset;
+                tareStatusResource.unlockResource();
+
+                result->success = false;
+                result->result = "Tare timed out.";
+                goalHandle->abort(result);
+                return;
+            }
+
+            //if we get here, success!
+            result->success = true;
+            result->result = "Tare succeeded.";
+            goalHandle->succeed(result);
+        }
+
         //params
         ProtectedResource<NodeParameters*> nodeParamsResource;        
 
         //status
         ProtectedResource<riptide_msgs2::msg::GyroStatus*> statusResource;
+        ProtectedResource<TareStatus*> tareStatusResource;
 
         //tools
         std::shared_ptr<LinuxSerialTransceiver> transceiver;
@@ -399,6 +552,7 @@ namespace uwrt_gyro {
         rclcpp::Publisher<riptide_msgs2::msg::Int32Stamped>::SharedPtr rawDataPub;
         rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr twistPub;
         rclcpp::Publisher<riptide_msgs2::msg::GyroStatus>::SharedPtr statusPub;
+        rclcpp_action::Server<TareGyro>::SharedPtr tareServer;
         std::unique_ptr<std::thread> procThread;
     };
 }

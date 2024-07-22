@@ -8,6 +8,7 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(riptide_msgs2 REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
@@ -15,6 +16,7 @@ find_package(diagnostic_updater REQUIRED)
 
 set(deps
   rclcpp
+  rclcpp_action
   riptide_msgs2
   diagnostic_msgs
   diagnostic_updater)
