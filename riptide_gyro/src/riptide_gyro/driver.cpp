@@ -260,6 +260,7 @@ namespace uwrt_gyro {
 
         void reloadParams()
         {
+            RCLCPP_INFO(get_logger(), "Reloading gyro parameters");
             NodeParameters *params = nodeParamsResource.lockResource();
             params->frame = get_parameter("gyro_frame").as_string();
             params->p00 = get_parameter("p00").as_double();
@@ -365,17 +366,6 @@ namespace uwrt_gyro {
 
             int32_t signedRawReading = (unsignedRawReading > 0x800000 ? unsignedRawReading - 0xFFFFFF : unsignedRawReading);
 
-            //add to tare if necessary
-            TareStatus *tareStatus = tareStatusResource.lockResource();
-            if(tareStatus->active && tareStatus->acquiredSamples < tareStatus->desiredSamples)
-            {
-                tareStatus->offset += signedRawReading / (double) tareStatus->desiredSamples;
-            }
-
-            //apply tare to signed raw reading before processing it
-            signedRawReading -= (int32_t) tareStatus->offset;
-            tareStatusResource.unlockResource();
-
             //get temperature value from status
             int gyroTemperature = statusResource.lockResource()->temperature;
             statusResource.unlockResource();
@@ -407,6 +397,20 @@ namespace uwrt_gyro {
                 params->p20 * normalizedRawReading * normalizedRawReading +
                 params->p11 * normalizedRawReading * normalizedGyroTemperature;
             
+            //add to tare if necessary
+            TareStatus *tareStatus = tareStatusResource.lockResource();
+            if(tareStatus->active && tareStatus->acquiredSamples < tareStatus->desiredSamples)
+            {
+                tareStatus->offset += twistMsg.twist.twist.angular.z / (double) tareStatus->desiredSamples;
+                tareStatus->acquiredSamples++;
+            } else
+            {
+                //apply tare to twist before publishing
+                twistMsg.twist.twist.angular.z -= tareStatus->offset;
+            }
+
+            tareStatusResource.unlockResource();
+
             nodeParamsResource.unlockResource();
             twistPub->publish(twistMsg);
         }
