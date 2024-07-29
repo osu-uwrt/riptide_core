@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <riptide_msgs2/msg/int32_stamped.hpp>
@@ -328,7 +329,14 @@ namespace uwrt_gyro {
             statMsg->diagsignal = statMsg->raw_diagsignal * (2.5 / (float) 0x8000);
 
             //diagnostic checks
-            statMsg->temp_good = statMsg->temperature > tempLimits[0] && statMsg->temperature < tempLimits[1];
+            if(tempLimits.size() >= 2)
+            {
+                statMsg->temp_good = statMsg->temperature > tempLimits[0] && statMsg->temperature < tempLimits[1];
+            } else
+            {
+                RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 10000, "Could not determine temperature limits. Parameters may be missing.");
+                statMsg->temp_good = false;
+            }
             statMsg->vsupply_good = statMsg->vsupply > VSUPPLY_LOWER && statMsg->vsupply < VSUPPLY_UPPER;
             statMsg->sldcurrent_good = statMsg->sldcurrent > SLDCURRENT_LOWER && statMsg->sldcurrent < SLDCURRENT_UPPER;
             statMsg->diagsignal_good = statMsg->diagsignal > DIAG_SIGNAL_LOWER && statMsg->diagsignal < DIAG_SIGNAL_UPPER;
@@ -428,6 +436,8 @@ namespace uwrt_gyro {
                     RCLCPP_WARN(get_logger(), "Caught serial lib exception: %s", ex.what().c_str());
                 }
             }
+
+            RCLCPP_INFO(get_logger(), "Thread func exiting.");
         }
 
         rclcpp_action::GoalResponse handleTareGoal(
