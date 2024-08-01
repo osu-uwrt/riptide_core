@@ -129,11 +129,12 @@ namespace uwrt_gyro {
         std::string frame;
         
         double
-            p00,
-            p10,
-            p01,
-            p20,
-            p11,
+            a,
+            b,
+            c,
+            d,
+            f,
+            g,
             rateNormMean,
             rateNormStd,
             tempNormMean,
@@ -201,11 +202,12 @@ namespace uwrt_gyro {
             //declare parameters
             declare_parameter<std::string>("gyro_port", DEFAULT_PORT);
             declare_parameter<std::string>("gyro_frame", DEFAULT_FRAME);
-            declare_parameter<double>("p00", 0);
-            declare_parameter<double>("p10", 0);
-            declare_parameter<double>("p01", 0);
-            declare_parameter<double>("p20", 0);
-            declare_parameter<double>("p11", 0);
+            declare_parameter<double>("a", 0);
+            declare_parameter<double>("b", 0);
+            declare_parameter<double>("c", 0);
+            declare_parameter<double>("d", 0);
+            declare_parameter<double>("f", 0);
+            declare_parameter<double>("g", 0);
             declare_parameter<double>("rate_norm_mean", 0);
             declare_parameter<double>("rate_norm_std", 0);
             declare_parameter<double>("temp_norm_mean", 0);
@@ -264,11 +266,12 @@ namespace uwrt_gyro {
             RCLCPP_INFO(get_logger(), "Reloading gyro parameters");
             NodeParameters *params = nodeParamsResource.lockResource();
             params->frame = get_parameter("gyro_frame").as_string();
-            params->p00 = get_parameter("p00").as_double();
-            params->p10 = get_parameter("p10").as_double();
-            params->p01 = get_parameter("p01").as_double();
-            params->p20 = get_parameter("p20").as_double();
-            params->p11 = get_parameter("p11").as_double();
+            params->a = get_parameter("a").as_double();
+            params->b = get_parameter("b").as_double();
+            params->c = get_parameter("c").as_double();
+            params->d = get_parameter("d").as_double();
+            params->f = get_parameter("f").as_double();
+            params->g = get_parameter("g").as_double();
             params->rateNormMean = get_parameter("rate_norm_mean").as_double();
             params->rateNormStd = get_parameter("rate_norm_std").as_double();
             params->tempNormMean = get_parameter("temp_norm_mean").as_double();
@@ -397,13 +400,12 @@ namespace uwrt_gyro {
                 normalizedRawReading = (signedRawReading - params->rateNormMean) / params->rateNormStd,
                 normalizedGyroTemperature = (gyroTemperature - params->tempNormMean) / params->tempNormStd;
 
-            //fit = p00 + p10*x + p01*y + p20*x^2 + p11*xy, where x is rate and y is temp
+            //formula: z(x,y) = a + b*x + c*x*y + d*cos(f*x + g)
             twistMsg.twist.twist.angular.z = 
-                params->p00 +
-                params->p10 * normalizedRawReading + 
-                params->p01 * normalizedGyroTemperature + 
-                params->p20 * normalizedRawReading * normalizedRawReading +
-                params->p11 * normalizedRawReading * normalizedGyroTemperature;
+                params->a + 
+                params->b * normalizedRawReading +
+                params->c * normalizedRawReading * normalizedGyroTemperature +
+                params->d * cos(params->f * normalizedRawReading + params->g);
             
             //add to tare if necessary
             TareStatus *tareStatus = tareStatusResource.lockResource();
