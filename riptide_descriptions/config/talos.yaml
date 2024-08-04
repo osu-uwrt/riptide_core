@@ -25,7 +25,7 @@ controller:
 
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
-    base_wrench: [0.00, 0.0, -6.0, 0.058, 0.010, -0.020]
+    base_wrench: [0.00, 0.0, 2.0, 1.1, 0.3, -0.020]
 
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
@@ -41,13 +41,15 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [0.8, 0.8, 5.0, 0.2, 0.2, 0.3]
+      # eta_order_0: [0.8, 0.8, 10.0, 0.2, 0.2, 0.3]
+      eta_order_0: [0.8, 0.8, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
+      # eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
       eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2, 0.2, 0.4, 10.0, 10.0, 0.35]
+      lambda: [0.2, 0.2, 1.0, 10.0, 10.0, 0.35]
 
       #format: 'a, m' for each degree of freedom
       #where:
@@ -70,9 +72,9 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [20.0, 20.0, 200.0, 1.0, 1.0, 2.0]
-    i_gains: [0.0, 0.0, 0.0, 0.1, 0.1, 0.1]
-    d_gains: [5.0, 5.0, 90.0, 0.1, 0.1, 0.5]
+    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 2.0]
+    i_gains: [0.0, 0.0, 0.0, 0.01, 1.0, 0.1]
+    d_gains: [5.0, 5.0, 90.0, 1.0, 0.05, 0.5]
 
     # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
