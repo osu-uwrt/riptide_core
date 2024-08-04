@@ -31,6 +31,11 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
+gyro_launch_file = os.path.join(
+    get_package_share_directory('riptide_gyro'),
+    "launch", "gyro.launch.py"
+)
+
 zed_launch_file = os.path.join(
     get_package_share_directory('riptide_hardware2'),
     "launch", "zed.launch.py"
@@ -69,6 +74,12 @@ def generate_launch_description():
             ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(imu_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot'))
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(gyro_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot'))
                 ]

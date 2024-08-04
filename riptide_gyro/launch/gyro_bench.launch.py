@@ -89,7 +89,7 @@ def generate_launch_description():
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(gyro_launch_file),
                 launch_arguments = [
-                    ("port", LC("gyro_port")),
+                    ("gyro_port", LC("gyro_port")),
                     ("config_file", LC("config_file"))
                 ]
             )
