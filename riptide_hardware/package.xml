@@ -15,6 +15,9 @@
   <author email="justice.251@osu.edu">Benji Justice</author>
   <author email="pafford.9@osu.edu">Robert Pafford</author>
 
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
@@ -31,6 +34,6 @@
   <exec_depend>gpiod</exec_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
