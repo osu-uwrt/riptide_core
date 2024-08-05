@@ -116,7 +116,7 @@ controller:
     summersault_force: 25.0
 
     #time required for a summersault
-    summersault_duration: 2.0
+    summersault_duration: 3.9
 
     #force required for flip
     barrel_roll_force: 25
