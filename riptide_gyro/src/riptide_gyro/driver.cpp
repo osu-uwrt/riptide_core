@@ -1,4 +1,5 @@
-#include <unistd.h>
+#include <fstream>
+#include <filesystem>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <riptide_msgs2/msg/int32_stamped.hpp>
@@ -7,6 +8,7 @@
 #include <riptide_msgs2/msg/gyro_status.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include "riptide_gyro/serial_library.hpp"
 
 using namespace std::chrono_literals;
@@ -193,6 +195,7 @@ namespace uwrt_gyro {
 
         GyroDriver()
         : rclcpp::Node("riptide_gyro"),
+          tareFileName(ament_index_cpp::get_package_share_directory("riptide_gyro") + "/tare"),
           nodeParamsResource(new NodeParameters()),
           statusResource(new riptide_msgs2::msg::GyroStatus()),
           tareStatusResource(new TareStatus())
@@ -216,6 +219,32 @@ namespace uwrt_gyro {
             declare_parameter<std::vector<double>>("cal_temp_limits", std::vector<double>());
             add_on_set_parameters_callback(std::bind(&GyroDriver::setParamsCb, this, _1));
             reloadParams();
+
+            //load tare offset
+            if(std::filesystem::exists(tareFileName))
+            {
+                std::ifstream tareFile(tareFileName);
+                std::string tareStr;
+                tareFile >> tareStr;
+                double tare = 0;
+
+                try
+                {
+                    tare = std::stod(tareStr);
+                    
+                    TareStatus *status = tareStatusResource.lockResource();
+                    status->offset = tare;
+                    tareStatusResource.unlockResource();
+
+                    RCLCPP_INFO(get_logger(), "Read tare from %s as %f", tareFileName.c_str(), tare);
+                } catch(std::invalid_argument& ex)
+                {
+                    RCLCPP_ERROR(get_logger(), "Could not read tare from file %s: %s", tareFileName.c_str(), ex.what());
+                }
+            } else
+            {
+                RCLCPP_WARN(get_logger(), "Not loading tare because file %s does not exist.", tareFileName.c_str());
+            }
             
             //start timer
             timer = create_wall_timer(
@@ -263,6 +292,7 @@ namespace uwrt_gyro {
 
         void reloadParams()
         {
+            //regular parameters
             RCLCPP_INFO(get_logger(), "Reloading gyro parameters");
             NodeParameters *params = nodeParamsResource.lockResource();
             params->frame = get_parameter("gyro_frame").as_string();
@@ -511,6 +541,7 @@ namespace uwrt_gyro {
             //deactivate tare
             RCLCPP_INFO(get_logger(), "Stopping tare");
             status = tareStatusResource.lockResource();
+            double finalOffset = status->offset;
             status->active = false;
             tareStatusResource.unlockResource();
 
@@ -548,11 +579,20 @@ namespace uwrt_gyro {
                 return;
             }
 
-            //if we get here, success!
+            //if we get here, success! save tare to file
+            RCLCPP_INFO(get_logger(), "Tare succeeded! Storing result to %s", tareFileName.c_str());
+            std::ofstream file(tareFileName);
+            file << std::to_string(finalOffset) << std::endl;
+            file.close();
+
+            //store results and end action
             result->success = true;
             result->result = "Tare succeeded.";
             goalHandle->succeed(result);
         }
+
+        //consts
+        const std::string tareFileName;
 
         //params
         ProtectedResource<NodeParameters*> nodeParamsResource;        
