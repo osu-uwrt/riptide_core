@@ -5,6 +5,7 @@
 #if defined(USE_LINUX)
 #include <termios.h>
 #include <fcntl.h>
+#include <unistd.h>
 #endif
 
 namespace uwrt_gyro
