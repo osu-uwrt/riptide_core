@@ -214,10 +214,10 @@ class Vectornav : public rclcpp::Node {
       node->fillCovarianceFromParam("linear_acceleration_covariance", msg.linear_acceleration_covariance);
 
       try {
-        magMsg = toMsg(cd.magnetic());
+        // magMsg = toMsg(cd.magnetic());
 
         try {
-          headingMsg.data = node->calculateMagnetHeading(magMsg);
+          // headingMsg.data = node->calculateMagnetHeading(magMsg);
         } catch (...) {
           RCLCPP_WARN(node->get_logger(), "Failed to parse magnetometer heading");
         }
@@ -236,8 +236,8 @@ class Vectornav : public rclcpp::Node {
     // Publish output, throw error if publish failed
     try {
       node->imuPub->publish(msg);
-      node->magPub->publish(magMsg);
-      node->magHeadingPub->publish(headingMsg);
+      // node->magPub->publish(magMsg);
+      // node->magHeadingPub->publish(headingMsg);
     } catch(...) {
       RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
     }
