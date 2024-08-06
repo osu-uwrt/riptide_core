@@ -42,7 +42,7 @@ controller:
 
       #first order eta
       # eta_order_0: [0.8, 0.8, 10.0, 0.2, 0.2, 0.3]
-      eta_order_0: [0.8, 0.8, 10.0, 0.2, 0.2, 0.3]
+      eta_order_0: [0.8, 1.0, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
       # eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
@@ -55,8 +55,8 @@ controller:
       #where:
       #  a = gravity well saturation amplitude
       #  m = gravity well saturation error
-      velocity_curve_params: [7.0, 2.0,  #x
-                              7.0, 2.0,  #y
+      velocity_curve_params: [7.0, 1.0,  #x
+                              7.0, 1.0,  #y
                               10.0, 0.5,  #z
                               15.0, 1.0,  #r
                               15.0, 1.0,  #p
