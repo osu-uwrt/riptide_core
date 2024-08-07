@@ -22,6 +22,7 @@ public:
     SerialInterface(std::shared_ptr<VnSensor> imu, rclcpp::Node* imuNode) : vs{imu}/*, node{imuNode}*/ {
         // Create services for all serial communication actions
         srv = imuNode->create_service<SerialRequest>("vectornav/config", std::bind(&SerialInterface::gotServiceRequest, this, _1, _2));
+        // node = imuNode;
     }
 
 private:
@@ -30,5 +31,7 @@ private:
             response->response = "IMU not connected";
 
         response->response = vs->transaction(request->request);
+
+        // response->response = "Success!";
     }
 };
