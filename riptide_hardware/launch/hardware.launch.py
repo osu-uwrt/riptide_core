@@ -1,4 +1,3 @@
-import launch
 from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch_ros.actions import PushRosNamespace, Node
@@ -31,17 +30,26 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
-# zed_launch_file = os.path.join(
-#     get_package_share_directory('riptide_hardware2'),
-#     "launch", "zed.launch.py"
-# )
+gyro_launch_file = os.path.join(
+    get_package_share_directory('riptide_gyro'),
+    "launch", "gyro.launch.py"
+)
 
+zed_launch_file = os.path.join(
+    get_package_share_directory('riptide_hardware2'),
+    "launch", "zed.launch.py"
+)
+
+apriltag_launch_file = os.path.join(
+    get_package_share_directory('riptide_hardware2'),
+    "launch", "apriltag.launch.py"
+)
 
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robot', default_value="tempest",
                               description="Name of the vehicle"),
-
+        
         GroupAction([
             PushRosNamespace(
                 LC("robot")
@@ -69,6 +77,24 @@ def generate_launch_description():
             ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(imu_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot'))
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(gyro_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot'))
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(zed_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(apriltag_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]

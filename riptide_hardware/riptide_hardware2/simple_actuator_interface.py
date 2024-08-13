@@ -128,15 +128,15 @@ def fireActuator(node: 'SimpleActuatorInterface', targetClient: 'Client'):
         return
 
     # Finally disarm
-    arm_req = SetBool.Request()
-    arm_req.data = False
-    future = node.armClient.call_async(arm_req)
-    rclpy.spin_until_future_complete(node, future)
-    result: 'SetBool.Response' = future.result()
+    # arm_req = SetBool.Request()
+    # arm_req.data = False
+    # future = node.armClient.call_async(arm_req)
+    # rclpy.spin_until_future_complete(node, future)
+    # result: 'SetBool.Response' = future.result()
 
-    if not result.success:
-        node.get_logger().error("Failed to disarm after firing: " + result.message)
-        return
+    # if not result.success:
+    #     node.get_logger().error("Failed to disarm after firing: " + result.message)
+    #     return
 
     node.get_logger().info("Successfully Fired Actuator")
 
