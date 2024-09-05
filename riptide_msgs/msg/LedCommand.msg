@@ -16,5 +16,5 @@ uint8 MODE_BREATH = 3
 # targets
 uint8 TARGET_NONE = 0
 uint8 TARGET_CCB = 1
-uint8 TARGET_ACT = 2
+uint8 TARGET_ALU = 2
 uint8 TARGET_ALL = 3
