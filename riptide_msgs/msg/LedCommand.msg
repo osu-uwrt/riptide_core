@@ -12,6 +12,7 @@ uint8 MODE_SOLID = 0
 uint8 MODE_SLOW_FLASH = 1
 uint8 MODE_FAST_FLASH = 2 
 uint8 MODE_BREATH = 3
+uint8 SINGLETON_FLASH = 4
 
 # targets
 uint8 TARGET_NONE = 0
