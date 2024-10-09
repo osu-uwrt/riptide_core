@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostics Data Viewer</title>
+</head>
+<body>
+    <h1>Diagnostics Data</h1>
+    <pre id="dataDisplay"></pre>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const displayElement = document.getElementById('dataDisplay');
+
+            const url="ws://localhost:8080";
+
+            const socket = new WebSocket(url);
+
+            socket.onopen = function(event) {
+                console.log('Connected to:', url);
+            };
+
+            socket.onmessage = function(event) {
+                console.log('Message from server:', event.data);
+                displayElement.textContent = JSON.stringify(JSON.parse(event.data), null, 4);
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+
+            socket.onclose = function(event) {
+                console.log('WebSocket connection closed:', event);
+            };
+        });
+    </script>
+</body>
+</html>
