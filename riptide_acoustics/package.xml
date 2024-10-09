@@ -4,7 +4,9 @@
   <name>riptide_acoustics</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="spyalexs@gmail.com">hollis</maintainer>
+
+  <maintainer email="zmbasketball2021@gmail.com">zach</maintainer>
+  
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
