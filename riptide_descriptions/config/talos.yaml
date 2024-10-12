@@ -145,6 +145,9 @@ thruster_solver:
   #the limit for an individual thruster
   individual_thrust_limit: 24
 
+  #the feedback decay constant
+  feedback_decay: 1.25
+
   #Format: 4 times positive curve then 4 times negative curve
   # 1 * 1
   # 2 * x
