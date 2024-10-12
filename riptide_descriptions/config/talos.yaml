@@ -156,6 +156,19 @@ thruster_solver:
   force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105,
                              257.460623,  42.948545, -24.402056,  -986.338071]
 
+#acoustics system parameters
+acoustics:
+  #hydrophone locations
+  port:
+    pose: [ -0.305, 0.325, -0.075, 0.0, 0.0, 0.0]
+  starboard:
+    pose: [ -0.315, -0.325, -0.075, 0.0, 0.0, 0.0]
+
+  speed_of_sound: 1500 # m/s
+
+  #fake pinger location for simulaation
+  fake_pinger:
+    pose: [3.0, 2.0, -1.0, 0.0, 0.0, 0.0]
 
 dvl:
   # topic: dvl
