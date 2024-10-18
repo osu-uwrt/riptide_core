@@ -5,17 +5,17 @@
     gyro_frame: talos/base_link
 
     # calibration parameters
-    # formula: z(x,y) = a + b*x + c*x*y + d*cos(f*x + g)
-    a: 0.08252
-    b: -25.49
-    c: -0.001824
-    d: 463.2
-    f: 0.05289
+    # formula: z(x,y) = a + b*x^3 + c*x*y + d*cos(f*x + g)
+    a: 0.003388
+    b: -0.1639
+    c: -0.003513
+    d: 1.983
+    f: -0.7383
     g: -1.571
-    rate_norm_mean: -13879.06
-    rate_norm_std: 1587500.0
-    temp_norm_mean: 42.96093
-    temp_norm_std: 4.295707
+    rate_norm_mean: -5059.731
+    rate_norm_std: 2334200.0
+    temp_norm_mean: 48.81530
+    temp_norm_std: 4.702017
 
     variance: 0.0001
 
