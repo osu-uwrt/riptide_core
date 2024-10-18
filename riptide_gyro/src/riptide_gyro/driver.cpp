@@ -430,10 +430,10 @@ namespace uwrt_gyro {
                 normalizedRawReading = (signedRawReading - params->rateNormMean) / params->rateNormStd,
                 normalizedGyroTemperature = (gyroTemperature - params->tempNormMean) / params->tempNormStd;
 
-            //formula: z(x,y) = a + b*x^3 + c*x*y + d*cos(f*x + g)
+            //formula: z(x,y) = a + b*x + c*x*y + d*cos(f*x + g)
             twistMsg.twist.twist.angular.z = 
                 params->a + 
-                params->b * normalizedRawReading * normalizedRawReading * normalizedRawReading +
+                params->b * normalizedRawReading +
                 params->c * normalizedRawReading * normalizedGyroTemperature +
                 params->d * cos(params->f * normalizedRawReading + params->g);
             
