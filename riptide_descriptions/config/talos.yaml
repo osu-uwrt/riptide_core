@@ -189,7 +189,7 @@ imu:
   sigma_omega: 0.01 # Stdev in deg/s. Used by sim
   sigma_angle: 0.5 # Std dev in deg. Used by sim
   yaw_drift:   1.5 # deg/min 
-  pose: [-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
+  pose: [-0.0505, -0.0769, 0.0529, 3.141, 0.0, -1.5707] #[-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
 
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
@@ -207,9 +207,9 @@ cameras: [
     name: zed_camera,
     model: zed2,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
-    pose: [-0.036, -0.0874, 0, 0, 0, 0]
+    pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
-  { #TODO: FILL IN WITH REAL VALUES
+  {
     type: stereo,
     name: downwards_camera,
     baseline: 0.12,
