@@ -50,7 +50,7 @@ def launch_imu(context, **kwargs):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("robot", default_value="talos", description="Name of the robot"),
-        DeclareLaunchArgument("gyro_port", default_value="/dev/ttyTHS1", description="Port to use"),
+        DeclareLaunchArgument("gyro_port", default_value="/dev/ttyUSB0", description="Port to use"),
         DeclareLaunchArgument("imu_port", default_value="/dev/ttyTHS0", description="IMU port. Only used if IMU is enabled"),
         DeclareLaunchArgument("with_imu", default_value="False", description="Optional enable switch for IMU"),
         DeclareLaunchArgument("config_file", default_value = default_config_file, description="Config file to use"),

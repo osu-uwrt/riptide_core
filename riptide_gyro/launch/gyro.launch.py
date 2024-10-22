@@ -14,7 +14,7 @@ default_config_file = os.path.join(
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument("config_file", default_value = default_config_file, description="Config file to use"),
-        DeclareLaunchArgument("gyro_port", default_value = "/dev/ttyTHS1", description="Port to use"),
+        DeclareLaunchArgument("gyro_port", default_value = "/dev/ttyUSB0", description="Port to use"),
         
         Node(
             package="riptide_gyro",
