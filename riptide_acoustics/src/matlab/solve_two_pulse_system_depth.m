@@ -1,4 +1,4 @@
-function [intersection_x, intersection_y] = solve_two_pulse_system_depth(k1, k2, pose_1, pose_2, hydrophone_base_vector, estimated_distance, pinger_depth)
+function [intersection_x, intersection_y, pinger_depth] = solve_two_pulse_system_depth(k1, k2, pose_1, pose_2, hydrophone_base_vector, estimated_distance, pinger_depth)
 %k1: hydrophone 1 pulse time - hydrophone 2 pulse time for first pulse
 %k2: hydrophone 1 pulse time - hydrophone 2 pulse time for second pulse
 %pose_1: the pose of the front hydrophone at the time of the first pulse
@@ -38,7 +38,8 @@ h2 = norm([pos2_2(1) - x1_2 , pos2_2(2) - y1_2]);
 
 %calculate delta positions
 x1 = x1_2 - x1_1;
-x2 = pos2_2(1) - x1_1;
+x2 = pos2_2(1) - pos2_1(1)
+x2 = pos2_2(1) - x1_1(1)
 
 y1 = y1_2 - y1_1;
 y2 = pos2_2(2) - pos2_1(2);

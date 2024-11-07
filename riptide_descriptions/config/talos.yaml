@@ -27,6 +27,9 @@ controller:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
 
+    #sim discrepency - allows to test control when feed forward is not perfect
+    sim_discrepancy: [0.0, 0.0, 0.1, 0.0, 0.0, 0.0]
+
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
