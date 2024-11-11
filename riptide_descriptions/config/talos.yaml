@@ -28,7 +28,7 @@ controller:
     base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
 
     #sim discrepency - allows to test control when feed forward is not perfect
-    sim_discrepancy: [0.0, 0.0, 10.0, 0.0, 0.0, 0.0]
+    sim_discrepancy: [0.0, 0.0, 1.0, 1.0, 0.0, 0.0]
 
     auto_tune:
       #positional error threshold to begin autotuning
@@ -53,7 +53,7 @@ controller:
       convergence_threshold: 0.02
 
       #axis to perform autotune on (either zero or one)
-      auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 0.0, 0.0]
     
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
