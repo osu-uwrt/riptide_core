@@ -33,7 +33,7 @@ def generate_launch_description():
         Node(
             package='zed_wrapper',
             executable='zed_wrapper',
-            namespace="zed",
+            namespace="ffc",
             name='zed_node',
             output='screen',
             parameters=[
@@ -42,8 +42,28 @@ def generate_launch_description():
                 zed_camera_path,  # Camera related parameters
                 # Overriding
                 {
-                    'general.camera_name': "talos/zed",
                     'general.camera_model': "zed2i",
+                    'pos_tracking.publish_tf': False,
+                    'pos_tracking.publish_map_tf': False,
+                    'sensors.publish_imu_tf': False,
+                    # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
+                },
+            ]
+        ),
+        
+        Node(
+            package='zed_wrapper',
+            executable='zed_wrapper',
+            namespace="dfc",
+            name='zed_node',
+            output='screen',
+            parameters=[
+                # YAML files
+                zed_config_path,  # Common parameters
+                zed_camera_path,  # Camera related parameters
+                # Overriding
+                {
+                    'general.camera_model': "zedxm",
                     'pos_tracking.publish_tf': False,
                     'pos_tracking.publish_map_tf': False,
                     'sensors.publish_imu_tf': False,

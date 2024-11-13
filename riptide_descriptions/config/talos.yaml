@@ -232,14 +232,14 @@ droppers:
 cameras: [
   {
     type: zed, 
-    name: zed_camera,
-    model: zed2,
+    name: ffc,
+    model: zed2i,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
   {
-    type: stereo,
-    name: downwards_camera,
+    type: zed,
+    name: dfc_camera,
     baseline: 0.12,
     pose: [0.06, 0, -0.01, 0, 1.5707, 0]
   }

@@ -66,7 +66,7 @@ def evaluate_xacro(context, *args, **kwargs):
                 'debug': debug,
                 'namespace': robot,
                 'inertial_reference_frame':'world',
-                'camera_name': robot + "/zed",
+                'camera_name': robot + "/ffc",
                 'camera_model': "zed2i"}
             ).toxml()
             
