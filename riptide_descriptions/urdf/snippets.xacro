@@ -66,14 +66,14 @@
     </xacro:macro>
 
     <xacro:macro name="zed_macro" params="namespace name parent_link">
-        <link name="${name}">
-            <xacro:dummy_inertia/>
-            <xacro:no_collision/>
+        <link name="${name}_camera_link">
+            <xacro:dummy_inertia />
+            <xacro:no_collision />
         </link>
 
-        <joint name="${namespace}/zed_camera_link_origin_joint" type="fixed">
+        <joint name="${namespace}/${name}_origin_joint" type="fixed">
             <parent link="${parent_link}" />
-            <child link="${name}" />
+            <child link="${name}_camera_link" />
             <origin xyz="0 0 0" rpy="0 0 0"/>
         </joint>
     </xacro:macro>

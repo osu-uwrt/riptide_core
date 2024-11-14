@@ -116,7 +116,7 @@
           <xacro:if value="${camera['type'] == 'zed'}">
             <xacro:zed_macro
              namespace="${namespace}"
-             name="talos/${camera['name']}_link"
+             name="talos/${camera['name']}"
              parent_link="${camera_base_link}" />
           </xacro:if>
         </xacro:unless>

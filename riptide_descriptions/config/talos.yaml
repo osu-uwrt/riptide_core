@@ -233,14 +233,13 @@ cameras: [
   {
     type: zed, 
     name: ffc,
-    model: zed2i,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
   {
     type: zed,
-    name: dfc_camera,
-    baseline: 0.12,
+    name: dfc,
+    baseline: 0.045,
     pose: [0.06, 0, -0.01, 0, 1.5707, 0]
   }
 ]
