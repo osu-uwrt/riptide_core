@@ -87,12 +87,12 @@ def generate_launch_description():
                     ('robot', LC('robot'))
                 ]
             ),
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(zed_launch_file),
-            #     launch_arguments=[
-            #         ('robot', LC('robot')),
-            #     ]
-            # ),
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(zed_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(apriltag_launch_file),
                 launch_arguments=[
