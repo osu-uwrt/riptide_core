@@ -23,6 +23,8 @@ controller:
   scaling_factor: 1000000
   active_force_mask: [2, 2, 2, 1, 1, 1]
 
+  drag_enable: [1, 1, 0, 0, 0, 0]
+
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
