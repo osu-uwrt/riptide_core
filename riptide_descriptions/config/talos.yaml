@@ -29,6 +29,34 @@ controller:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
 
+    #sim discrepency - allows to test control when feed forward is not perfect
+    sim_discrepancy: [0.0, 0.0, 10.0, 0.0, 0.0, 0.0]
+
+    auto_tune:
+      #positional error threshold to begin autotuning
+      positional_error_threshold: 0.1
+
+      #max velocity threshold for ff autotune
+      velocity_threshold: 0.1
+
+      #minimum strength of measurement to be counted in autotuning
+      strength_threshold: 0.5
+
+      #learning multiplier for feed forward learning
+      learning_rate: 1.0
+      
+      #the maximum buffer length in seconds for autotuning
+      buffer_duration: 3.0
+
+      #time taken for convergence to occur
+      convergence_time: 10.0
+
+      #the maximum deviation for a measurement for convergence to occur
+      convergence_threshold: 0.02
+
+      #axis to perform autotune on (either zero or one)
+      auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+    
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x

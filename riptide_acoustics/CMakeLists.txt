@@ -29,4 +29,10 @@ install(TARGETS run_acoustics
   DESTINATION lib/${PROJECT_NAME}
 )
 
+#yoink files
+file(GLOB src_py_files RELATIVE ${PROJECT_SOURCE_DIR} src/*.py)
+install(PROGRAMS ${src_py_files}
+  DESTINATION lib/${PROJECT_NAME})
+
+
 ament_package()
