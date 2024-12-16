@@ -55,7 +55,7 @@ controller:
       convergence_threshold: 0.02
 
       #axis to perform autotune on (either zero or one)
-      auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0]
     
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
