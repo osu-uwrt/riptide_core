@@ -8,6 +8,9 @@ data = table2array(readtable(filename, "NumHeaderLines", 1));
 %load into ros2 messages
 transform = ros2message("geometry_msgs/TransformStamped");
 
+%pinger pose hardcoded
+pinger_pose = [3.0,2.0,1.0,0.0,0.0,0.0];
+
 line_1 = 7;
 m1 = struct();
 m1.delta_t = data(line_1, 3);

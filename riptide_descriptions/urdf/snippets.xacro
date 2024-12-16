@@ -125,6 +125,23 @@
     </joint>
     </xacro:macro>
 
+
+    <xacro:macro name="fog_plugin_macro" params="namespace parent_link *origin">
+
+    <link name="${namespace}/fog_link">
+        <xacro:dummy_inertia />
+        <xacro:no_collision />
+    </link>
+
+    <joint name="${namespace}/fog_joint" type="revolute">
+        <xacro:insert_block name="origin" />
+        <parent link="${parent_link}" />
+        <child link="${namespace}/fog_link" />
+        <limit upper="0" lower="0" effort="0" velocity="0" />
+        <axis xyz="1 0 0" />
+    </joint>
+    </xacro:macro>
+
     <xacro:macro name="imu_plugin_macro" params="namespace imu_suffix parent_link *origin">
         <!-- IMU link -->
         <link name="${namespace}/imu${imu_suffix}_link">

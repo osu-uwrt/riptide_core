@@ -19,6 +19,9 @@ global measurements;
 global port_to_origin_transform
 global port_to_startboard_transform
 
+global pinger_pose
+pinger_pose = [3.0,2.0,-1.0,0.0,0.0,0.0];
+
 transforms_recieved = false;
 while(transforms_recieved == false)
     %loop until transforms become available
@@ -42,13 +45,6 @@ delta_t_sub = ros2subscriber(node, "/talos/acoustics/delta_t", @delta_t_callback
 
 x = 0;
 while(x < 1)
-
-    msg = ros2message("std_msgs/UInt8");
-    msg.data = uint8(100);
-
-    send(pub, msg);
-    pause(5)
-
     if(length(measurements) > 2)
         %select the two measurements to calculate with
         m1 = measurements(end - 1);
@@ -75,9 +71,17 @@ while(x < 1)
         m2t = o2m2_rotation * p2o_translation + o2m2_translation;
         m2r = transpose(quatmultiply(p2o_quat', o2m2_quat'));
 
-        [solve_x, solve_y] = solve_two_pulse_system_depth(m1.delta_t/speed_of_sound, m2.delta_t/speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, 3000, pinger_depth);
+        [solve_x, solve_y] = solve_two_pulse_system_depth(m1.delta_t/speed_of_sound, m2.delta_t/speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, 3000, pinger_depth)
         
         pinger_location = o2m1_rotation * ([solve_x; solve_y; pinger_depth] + p2s_translation) + o2m1_translation
+
+        timing_estimate_1 = GetTimingDIfference([m1t;m1r], p2s_translation, pinger_pose, speed_of_sound)
+        back_calc1 = GetTimingDIfference([m1t;m1r], p2s_translation, pinger_location, speed_of_sound)        
+        m1.delta_t
+
+        timing_estimate_2 = GetTimingDIfference([m2t;m2r], p2s_translation, pinger_pose, speed_of_sound)
+        back_calc2 = GetTimingDIfference([m2t;m2r], p2s_translation, pinger_location, speed_of_sound)        
+        m2.delta_t
     end
 
 end

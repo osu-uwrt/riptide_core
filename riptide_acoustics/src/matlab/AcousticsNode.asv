@@ -75,9 +75,13 @@ while(x < 1)
         m2t = o2m2_rotation * p2o_translation + o2m2_translation;
         m2r = transpose(quatmultiply(p2o_quat', o2m2_quat'));
 
-        solve_two_pulse_system_depth(m1.delta_t/speed_of_sound, m2.delta_t/speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, 3000, pinger_depth);
+        [solve_x, solve_y] = solve_two_pulse_system_depth(m1.delta_t/speed_of_sound, m2.delta_t/speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, 3000, pinger_depth);
         
-        
+        pinger_location = o2m1_rotation * ([solve_x; solve_y; pinger_depth] + p2s_translation) + o2m1_translation
+
+        timing_estimate_1 = 
+
+        timing_estimate_2 = 
     end
 
 end

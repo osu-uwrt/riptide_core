@@ -2,7 +2,7 @@
   ros__parameters:
     # configuration information
     gyro_port: /dev/ttyUSB0
-    gyro_frame: talos/base_link
+    gyro_frame: talos/fog_link
 
     # calibration parameters
     # formula: z(x,y) = a + b*x + c*x*y + d*cos(f*x + g)
