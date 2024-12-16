@@ -212,6 +212,11 @@ depth:
   sigma: 0.010 # Stdev in m. Used by gazebo
   pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
 
+fog:
+  rate: 1000 # Hz
+  sigma: 0.005
+  pose: [0.0, 0.0, 0.0, 3.1415, 0.0, 0.0]
+
 imu:
   # topic: /imu/imu/data
   rate: 100 #Hz

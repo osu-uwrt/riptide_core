@@ -19,23 +19,35 @@
         </collision>
     </xacro:macro>
 
-    <!-- Ground truth position -->
-    <xacro:macro name="default_pose_3d_macro" params="namespace parent_link inertial_reference_frame">
-        <!-- Mount a 3D pose sensor -->
-        <link name="${namespace}/pose_sensor_link">
+    <xacro:macro name="generic_frame_macro" params="namespace name suffix parent_link *origin">
+        <link name="${namespace}/${name}${suffix}_link">
             <xacro:dummy_inertia />
+            <xacro:no_collision />
         </link>
 
-        <joint name="${namespace}/pose_sensor_joint" type="revolute">
-            <axis xyz="0 0 1" />
+        <joint name="${namespace}/${name}${suffix}_joint" type="fixed">
+            <xacro:insert_block name="origin" />
             <parent link="${parent_link}" />
-            <child link="${namespace}/pose_sensor_link" />
-            <limit effort="0" lower="0" upper="0" velocity="0" />
+            <child link="${namespace}/${name}${suffix}_link" />
+            <limit upper="0" lower="0" effort="0" velocity="0" />
+            <axis xyz="1 0 0" />
         </joint>
     </xacro:macro>
 
+    <!-- Ground truth position -->
+    <xacro:macro name="default_pose_3d_macro" params="namespace parent_link">
+        <!-- Mount a 3D pose sensor -->
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="pose_sensor"
+            suffix=""
+            parent_link="${parent_link}">
+            <origin xyz="0 0 0" rpy="0 0 0" />
+        </xacro:generic_frame_macro>
+    </xacro:macro>
+
     <xacro:macro name="camera_macro" params="namespace name parent_link *origin">
-        <link name="${namespace}/${name}_link">
+        <!-- <link name="${namespace}/${name}_link">
             <xacro:dummy_inertia />
             <xacro:no_collision />
         </link>
@@ -44,15 +56,32 @@
             <xacro:insert_block name="origin" />
             <parent link="${parent_link}" />
             <child link="${namespace}/${name}_link" />
-        </joint>
+        </joint> -->
 
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="${name}"
+            suffix=""
+            parent_link="${parent_link}">
+            <xacro:insert_block name="origin" />
+        </xacro:generic_frame_macro>
+<!-- 
         <link name="${namespace}/${name}_optical" />
 
         <joint name="${namespace}/${name}_optical_joint" type="fixed">
             <parent link="${namespace}/${name}_link" />
             <child link="${namespace}/${name}_optical" />
             <origin rpy="${-pi/2} 0 ${-pi/2}"></origin>
-        </joint>
+        </joint> -->
+
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="${name}_optical"
+            suffix=""
+            parent_link="${namespace}/${name}_link">
+            <origin rpy="${-pi/2} 0 ${-pi/2}"></origin>
+        </xacro:generic_frame_macro>
+
     </xacro:macro>
 
     <xacro:macro name="stereo_macro" params="namespace parent_link name baseline *origin">
@@ -66,7 +95,7 @@
     </xacro:macro>
 
     <xacro:macro name="zed_macro" params="namespace name parent_link">
-        <link name="${name}">
+        <!-- <link name="${name}">
             <xacro:dummy_inertia/>
             <xacro:no_collision/>
         </link>
@@ -75,11 +104,19 @@
             <parent link="${parent_link}" />
             <child link="${name}" />
             <origin xyz="0 0 0" rpy="0 0 0"/>
-        </joint>
+        </joint> -->
+
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="${name}"
+            suffix=""
+            parent_link="${parent_link}">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:generic_frame_macro>
     </xacro:macro>
 
     <xacro:macro name="dvl_plugin_macro" params="namespace suffix parent_link *origin">
-        <link name="${namespace}/dvl${suffix}_link">
+        <!-- <link name="${namespace}/dvl${suffix}_link">
             <xacro:dummy_inertia />
             <xacro:no_collision />
         </link>
@@ -90,12 +127,20 @@
             <child link="${namespace}/dvl${suffix}_link" />
             <limit upper="0" lower="0" effort="0" velocity="0" />
             <axis xyz="1 0 0" />
-        </joint>
+        </joint> -->
+
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="dvl"
+            suffix="${suffix}"
+            parent_link="${parent_link}">
+            <xacro:insert_block name="origin" />
+        </xacro:generic_frame_macro>
     </xacro:macro>
 
     <xacro:macro name="pressure_plugin_macro" params="namespace suffix parent_link *origin">
 
-        <link name="${namespace}/pressure${suffix}_link">
+        <!-- <link name="${namespace}/pressure${suffix}_link">
             <xacro:dummy_inertia />
             <xacro:no_collision />
         </link>
@@ -106,41 +151,79 @@
             <child link="${namespace}/pressure${suffix}_link" />
             <limit upper="0" lower="0" effort="0" velocity="0" />
             <axis xyz="1 0 0" />
-        </joint>
+        </joint> -->
+
+
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="pressure"
+            suffix="${suffix}"
+            parent_link="${parent_link}">
+            <xacro:insert_block name="origin" />
+        </xacro:generic_frame_macro>
+
+    </xacro:macro>
+
+    <xacro:macro name="fog_macro" params="namespace suffix parent_link *origin">
+        <xacro:insert_block name="origin" />
+        
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="fog"
+            suffix="${suffix}"
+            parent_link="${parent_link}">
+            <xacro:insert_block name="origin" />
+        </xacro:generic_frame_macro>
     </xacro:macro>
 
     <xacro:macro name="acoustics_plugin_macro" params="namespace suffix parent_link *origin">
 
-    <link name="${namespace}/acoustics${suffix}_link">
-        <xacro:dummy_inertia />
-        <xacro:no_collision />
-    </link>
+        <!-- <link name="${namespace}/acoustics${suffix}_link">
+            <xacro:dummy_inertia />
+            <xacro:no_collision />
+        </link>
 
-    <joint name="${namespace}/acoustics${suffix}_joint" type="revolute">
-        <xacro:insert_block name="origin" />
-        <parent link="${parent_link}" />
-        <child link="${namespace}/acoustics${suffix}_link" />
-        <limit upper="0" lower="0" effort="0" velocity="0" />
-        <axis xyz="1 0 0" />
-    </joint>
+        <joint name="${namespace}/acoustics${suffix}_joint" type="revolute">
+            <xacro:insert_block name="origin" />
+            <parent link="${parent_link}" />
+            <child link="${namespace}/acoustics${suffix}_link" />
+            <limit upper="0" lower="0" effort="0" velocity="0" />
+            <axis xyz="1 0 0" />
+        </joint> -->
+
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="acoustics"
+            suffix="${suffix}"
+            parent_link="${parent_link}">
+            <xacro:insert_block name="origin" />
+        </xacro:generic_frame_macro>
     </xacro:macro>
 
     <xacro:macro name="imu_plugin_macro" params="namespace imu_suffix parent_link *origin">
-        <!-- IMU link -->
+        <!-- IMU link
         <link name="${namespace}/imu${imu_suffix}_link">
             <xacro:dummy_inertia />
         </link>
 
-        <link name="${namespace}/imu${imu_suffix}_revolute_link">
-            <xacro:dummy_inertia />
-        </link>
 
-        <!-- IMU joint -->
         <joint name="${namespace}/imu${imu_suffix}_joint" type="fixed">
             <xacro:insert_block name="origin" />
             <parent link="${parent_link}" />
             <child link="${namespace}/imu${imu_suffix}_link" />
-        </joint>
+        </joint> -->
+
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="imu"
+            suffix="${imu_suffix}"
+            parent_link="${parent_link}">
+            <xacro:insert_block name="origin" />
+        </xacro:generic_frame_macro>
+
+        <!-- <link name="${namespace}/imu${imu_suffix}_revolute_link">
+            <xacro:dummy_inertia />
+        </link>
 
         <joint name="${namespace}/imu${imu_suffix}_revolute_joint" type="revolute">
             <xacro:insert_block name="origin" />
@@ -148,7 +231,16 @@
             <child link="${namespace}/imu${imu_suffix}_revolute_link" />
             <limit upper="0" lower="0" effort="0" velocity="0" />
             <axis xyz="1 0 0" />
-        </joint>
+        </joint> -->
+
+        <xacro:generic_frame_macro
+            namespace="${namespace}"
+            name="imu${imu_suffix}_revolute"
+            suffix=""
+            parent_link="${parent_link}">
+            <xacro:insert_block name="origin" />
+        </xacro:generic_frame_macro>
+
     </xacro:macro>
 
     <xacro:macro name="thruster_macro" params="namespace
