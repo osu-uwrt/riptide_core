@@ -21,10 +21,11 @@ using namespace std::placeholders;
 #define DEFAULT_PORT "/dev/ttyUSB0"
 #define DEFAULT_FRAME "fog_link"
 
+#define TEMP_UPPER 70.0
 #define VSUPPLY_UPPER 5.1
 #define VSUPPLY_LOWER 4.9
-#define SLDCURRENT_UPPER 0.1
-#define SLDCURRENT_LOWER 0.7
+#define SLDCURRENT_UPPER 0.12
+#define SLDCURRENT_LOWER 0.07
 #define DIAG_SIGNAL_LOWER 1.05
 #define DIAG_SIGNAL_UPPER 0.95
 
@@ -364,12 +365,14 @@ namespace uwrt_gyro {
             //diagnostic checks
             if(tempLimits.size() >= 2)
             {
-                statMsg->temp_good = statMsg->temperature > tempLimits[0] && statMsg->temperature < tempLimits[1];
+                statMsg->temp_within_cal = statMsg->temperature > tempLimits[0] && statMsg->temperature < tempLimits[1];
             } else
             {
                 RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 10000, "Could not determine temperature limits. Parameters may be missing.");
                 statMsg->temp_good = false;
             }
+
+            statMsg->temp_good = statMsg->temperature < TEMP_UPPER;
             statMsg->vsupply_good = statMsg->vsupply > VSUPPLY_LOWER && statMsg->vsupply < VSUPPLY_UPPER;
             statMsg->sldcurrent_good = statMsg->sldcurrent > SLDCURRENT_LOWER && statMsg->sldcurrent < SLDCURRENT_UPPER;
             statMsg->diagsignal_good = statMsg->diagsignal > DIAG_SIGNAL_LOWER && statMsg->diagsignal < DIAG_SIGNAL_UPPER;
