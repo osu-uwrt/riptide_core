@@ -54,7 +54,28 @@ controller:
 
       #axis to perform autotune on (either zero or one)
       auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
-    
+
+  controller_scale:
+
+    #time constant for out of spec measurement trust decay
+    trust_decay_tau: 1 #seconds
+
+    #time constant for out of spec measurement trust growth
+    trust_growth_tau: 1 #seconds
+
+    #reset trust threshold
+    reset_trust_threshold: .2 
+
+    #minimum weight for reset:
+    reset_weight_minimum: 3
+
+    #nominal variance 
+    nominal_variance: [0.25, 0.25, 0.25, 0.02, 0.02, 0.02] #N / N/m
+
+    #nominal time
+    nominal_time: .3 #seconds
+
+
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
