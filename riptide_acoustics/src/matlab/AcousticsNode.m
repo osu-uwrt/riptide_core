@@ -1,4 +1,5 @@
 clear;
+clear global;
 
 %read from config
 speed_of_sound = 1500;
@@ -19,8 +20,8 @@ global measurements;
 global port_to_origin_transform
 global port_to_startboard_transform
 
-global pinger_pose
-pinger_pose = [3.0,2.0,-1.0,0.0,0.0,0.0];
+global initial_pinger_estimate
+initial_pinger_estimate = [3.0,2.0,-1.0,0.0,0.0,0.0];
 
 transforms_recieved = false;
 while(transforms_recieved == false)
@@ -41,13 +42,23 @@ end
 %initialize publishers and subscribers
 pub = ros2publisher(node, "/test_matlab", "std_msgs/UInt8");
 
+%add subscriber to add to measurements
 delta_t_sub = ros2subscriber(node, "/talos/acoustics/delta_t", @delta_t_callback);
 
-x = 0;
+%add rate function to analyze measurements
+r = ros2rate(node, 1)
+reset(r)
+
+x = 0
 while(x < 1)
-    if(length(measurements) > 2)
+    run_analysis(port_to_startboard_transform, port_to_origin_transform, measurements, pinger_depth, initial_pinger_estimate, speed_of_sound);
+    waitfor(r)
+end
+
+function [] = run_analysis(port_to_startboard_transform, port_to_origin_transform, measurements, pinger_depth, pinger_pose, speed_of_sound)
+    if(max(size((measurements))) > 5)
         %select the two measurements to calculate with
-        m1 = measurements(end - 1);
+        m1 = measurements(5);
         m2 = measurements(end);
 
         %formatting...
@@ -66,12 +77,12 @@ while(x < 1)
         p2s_translation = [port_to_startboard_transform.transform.translation.x; port_to_startboard_transform.transform.translation.y; port_to_startboard_transform.transform.translation.z];
             
         %transform each hydrophone into origin frame for each measurement
-        m1t = o2m1_rotation * p2o_translation + o2m1_translation;
-        m1r = transpose(quatmultiply(p2o_quat', o2m1_quat'));
-        m2t = o2m2_rotation * p2o_translation + o2m2_translation;
-        m2r = transpose(quatmultiply(p2o_quat', o2m2_quat'));
+        m1t = o2m1_rotation * p2o_translation + o2m1_translation
+        m1r = transpose(quatmultiply(p2o_quat', o2m1_quat'))
+        m2t = o2m2_rotation * p2o_translation + o2m2_translation
+        m2r = transpose(quatmultiply(p2o_quat', o2m2_quat'))
 
-        [solve_x, solve_y] = solve_two_pulse_system_depth(m1.delta_t/speed_of_sound, m2.delta_t/speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, 3000, pinger_depth)
+        [solve_x, solve_y] = solve_two_pulse_system_depth(m1.delta_t/speed_of_sound, m2.delta_t/speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, 1, [100,100], pinger_depth)
         
         pinger_location = o2m1_rotation * ([solve_x; solve_y; pinger_depth] + p2s_translation) + o2m1_translation
 
@@ -104,7 +115,7 @@ function delta_t_callback(message)
         measurement.auv_origin = port_transform;
 
         if(length(measurements) == 0)
-            measurements = [measurement]
+            measurements = [measurement];
 
         else
             measurements(end+1) = measurement;

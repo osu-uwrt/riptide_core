@@ -23,7 +23,7 @@ function pinger_location = parse_measurements(m1, m2, port_to_origin_transform, 
         m2r = transpose(quatmultiply(p2o_quat', o2m2_quat'));
 
         %in world frame
-        [solve_x, solve_y, solve_depth] = solve_two_pulse_system_depth(m1.delta_t*speed_of_sound, m2.delta_t*speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, 3000, pinger_depth);
+        [solve_x, solve_y, solve_depth] = solve_two_pulse_system_depth(m1.delta_t*speed_of_sound, m2.delta_t*speed_of_sound,[m1t;m1r],[m2t;m2r], p2s_translation, -1, [1;1], pinger_depth);
         
         pinger_location = ([solve_x; solve_y; pinger_depth]);
 
