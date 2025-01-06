@@ -11,10 +11,16 @@ zed_launch_file = os.path.join(get_package_share_directory(
 zed_config_path = os.path.join(get_package_share_directory('riptide_hardware2'), "cfg", "zed_common.yaml")
 
 def generate_launch_description():
-    zed_camera_path = os.path.join(
+    zed2i_camera_path = os.path.join(
         get_package_share_directory('zed_wrapper'),
         'config',
         'zed2i.yaml'
+    )
+    
+    zedxm_camera_path = os.path.join(
+        get_package_share_directory('zed_wrapper'),
+        'config',
+        'zedxm.yaml'
     )
     
     # Create the launch description and populate
@@ -33,17 +39,39 @@ def generate_launch_description():
         Node(
             package='zed_wrapper',
             executable='zed_wrapper',
-            namespace="zed",
+            namespace="ffc",
             name='zed_node',
             output='screen',
             parameters=[
                 # YAML files
                 zed_config_path,  # Common parameters
-                zed_camera_path,  # Camera related parameters
+                zed2i_camera_path,  # Camera related parameters
                 # Overriding
                 {
-                    'general.camera_name': "talos/zed",
+                    'general.camera_name': "talos/ffc",
                     'general.camera_model': "zed2i",
+                    'pos_tracking.publish_tf': False,
+                    'pos_tracking.publish_map_tf': False,
+                    'sensors.publish_imu_tf': False,
+                    # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
+                },
+            ]
+        ),
+        
+        Node(
+            package='zed_wrapper',
+            executable='zed_wrapper',
+            namespace="dfc",
+            name='zed_node',
+            output='screen',
+            parameters=[
+                # YAML files
+                zed_config_path,  # Common parameters
+                zedxm_camera_path,  # Camera related parameters
+                # Overriding
+                {
+                    'general.camera_name': "talos/dfc",
+                    'general.camera_model': "zedxm",
                     'pos_tracking.publish_tf': False,
                     'pos_tracking.publish_map_tf': False,
                     'sensors.publish_imu_tf': False,

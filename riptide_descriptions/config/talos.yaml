@@ -7,7 +7,8 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties
 mass: 31.998
 com: [-0.148, 0.040, -0.071]
-inertia: [1.493, 0.549, 1.399] # kg*m^2
+inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
+
 
 # Controller parameters
 #params for the newly developed overseer
@@ -18,6 +19,8 @@ controller_overseer:
 controller:
   scaling_factor: 1000000
   active_force_mask: [2, 2, 2, 1, 1, 1]
+
+  drag_enable: [1, 1, 0, 0, 0, 0]
 
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
@@ -67,7 +70,6 @@ controller:
 
     #nominal time
     nominal_time: .3 #seconds
-
 
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
@@ -236,7 +238,7 @@ poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedos: 
-  pose: [0.048, -0.1143, -0.1501, 0.0, 0.0, 0.0]
+  pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
   baseline: 0.0333375 #1 5/16 in
 
 droppers:
@@ -245,15 +247,14 @@ droppers:
 cameras: [
   {
     type: zed, 
-    name: zed_camera,
-    model: zed2,
+    name: ffc,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
   {
-    type: stereo,
-    name: downwards_camera,
-    baseline: 0.12,
+    type: zed,
+    name: dfc,
+    baseline: 0.045,
     pose: [0.06, 0, -0.01, 0, 1.5707, 0]
   }
 ]
