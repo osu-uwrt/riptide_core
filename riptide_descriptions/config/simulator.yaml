@@ -19,8 +19,16 @@ controller:
   sim_discrepancy: [0.0, 0.0, -0.5, 0.0, 0.0, 0.0]
 
 claw:
-  fake_objects:
-    test_object_mass: 1.0 #kg
+  fake_objects: #I've arbilitrailly set these properties - measure at some point
+    coral:
+      net_buoyancy: 2.0 #positive =  positively bouyant, negative = negatively buoyant
+      com: [.1, 0.0, -0.1] # the "origin" of the object is where the end affector grips the object      
+    tubeworm:
+      net_buoyancy: 1.0 #positive =  positively bouyant, negative = negatively buoyant
+      com: [.1, 0.0, -0.1] # the "origin" of the object is where the end affector grips the object
+    nautilus:
+      net_buoyancy: 2.0 #positive =  positively bouyant, negative = negatively buoyant
+      com: [.4, 0.0, -0.0] # the "origin" of the object is where the end affector grips the object
 
 
 acoustics:
