@@ -138,7 +138,7 @@ def launch_ekf(context, *args, **kwargs):
             launch_items.append(
                 Node(
                     package='riptide_hardware2',
-                    executable='tag_odom',
+                    executable='tag_odom.py',
                     name='tag_odom',
                     output='screen'
                 )

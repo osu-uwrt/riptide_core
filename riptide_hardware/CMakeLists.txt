@@ -45,52 +45,9 @@ install(TARGETS
 # Install Python package
 ament_python_install_package(${PROJECT_NAME})
 
-# Define console scripts for Python nodes
-set(PYTHON_NODES
-  "electrical_monitor"
-  "firmware_monitor"
-  "voltage_monitor"
-  "sensor_monitor"
-  "computer_monitor"
-  "fake_ekf"
-  "fake_dvl"
-  "pose_converter"
-  "rpm_echo"
-  "tag_odom"
-  "alternate_thruster"
-  "imu_power_cycle"
-  "simple_actuator_interface"
-)
-
-foreach(node ${PYTHON_NODES})
-  # Create symbolic links without the .py extension
-  install(CODE "
-    execute_process(
-      COMMAND ln -sf ${CMAKE_CURRENT_SOURCE_DIR}/riptide_hardware2/${node}.py ${CMAKE_CURRENT_BINARY_DIR}/${node}
-    )
-    execute_process(
-      COMMAND chmod +x ${CMAKE_CURRENT_BINARY_DIR}/${node}
-    )
-  ")
-endforeach()
-
-# Install the symbolic links to the destination
-install(PROGRAMS
-  ${CMAKE_CURRENT_BINARY_DIR}/electrical_monitor
-  ${CMAKE_CURRENT_BINARY_DIR}/firmware_monitor
-  ${CMAKE_CURRENT_BINARY_DIR}/voltage_monitor
-  ${CMAKE_CURRENT_BINARY_DIR}/sensor_monitor
-  ${CMAKE_CURRENT_BINARY_DIR}/computer_monitor
-  ${CMAKE_CURRENT_BINARY_DIR}/fake_ekf
-  ${CMAKE_CURRENT_BINARY_DIR}/fake_dvl
-  ${CMAKE_CURRENT_BINARY_DIR}/pose_converter
-  ${CMAKE_CURRENT_BINARY_DIR}/rpm_echo
-  ${CMAKE_CURRENT_BINARY_DIR}/tag_odom
-  ${CMAKE_CURRENT_BINARY_DIR}/alternate_thruster
-  ${CMAKE_CURRENT_BINARY_DIR}/imu_power_cycle
-  ${CMAKE_CURRENT_BINARY_DIR}/simple_actuator_interface
-  DESTINATION lib/${PROJECT_NAME}
-)
+file(GLOB python_programs riptide_hardware2/*.py)
+install(PROGRAMS ${python_programs}
+  DESTINATION lib/${PROJECT_NAME})
 
 # Install launch files
 install(DIRECTORY launch
