@@ -63,7 +63,7 @@ def generate_launch_description():
             ),
             Node(
                 package='riptide_hardware2',
-                executable='fake_dvl',
+                executable='fake_dvl.py',
                 name='fake_dvl',
                 condition=IfCondition(
                     PythonExpression(["'", LC("robot"), "' == 'talos'"])
