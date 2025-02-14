@@ -41,16 +41,5 @@ install(DIRECTORY launch
   FILES_MATCHING PATTERN "*.launch*"
 )
 
-install(PROGRAMS
-  src/test_node.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-# Install the test CSV files
-install(DIRECTORY test
-  DESTINATION share/${PROJECT_NAME}
-  FILES_MATCHING PATTERN "*.csv"
-)
-
 
 ament_package()
