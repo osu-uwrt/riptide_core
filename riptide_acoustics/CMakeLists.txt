@@ -1,38 +1,56 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.5)
 project(riptide_acoustics)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+# Default to C++17
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
 
-# find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(std_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(tf2 REQUIRED)
-find_package(tf2_ros REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(diagnostic_updater REQUIRED)
 
-add_executable(run_acoustics src/Acoustics.cpp)
+include_directories(
+  include
+)
 
-ament_target_dependencies(run_acoustics
-std_msgs 
-geometry_msgs
-rclcpp
-tf2
-tf2_ros)
+add_executable(localization
+  src/localization_node.cpp
+)
 
-install(TARGETS run_acoustics
+ament_target_dependencies(localization
+  rclcpp
+  std_msgs
+  geometry_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  diagnostic_updater
+)
+
+install(TARGETS
+  localization
   DESTINATION lib/${PROJECT_NAME}
 )
 
-#yoink files
-file(GLOB src_py_files RELATIVE ${PROJECT_SOURCE_DIR} src/*.py)
-install(PROGRAMS ${src_py_files}
-  DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+  FILES_MATCHING PATTERN "*.launch*"
+)
+
+install(PROGRAMS
+  src/test_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install the test CSV files
+install(DIRECTORY test
+  DESTINATION share/${PROJECT_NAME}
+  FILES_MATCHING PATTERN "*.csv"
+)
 
 
 ament_package()
