@@ -34,6 +34,7 @@ ament_target_dependencies(depth_converter
   tf2_geometry_msgs
   riptide_msgs2
   Eigen3
+  robot_localization
 )
 
 # Install the C++ executable
