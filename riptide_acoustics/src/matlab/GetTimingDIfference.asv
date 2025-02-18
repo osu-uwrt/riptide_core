@@ -1,0 +1,9 @@
+function [delta_t] = getTimingDifference(pose_1, hydrophone_base_vector, pinger_pos)
+
+%rotation matrix
+rotm = quat2rotm([pose_1(4), pose_1(5), pose_1(6), pose_1(7)]);
+hydrophone2_pos = getTimingDifference(1:3) + rotm * hydrophone_base_vector;
+
+
+
+end

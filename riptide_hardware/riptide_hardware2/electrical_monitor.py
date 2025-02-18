@@ -10,51 +10,7 @@ from riptide_msgs2.msg import DshotPartialTelemetry, DshotSingleTelemetry, Dynam
 from std_msgs.msg import Bool, Float32
 from diagnostic_msgs.msg import DiagnosticStatus
 
-from .common import ExpiringMessage, Mk2Board
-
-
-# class RobotTemperatureTask(diagnostic_updater.DiagnosticTask):
-#     def __init__(self, robot_state, firmware_state, warning_temp_above):
-#         diagnostic_updater.DiagnosticTask.__init__(self, "Robot Temperature")
-
-#         self._warning_temp_above = int(warning_temp_above)
-#         self._robot_state = robot_state
-#         self._firmware_state = firmware_state
-
-#     def run(self, stat):
-#         robot_state = self._robot_state.get_value()
-#         firmware_state = self._firmware_state.get_value()
-
-#         if robot_state is None or firmware_state is None:
-#             stat.summary(DiagnosticStatus.STALE, "No data available from copro")
-#             return stat
-
-#         temperature = robot_state.robot_temperature
-#         temp_threshold = firmware_state.peltier_cooling_threshold
-#         peltier_power = robot_state.peltier_active
-
-#         stat.add("Cooling Temperature Threshold", str(temp_threshold) + "C")
-#         stat.add("Peltier Powered", str(peltier_power))
-
-#         if temperature == RobotState.NO_READING:
-#             stat.summary(DiagnosticStatus.ERROR, "Unable to read temperature sensor")
-#         else:
-#             stat.add("Robot Temperature", "{:.2f}C".format(temperature))
-
-#             peltier_status_msg = " [Peltier "
-#             if peltier_power:
-#                 peltier_status_msg += "ON"
-#             else:
-#                 peltier_status_msg += "OFF"
-#             peltier_status_msg += "]"
-
-#             if (temperature - temp_threshold) >= self._warning_temp_above:
-#                 stat.summary(DiagnosticStatus.WARN, "Temperature ({:.2f}C) is over {}C above cooling threshold".format(temperature, self._warning_temp_above) + peltier_status_msg)
-#             else:
-#                 stat.summary(DiagnosticStatus.OK, "Temperature at {:.2f}C".format(temperature) + peltier_status_msg)
-
-#         return stat
-
+from common import ExpiringMessage, Mk2Board
 
 class WaterTemperatureTask(diagnostic_updater.DiagnosticTask):
     def __init__(self, node: 'rclpy.Node', message_lifetime, warn_temp_below, warn_temp_above):

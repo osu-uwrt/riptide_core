@@ -7,11 +7,8 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties
 mass: 31.998
 com: [-0.148, 0.040, -0.071]
-cod: [-0.148, 0.040, -0.055]
 inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
-inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
-             -0.0599, 0.7341, 0.0427,  # Iyx Iyy Iyz
-             -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^2
+
 
 # Controller parameters
 #params for the newly developed overseer
@@ -28,9 +25,6 @@ controller:
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
     base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
-
-    #sim discrepency - allows to test control when feed forward is not perfect
-    sim_discrepancy: [0.0, 0.0, 10.0, 0.0, 0.0, 0.0]
 
     auto_tune:
       #positional error threshold to begin autotuning
@@ -56,7 +50,27 @@ controller:
 
       #axis to perform autotune on (either zero or one)
       auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
-    
+
+  controller_scale:
+
+    #time constant for out of spec measurement trust decay
+    trust_decay_tau: 2 #seconds
+
+    #time constant for out of spec measurement trust growth
+    trust_growth_tau: 2 #seconds
+
+    #reset trust threshold
+    reset_trust_threshold: .2 
+
+    #minimum weight for reset:
+    reset_weight_minimum: 3
+
+    #nominal variance 
+    nominal_variance: [0.25, 0.25, 0.25, 0.2, 0.2, 0.2] #N / N/m
+
+    #nominal time
+    nominal_time: .6 #seconds
+
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
@@ -196,10 +210,6 @@ acoustics:
 
   speed_of_sound: 1500 # m/s
 
-  #fake pinger location for simulaation
-  fake_pinger:
-    pose: [3.0, 2.0, -1.0, 0.0, 0.0, 0.0]
-
 dvl:
   # topic: dvl
   rate: 8 # Hz
@@ -221,11 +231,14 @@ imu:
   yaw_drift:   1.5 # deg/min 
   pose: [-0.0505, -0.0769, 0.0529, 3.141, 0.0, -1.5707] #[-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
 
+fog:
+  pose: [0.0, 0.0, 0.0, 3.1415, 0.0, 0.0]
+
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedos: 
-  pose: [0.048, -0.1143, -0.1501, 0.0, 0.0, 0.0]
+  pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
   baseline: 0.0333375 #1 5/16 in
 
 droppers:
@@ -234,35 +247,17 @@ droppers:
 cameras: [
   {
     type: zed, 
-    name: zed_camera,
-    model: zed2,
+    name: ffc,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
   {
-    type: stereo,
-    name: downwards_camera,
-    baseline: 0.12,
+    type: zed,
+    name: dfc,
+    baseline: 0.045,
     pose: [0.06, 0, -0.01, 0, 1.5707, 0]
   }
 ]
-
-# TODO: sim uses some of this stuff. Figure out what we can delete
-thruster: 
-  rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
-  max_force: 22 # Newtons. Thrusters draw about 8A here
-  MIN_THRUST: 0.2
-  STARTUP_THRUST: 1.5
-  SU_THRUST: #Start Up Thrust
-    POS_SLOPE: 71.538
-    POS_YINT: -14.307
-    NEG_SLOPE: 80.0
-    NEG_YINT: 7.0
-  THRUST:
-    POS_SLOPE: 17.951
-    POS_YINT: 66.073
-    NEG_SLOPE: 22.920
-    NEG_YINT: -78.609
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:

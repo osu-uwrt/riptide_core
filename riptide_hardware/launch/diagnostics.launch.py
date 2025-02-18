@@ -19,7 +19,7 @@ aggregator = Node(
 electrical_monitor_node = Node(
     name='electrical_monitor',
     package='riptide_hardware2',
-    executable='electrical_monitor',
+    executable='electrical_monitor.py',
     output='screen',
     parameters=[
         {"diag_thresholds_file": thresholds_file},
@@ -30,7 +30,7 @@ electrical_monitor_node = Node(
 firmware_monitor_node = Node(
     name='firmware_monitor',
     package='riptide_hardware2',
-    executable='firmware_monitor',
+    executable='firmware_monitor.py',
     output='screen',
     parameters=[
         {"diag_thresholds_file": thresholds_file},
@@ -41,7 +41,7 @@ firmware_monitor_node = Node(
 voltage_monitor_node = Node(
     name='voltage_monitor',
     package='riptide_hardware2',
-    executable='voltage_monitor',
+    executable='voltage_monitor.py',
     output='screen',
     parameters=[
         {"diag_thresholds_file": thresholds_file},
@@ -52,7 +52,7 @@ voltage_monitor_node = Node(
 sensor_monitor_node = Node(
     name='sensor_monitor',
     package='riptide_hardware2',
-    executable='sensor_monitor',
+    executable='sensor_monitor.py',
     output='screen',
     parameters=[
         {"diag_thresholds_file": thresholds_file},
@@ -63,7 +63,7 @@ sensor_monitor_node = Node(
 computer_monitor_node = Node(
     name='computer_monitor',
     package='riptide_hardware2',
-    executable='computer_monitor',
+    executable='computer_monitor.py',
     output='screen',
     parameters=[
         {"diag_thresholds_file": thresholds_file},

@@ -49,6 +49,14 @@
           rpy="${acoustics_starboard['pose'][3]} ${acoustics_starboard['pose'][4]} ${acoustics_starboard['pose'][5]}"/>
   </xacro:acoustics_plugin_macro>
 
+  <xacro:property name="fog" value="${config['fog']}"/>
+  <xacro:fog_plugin_macro
+  namespace="${namespace}"
+  parent_link="${namespace}/origin">
+  <origin xyz="${fog['pose'][0]} ${fog['pose'][1]} ${fog['pose'][2]}" 
+          rpy="${fog['pose'][3]} ${fog['pose'][4]} ${fog['pose'][5]}"/>
+  </xacro:fog_plugin_macro>
+
   <!-- IMU  -->
   <!-- TODO: Get imu model from config -->
   <!-- TODO: restore below if when xacro releases 1.14.4 -->
@@ -116,7 +124,7 @@
           <xacro:if value="${camera['type'] == 'zed'}">
             <xacro:zed_macro
              namespace="${namespace}"
-             name="talos/${camera['name']}_link"
+             name="talos/${camera['name']}"
              parent_link="${camera_base_link}" />
           </xacro:if>
         </xacro:unless>

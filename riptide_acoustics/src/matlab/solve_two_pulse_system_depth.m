@@ -1,4 +1,4 @@
-function [intersection_x, intersection_y, pinger_depth] = solve_two_pulse_system_depth(k1, k2, pose_1, pose_2, hydrophone_base_vector, estimated_distance, pinger_depth)
+function [intersection_x, intersection_y, pinger_depth] = solve_two_pulse_system_depth(k1, k2, pose_1, pose_2, hydrophone_base_vector, y_sign, guess, pinger_depth)
 %k1: hydrophone 1 pulse time - hydrophone 2 pulse time for first pulse
 %k2: hydrophone 1 pulse time - hydrophone 2 pulse time for second pulse
 %pose_1: the pose of the front hydrophone at the time of the first pulse
@@ -9,6 +9,11 @@ function [intersection_x, intersection_y, pinger_depth] = solve_two_pulse_system
 %pinger_depth: the estimated depth of the pinger
 
 %pose format = [x,y,z,rw,rx,ry,rz]
+
+hydrophone_base_vector_rotm = eul2rotm([atan(hydrophone_base_vector(2)/hydrophone_base_vector(1)), 0, 0])
+pose_1(4:7) = quatmultiply(pose_1(4:7)', eul2quat([atan(hydrophone_base_vector(2)/hydrophone_base_vector(1)), 0, 0]))';
+pose_2(4:7) = quatmultiply(pose_2(4:7)', eul2quat([atan(hydrophone_base_vector(2)/hydrophone_base_vector(1)), 0, 0]))';
+hydrophone_base_vector = [norm(hydrophone_base_vector(1:2)), 0, hydrophone_base_vector(3)]';
 
 %base frame is hydrophone 1 pulse 1 = [0,0,0,0,0,0]
 x1_1 = 0;
@@ -24,24 +29,21 @@ norm_matrix = eul2rotm([-eul_1(1), 0, 0]);
 rot_1 = norm_matrix * quat2rotm([pose_1(4), pose_1(5), pose_1(6), pose_1(7)]);
 pos2_1 = rot_1 * hydrophone_base_vector;
 
-x1_2 = pose_2(1) - pose_1(1);
-y1_2 = pose_2(2) - pose_1(2);
-z1_2 = pose_2(3) - pose_1(3);
+pos1_2 = norm_matrix * [(pose_2(1) - pose_1(1)); pose_2(2) - pose_1(2); pose_2(3) - pose_1(3)];
 
 %calculate position of second hydrophone in second pulse
 rot_2 = norm_matrix * quat2rotm([pose_2(4), pose_2(5), pose_2(6), pose_2(7)]);
-pos2_2 = rot_2 * hydrophone_base_vector + [x1_2;y1_2;z1_2];
+pos2_2 = rot_2 * hydrophone_base_vector + pos1_2;
 
 %base widths in x,y plane
-h1 = pos2_1(1);
-h2 = norm([pos2_2(1) - x1_2 , pos2_2(2) - y1_2]);
+h1 = norm([pos2_1(2),pos2_1(1)]);
+h2 = norm([pos2_2(1) - pos1_2(1) , pos2_2(2) - pos1_2(2)]);
 
 %calculate delta positions
-x1 = x1_2 - x1_1;
-x2 = pos2_2(1) - pos2_1(1)
-x2 = pos2_2(1) - x1_1(1)
+x1 = pos1_2(1) - x1_1;
+x2 = pos2_2(1) - pos2_1(1);
 
-y1 = y1_2 - y1_1;
+y1 = pos1_2(2) - y1_1;
 y2 = pos2_2(2) - pos2_1(2);
 
 %changes in depth
@@ -56,14 +58,15 @@ heading_change = eul_2(1);
 
 %define core functions
 K = @(a,k_bar,z1,z2) (-(2*a) + sqrt(4*a^2 + 4 * (k_bar^2 + 2 * k_bar * sqrt(a^2 + z1^2) + z1^2 - z2^2))) / 2;
-Y = @(a,k,h) sqrt(a^2 + 2*a*k + k^2 - ((h^2 + 2*a*k +k^2)/(2*h))^2);
+Y = @(a,k,h) sign(y_sign) * sqrt(a^2 + 2*a*k + k^2 - ((h^2 + 2*a*k +k^2)/(2*h))^2);
 X = @(a,y,k,h) sqrt(a^2 - y^2) * -sign(k) - h / 2;
 
 norm1 = 5;
 answer = [0;0];
-while(norm1 > .001)
+count = 0;
+while(norm1 > .001 && count < 50)
 
-    x0 = [rand() * estimated_distance;rand() * estimated_distance];% [estimated_distance; estimated_distance; estimated_distance; estimated_distance; k1 / 2 ; k2 / 2] * (.2 - rand()*.2);
+    x0 = guess;% [estimated_distance; estimated_distance; estimated_distance; estimated_distance; k1 / 2 ; k2 / 2] * (.2 - rand()*.2);
 
     %equations of localization
 %         F = @(x) [sqrt(abs((x(1)+x(3))^2-x(5)^2))*sign((x(1)+x(3))^2-x(5)^2) + sqrt(abs((x(2)+x(4))^2-x(5)^2))*sign((x(1)+x(3))^2-x(5)^2) - sqrt(x1^2+y1^2);
@@ -77,8 +80,8 @@ while(norm1 > .001)
     %cramers rule & determinant of rot matrix is one
 %     F = @(x) [cos(-heading_change)*(Y(x(1), k1, h1) - (y1 + y2) / 2) + (sin(-heading_change) * (X(x(1), Y(x(1), k1, h1), k1, h1) - (x1 + x2 - hydrophone_base_vector(1)) / 2)) - Y(x(2),k2, h2);
 %               (X(x(1), Y(x(1), k1, h1), k1, h1) - (x1 + x2 - hydrophone_base_vector(1)) / 2) * cos(-heading_change) - (Y(x(1), k1, h1) - (y1 + y2) / 2) * sin(-heading_change) - (X(x(2),Y(x(2),k2,h2), k2, h2))];
-    F = @(x) [cos(-heading_change)*(Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1) - (y1 + y2) / 2) + (sin(-heading_change) * (X(x(1), Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1), K(x(1), k1, dz1_1, dz2_1), h1) - (x1 + x2 - hydrophone_base_vector(1)) / 2)) - Y(x(2),K(x(2), k2, dz1_2, dz2_2), h2);
-              (X(x(1), Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1), K(x(1), k1, dz1_1, dz2_1), h1) - (x1 + x2 - hydrophone_base_vector(1)) / 2) * cos(-heading_change) - (Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1) - (y1 + y2) / 2) * sin(-heading_change) - (X(x(2),Y(x(2),K(x(2), k2, dz1_2, dz2_2),h2), K(x(2), k2, dz1_2, dz2_2), h2))];
+    F = @(x) [cos(-heading_change)*(Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1) - (y1 + y2) / 2) + (sin(-heading_change) * (X(x(1), Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1), K(x(1), k1, dz1_1, dz2_1), h1) - (x1 + x2) / 2)) - Y(x(2),K(x(2), k2, dz1_2, dz2_2), h2);
+              (X(x(1), Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1), K(x(1), k1, dz1_1, dz2_1), h1) - (x1 + x2)  / 2) * cos(-heading_change) - (Y(x(1), K(x(1), k1, dz1_1, dz2_1), h1) - (y1 + y2) / 2) * sin(-heading_change) - (X(x(2),Y(x(2),K(x(2), k2, dz1_2, dz2_2),h2), K(x(2), k2, dz1_2, dz2_2), h2))];
 
     %options = optimoptions('fsolve','Display','iter', "OptimalityTolerance", 10e-12);
     options = optimoptions("fsolve", 'Display', 'off', "OptimalityTolerance", 10e-6);
@@ -89,13 +92,24 @@ while(norm1 > .001)
     norm1 = norm(F(solve1));
     answer = solve1;
 
+    count = count + 1;
 end
 
- 
-%calculate position
 
-intersection_x = X(answer(1),Y(answer(1), K(answer(1), k1, dz1_1, dz2_1), h1), K(answer(1), k1, dz1_1, dz2_1), h1) + pose_1(1);
-intersection_y = Y(answer(1), K(answer(1), k1, dz1_1, dz2_1), h1) + pose_1(2);
+ 
+answer
+
+%vector relative to pos 1 coordinate frame
+%rotate to input frame
+rel_vector = [X(answer(1),Y(answer(1), K(answer(1), k1, dz1_1, dz2_1), h1), K(answer(1), k1, dz1_1, dz2_1), h1); Y(answer(1), K(answer(1), k1, dz1_1, dz2_1), h1); 0];
+global_vector = norm_matrix' * rel_vector + pose_1(1:3);
+
+%account for hydrophone base vector
+hydrophone_base_account =  norm_matrix' * hydrophone_base_vector
+
+%calculate position
+intersection_x = global_vector(1);
+intersection_y = global_vector(2);
 
 %for quadratic fit
 % intersection_x = (-(b2(2) - b1(2)) - sqrt(abs((b2(2) - b1(2))^2 - 4 * (b2(1) - b1(1))*(b2(3) - b1(3))))) / (2 * (b2(3) - b1(3)));

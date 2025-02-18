@@ -3,15 +3,15 @@
 import rclpy
 import socket
 import yaml
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
 from diagnostic_msgs.msg import DiagnosticStatus
 from nortek_dvl_msgs.msg import DvlStatus
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import TwistWithCovarianceStamped
-from riptide_msgs2.msg import Depth
+from riptide_msgs2.msg import Depth, GyroStatus
 from diagnostic_updater import DiagnosticStatusWrapper, DiagnosticTask, Updater
 
-from .common import ExpiringMessage
+from common import ExpiringMessage
 
 class DVLSensorTask(DiagnosticTask):
     def __init__(self, node: 'rclpy.Node', msg_lifetime):
@@ -120,6 +120,42 @@ class DepthSensorTask(DiagnosticTask):
 
         return stat
 
+class FOGSensorTask(DiagnosticTask):
+    def __init__(self, node: 'rclpy.Node', msg_lifetime):
+        DiagnosticTask.__init__(self, "Gyro")
+        self._fog_status = ExpiringMessage(node.get_clock(), msg_lifetime)
+        node.create_subscription(GyroStatus, "gyro/status", self.fog_callback, qos_profile_system_default)
+    
+    def fog_callback(self, msg: 'GyroStatus'):
+        self._fog_status.update_value(msg)
+        
+    def run(self, stat: 'DiagnosticStatusWrapper'):
+        fog_stat: 'GyroStatus' = self._fog_status.get_value()
+
+        if fog_stat is not None and fog_stat.connected:
+            if not fog_stat.temp_good:
+                stat.summary(DiagnosticStatus.ERROR, "Overheating")
+            elif not fog_stat.vsupply_good:
+                stat.summary(DiagnosticStatus.ERROR, "Bad Voltage")
+            elif not fog_stat.sldcurrent_good:
+                stat.summary(DiagnosticStatus.ERROR, "Bad SLDCurrent")
+            elif not fog_stat.diagsignal_good:
+                stat.summary(DiagnosticStatus.ERROR, "Bad Diag Signal")
+            elif not fog_stat.temp_within_cal and fog_stat.temp_good:
+                stat.summary(DiagnosticStatus.WARN, "Temperature Out of Cal")
+            else:
+                stat.summary(DiagnosticStatus.OK, "Connected")    
+            
+            stat.add("Temperature", str(fog_stat.temperature))
+            stat.add("Voltage", str(fog_stat.vsupply))
+            stat.add("SLDCurrent", str(fog_stat.sldcurrent))
+            stat.add("Diagnostic Signal", str(fog_stat.diagsignal))
+        else:
+            stat.summary(DiagnosticStatus.ERROR, "Not Connected")
+        
+        return stat
+        
+
 def main():
     hostname = socket.gethostname()
     rclpy.init()
@@ -139,6 +175,7 @@ def main():
         updater.add(DVLSensorTask(node, message_lifetime))
     updater.add(IMUSensorTask(node, message_lifetime))
     updater.add(DepthSensorTask(node, message_lifetime, max_nominal_depth))
+    updater.add(FOGSensorTask(node, message_lifetime))
 
     updater.force_update()
 
