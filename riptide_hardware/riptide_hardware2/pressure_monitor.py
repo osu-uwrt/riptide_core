@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 
 import rclpy
@@ -12,7 +14,6 @@ from math import sqrt
 from scipy import stats
 import yaml
 
-from action_tutorials_interfaces.action import Fibonacci
 from riptide_msgs2.action import Depressurize
 from std_msgs.msg import Float32
 from rclpy.qos import qos_profile_sensor_data
@@ -34,16 +35,16 @@ class SampleSet():
     #set of pressure and temp samples
 
     #camera cage 
-    camera_cage_temp = np.array()
-    camera_cage_temp_stamp = np.array()
+    camera_cage_temp = None
+    camera_cage_temp_stamp = None
 
     #ecage
-    ecage_temp = np.array()
-    ecage_temp_stamp = np.array()
+    ecage_temp = None
+    ecage_temp_stamp = None
 
     #pressure
-    pressure = np.array()
-    pressure_stamp = np.array()
+    pressure = None
+    pressure_stamp = None
 
     def __init__(self, start_time):
         #add the start
@@ -51,18 +52,30 @@ class SampleSet():
 
     def add_pressure_sample(self, pressure, time):
         #add a pressure stamp
-        self.pressure.append(pressure)
-        self.pressure_stamp.append(time)
+        if not (self.pressure is None):
+            self.pressure.append(pressure)
+            self.pressure_stamp.append(time)
+        else:
+            self.pressure = np.array([pressure])
+            self.pressure_stamp = np.array([time])
 
     def add_ecage_sample(self, temp, time):
         #add a pressure stamp
-        self.ecage_temp.append(temp)
-        self.ecage_temp_stamp.append(time)
+        if not (self.pressure is None):
+            self.pressure.append(temp)
+            self.pressure_stamp.append(time)
+        else:
+            self.pressure = np.array([temp])
+            self.pressure_stamp = np.array([time])
 
     def add_camera_cage_sample(self, temp, time):
         #add a pressure stamp
-        self.camera_cage_temp.append(temp)
-        self.camera_cage_temp_stamp.append(time)
+        if not (self.pressure is None):
+            self.pressure.append(temp)
+            self.pressure_stamp.append(time)
+        else:
+            self.pressure = np.array([temp])
+            self.pressure_stamp = np.array([time])
 
     def get_average_pressure(self):
         #get average of pressure sample set
@@ -88,7 +101,7 @@ class SampleSet():
         ecage_cage_sample_index = 0
         ecage_sample_time = self.ecage_temp_stamp[0]
 
-        pvt_array = np.array()
+        pvt_array = None
         
         #for each pressure sample, calculate the average pvt
         for sample, i in enumerate(self.pressure):
@@ -109,7 +122,10 @@ class SampleSet():
             average_temp_K = (self.camera_cage_temp[camera_cage_sample_index] + self.ecage_temp[ecage_cage_sample_index]) / 2 + 273.15
             pvt = sample * HULL_VOLUME / (average_temp_K)
 
-            pvt_array.append(pvt)
+            if not (pvt_array is None):
+                pvt_array.append(pvt)
+            else:
+                pvt_array = np.array([pvt])
 
         #return the average pvt value
         return np.mean(pvt_array)
@@ -122,7 +138,7 @@ class SampleSet():
         ecage_cage_sample_index = 0
         ecage_sample_time = self.ecage_temp_stamp[0]
 
-        pvt_array = np.array()
+        pvt_array = None
         
         #for each pressure sample, calculate the average pvt
         for sample, i in enumerate(self.pressure):
@@ -143,7 +159,10 @@ class SampleSet():
             average_temp_K = (self.camera_cage_temp[camera_cage_sample_index] + self.ecage_temp[ecage_cage_sample_index]) / 2 + 273.15
             pvt = sample * HULL_VOLUME / (average_temp_K)
 
-            pvt_array.append(pvt)
+            if not (pvt_array is None):
+                pvt_array.append(pvt)
+            else:
+                pvt_array = np.array([pvt])
 
         #return the average pvt value
         return np.std(pvt_array)
@@ -174,7 +193,7 @@ class PressureMonitor(Node):
         super().__init__('pressure_monitor')
 
         self.depressurization_server = ActionServer(self, Depressurize,'depressurize', self.depressurize_callback)
-        self.pressure_sub = self.create_subscription(Float32, "state/housing_pressure", self.add_pressure_sample, qos_profile_sensor_data)
+        self.pressure_sub = self.create_subscription(Float32, "state/housing_pressure", self.update_pressure, qos_profile_sensor_data)
         self.ecage_temp_sub = self.create_subscription(Float32, "state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data)
         self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data)
 

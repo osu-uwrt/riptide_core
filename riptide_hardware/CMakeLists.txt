@@ -52,6 +52,7 @@ set(PYTHON_NODES
   "firmware_monitor"
   "voltage_monitor"
   "sensor_monitor"
+  "pressure_monitor"
   "computer_monitor"
   "fake_ekf"
   "fake_dvl"
@@ -81,6 +82,7 @@ install(PROGRAMS
   ${CMAKE_CURRENT_BINARY_DIR}/firmware_monitor
   ${CMAKE_CURRENT_BINARY_DIR}/voltage_monitor
   ${CMAKE_CURRENT_BINARY_DIR}/sensor_monitor
+  ${CMAKE_CURRENT_BINARY_DIR}/pressure_monitor
   ${CMAKE_CURRENT_BINARY_DIR}/computer_monitor
   ${CMAKE_CURRENT_BINARY_DIR}/fake_ekf
   ${CMAKE_CURRENT_BINARY_DIR}/fake_dvl
