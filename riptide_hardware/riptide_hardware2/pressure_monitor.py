@@ -193,7 +193,7 @@ class PressureMonitor(Node):
         super().__init__('pressure_monitor')
 
         self.depressurization_server = ActionServer(self, Depressurize,'depressurize', self.depressurize_callback)
-        self.pressure_sub = self.create_subscription(Float32, "state/housing_pressure", self.update_pressure, qos_profile_sensor_data)
+        self.pressure_sub = self.create_subscription(Float32, "vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data)
         self.ecage_temp_sub = self.create_subscription(Float32, "state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data)
         self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data)
 
