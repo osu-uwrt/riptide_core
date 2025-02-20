@@ -2,6 +2,13 @@
 
 import os
 from enum import Enum
+import numpy as np
+from math import sqrt
+from scipy import stats
+import yaml
+
+from time import sleep
+from threading import Lock
 
 import rclpy
 from rclpy.action import ActionServer
@@ -9,20 +16,12 @@ import rclpy.clock
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-
-from time import sleep
-
-import numpy as np
-from math import sqrt
-from scipy import stats
-import yaml
+from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
 
 from riptide_msgs2.action import Depressurize
 from riptide_msgs2.msg import LedCommand
 from std_msgs.msg import Float32
-from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
 
-from threading import Lock
 
 #load these from yaml eventually
 TEMP_STD_DEV_TOLERANCE = 2
@@ -106,27 +105,44 @@ class SampleSet():
 
     def get_average_pressure(self):
         with self.lock:
-            #get average of pressure sample set
-            return np.mean(self.pressure)
+
+            if not self.pressure is None:
+                #get average of pressure sample set
+                return np.mean(self.pressure)
+            else:
+                return -1
     
     def get_pressure_std_dev(self):
         with self.lock:
             #get std  dev of pressure sample set
-            return np.std(self.pressure)
+            if not self.pressure is None:
+                return np.std(self.pressure)
+            else:
+                return -1
 
     def get_ecage_temp_std_dev(self):
         with self.lock:
             #get std dev of ecage sample set
-            return np.std(self.camera_cage_temp_stamp)
+            if not self.camera_cage_temp is None:
+                return np.std(self.camera_cage_temp)
+            else:
+                return -1
 
     def get_camera_cage_temp_std_dev(self):
         with self.lock:
             #get std dev of camera cage sample set
-            return np.std(self.ecage_temp)
+            if not self.camera_cage_temp is None:
+                return np.std(self.ecage_temp)
+            else:
+                return -1
         
     def get_pvt(self):
         with self.lock:
             #assuming samples are added in order
+
+            if self.camera_cage_temp is None or self.ecage_temp is None or self.pressure is None:
+                return -1
+
             
             camera_cage_sample_index = 0
             camera_cage_sample_time = self.camera_cage_temp_stamp[0]
@@ -165,6 +181,9 @@ class SampleSet():
     def get_pvt_std(self):
         with self.lock:
             #assuming samples are added in order
+
+            if self.camera_cage_temp is None or self.ecage_temp is None or self.pressure is None:
+                return -1
             
             camera_cage_sample_index = 0
             camera_cage_sample_time = self.camera_cage_temp_stamp[0]
@@ -204,6 +223,11 @@ class SampleSet():
         with self.lock:
             #return the number of pressure samples taken
             return len(self.pressure)
+        
+    def is_filled(self):
+        with self.lock:
+            #reutrn if all fields have been filled
+            return (self.pressure is not None) and (self.ecage_temp is not None) and (self.camera_cage_temp is not None)
 
 
 class PressureMonitor(Node):
@@ -302,6 +326,14 @@ class PressureMonitor(Node):
 
         #decide if initial readings were okay
         initial_pressure = 0
+
+        #check to make sure the sampler is actually getting filled
+        if not initial_samples.is_filled():
+            self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
+            self.publish_led_states(LedStates.TEST_FAILED)
+            self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
+            
+
         if(initial_samples.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and initial_samples.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and initial_samples.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
             initial_pressure = initial_samples.get_average_pressure()
         else:
@@ -372,6 +404,11 @@ class PressureMonitor(Node):
                 current_samples = self.collecting_sample_set
                 self.collecting_sample_set = None
 
+                if not current_samples.is_filled():
+                    self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
+                    self.publish_led_states(LedStates.TEST_FAILED)
+                    self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
+
                 #check to see if samples are satisfactory
                 if(current_samples.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and current_samples.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and current_samples.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
                     sampled_final_pressure = current_samples.get_average_pressure()
@@ -426,6 +463,10 @@ class PressureMonitor(Node):
 
             return
         
+        if not self.collecting_sample_set.is_filled():
+            self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
+            self.do_not_getting_pressure()
+        
         #get the stats on the current sample set
         current_pvt = self.collecting_sample_set.get_pvt()
         current_pvt_std = self.collecting_sample_set.get_pvt_std()
@@ -478,6 +519,10 @@ class PressureMonitor(Node):
     def do_panic(self):
         #overwrite this with the panic behavoir
         self.get_logger().info("I am panic")
+
+    def do_not_getting_pressure(self):
+        #by default, linking this to panic behavoir
+        self.do_panic()
         
     def write_depressurization_log(self):
         #write the depressurization log
