@@ -619,6 +619,12 @@ def main(args=None):
     executor = MultiThreadedExecutor()
     executor.add_node(pressure_monitor)
 
+    try:
+        pressure_monitor.get_logger().info('Beginning client, shut down with CTRL-C')
+        executor.spin()
+    except KeyboardInterrupt:
+        pressure_monitor.get_logger().info('Keyboard interrupt, shutting down.\n')
+
 
 if __name__ == '__main__':
     main()
