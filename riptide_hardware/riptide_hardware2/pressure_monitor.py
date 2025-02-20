@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+from enum import Enum
 
 import rclpy
 from rclpy.action import ActionServer
@@ -15,8 +16,9 @@ from scipy import stats
 import yaml
 
 from riptide_msgs2.action import Depressurize
+from riptide_msgs2.msg import LedCommand
 from std_msgs.msg import Float32
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
 
 #load these from yaml eventually
 TEMP_STD_DEV_TOLERANCE = 2
@@ -31,6 +33,15 @@ PUBLISH_INTERVAL = 1
 #the pressurization file needs to be persistant across colcon builds so this file needs to hide somewhere safe
 PRESSURIZATION_LOG_LOCATION = "/home/dev/pressurization_log.yaml"
 
+class LedStates(Enum):
+    OFF = 0
+    QUICK_ANALYZE = 1
+    LONG_ANALYZE = 2
+    ALL_GOOD = 3
+    TEST_FAILED = 4
+    KEEP_PUMPING = 5
+    REDUCE_PRESSURE = 6
+    PUMPING_COMPLEE = 7
 class SampleSet():
     #set of pressure and temp samples
 
@@ -193,9 +204,12 @@ class PressureMonitor(Node):
         super().__init__('pressure_monitor')
 
         self.depressurization_server = ActionServer(self, Depressurize,'depressurize', self.depressurize_callback)
+
         self.pressure_sub = self.create_subscription(Float32, "vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data)
         self.ecage_temp_sub = self.create_subscription(Float32, "state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data)
         self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data)
+        
+        self.led_pub = self.create_publisher(LedCommand, "state/LED", qos_profile_system_default)
 
         #create callback to check depressurization status
         self.create_timer(.05, self.check_pressurization_status)
@@ -374,6 +388,9 @@ class PressureMonitor(Node):
             #probably make a bigger fuss than this
             self.get_logger().error("Depressurization Detected!!!!!!!!!")
 
+            #maybe hinge this on if the system is in the water?
+            self.do_panic()
+
             #reset the system
             self.depressurized_pvt = None
             self.depressurized_pvt_std = None
@@ -407,6 +424,10 @@ class PressureMonitor(Node):
         p_two_tail = 2 * (1 - abs(p - 0.5) - 0.5) # this was a gemini moment
 
         return p_two_tail
+    
+    def do_panic(self):
+        #overwrite this with the panic behavoir
+        self.get_logger().info("I am panic")
         
     def write_depressurization_log(self):
         #write the depressurization log
@@ -451,6 +472,87 @@ class PressureMonitor(Node):
 
     def get_current_time_as_double(self):
         return self.get_clock().now().seconds_nanoseconds()[0] + self.get_clock().now().seconds_nanoseconds()[1] * 1e-9
+    
+    def turn_off_leds(self):
+        #callback for delayed LED turn off
+        self.publish_led_state(0)
+    
+    def publish_led_states(self, state):
+        msg = LedCommand()
+
+        msg.target = LedCommand.TARGET_ALL
+
+        #configure state
+        match state:
+            case 0:
+                # off state
+                msg.red = 0
+                msg.blue = 0
+                msg.green = 0
+
+                msg.mode = LedCommand.MODE_SOLID
+
+            case 1:
+                # analyzing state
+                msg.red = 255
+                msg.blue = 191
+                msg.green = 0
+
+                msg.mode = LedCommand.MODE_FAST_FLASH
+
+            case 2:
+                # long term analyzing state
+                msg.red = 255
+                msg.blue = 191
+                msg.green = 0
+
+                msg.mode = LedCommand.MODE_BREATH
+
+            case 3:
+                # all good state
+                msg.red = 0
+                msg.blue = 0
+                msg.green = 255
+
+                msg.mode = LedCommand.MODE_BREATH
+
+            case 4:
+                #test failed state
+                msg.red = 255
+                msg.blue = 0
+                msg.green = 0
+
+                msg.mode = LedCommand.MODE_BREATH
+
+            case 5: 
+                #keep pumping state
+                msg.red = 0
+                msg.blue = 0
+                msg.green = 255
+
+                msg.mode = LedCommand.MODE_SOLID
+
+            case 6:
+                #reduce pressure state
+                msg.red = 255
+                msg.blue = 0
+                msg.green = 0
+
+                msg.mode = LedCommand.MODE_SLOW_FLASH
+
+            case 7:
+                #pumping complete state
+                msg.red = 0
+                msg.blue = 0
+                msg.green = 255
+
+                msg.mode = LedCommand.MODE_FAST_FLASH
+
+            case _:
+                self.get_logger().warn(f"Bad LED State Requested: {state}")
+        
+        self.led_pub.publish(msg)
+            
 
 
 
