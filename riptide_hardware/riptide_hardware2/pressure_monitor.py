@@ -7,6 +7,8 @@ import rclpy
 from rclpy.action import ActionServer
 import rclpy.clock
 from rclpy.node import Node
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 
 from time import sleep
 
@@ -19,6 +21,8 @@ from riptide_msgs2.action import Depressurize
 from riptide_msgs2.msg import LedCommand
 from std_msgs.msg import Float32
 from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
+
+from threading import Lock
 
 #load these from yaml eventually
 TEMP_STD_DEV_TOLERANCE = 2
@@ -42,6 +46,8 @@ class LedStates(Enum):
     KEEP_PUMPING = 5
     REDUCE_PRESSURE = 6
     PUMPING_COMPLEE = 7
+    DIRTY_SAMPLES = 8
+
 class SampleSet():
     #set of pressure and temp samples
 
@@ -57,130 +63,147 @@ class SampleSet():
     pressure = None
     pressure_stamp = None
 
+    #thread safe lock
+    lock = None
+
     def __init__(self, start_time):
         #add the start
         self.start_time = start_time
 
+        # create the thread lock            
+        self._lock = Lock()
+
+
     def add_pressure_sample(self, pressure, time):
-        #add a pressure stamp
-        if not (self.pressure is None):
-            self.pressure.append(pressure)
-            self.pressure_stamp.append(time)
-        else:
-            self.pressure = np.array([pressure])
-            self.pressure_stamp = np.array([time])
+        with self.lock:
+            #add a pressure stamp
+            if not (self.pressure is None):
+                self.pressure.append(pressure)
+                self.pressure_stamp.append(time)
+            else:
+                self.pressure = np.array([pressure])
+                self.pressure_stamp = np.array([time])
 
     def add_ecage_sample(self, temp, time):
-        #add a pressure stamp
-        if not (self.pressure is None):
-            self.pressure.append(temp)
-            self.pressure_stamp.append(time)
-        else:
-            self.pressure = np.array([temp])
-            self.pressure_stamp = np.array([time])
+        with self.lock:
+            #add a pressure stamp
+            if not (self.pressure is None):
+                self.pressure.append(temp)
+                self.pressure_stamp.append(time)
+            else:
+                self.pressure = np.array([temp])
+                self.pressure_stamp = np.array([time])
 
     def add_camera_cage_sample(self, temp, time):
-        #add a pressure stamp
-        if not (self.pressure is None):
-            self.pressure.append(temp)
-            self.pressure_stamp.append(time)
-        else:
-            self.pressure = np.array([temp])
-            self.pressure_stamp = np.array([time])
+        with self.lock:
+            #add a pressure stamp
+            if not (self.pressure is None):
+                self.pressure.append(temp)
+                self.pressure_stamp.append(time)
+            else:
+                self.pressure = np.array([temp])
+                self.pressure_stamp = np.array([time])
 
     def get_average_pressure(self):
-        #get average of pressure sample set
-        return np.mean(self.pressure)
+        with self.lock:
+            #get average of pressure sample set
+            return np.mean(self.pressure)
     
     def get_pressure_std_dev(self):
-        #get std  dev of pressure sample set
-        return np.std(self.pressure)
+        with self.lock:
+            #get std  dev of pressure sample set
+            return np.std(self.pressure)
 
     def get_ecage_temp_std_dev(self):
-        #get std dev of ecage sample set
-        return np.std(self.camera_cage_temp_stamp)
+        with self.lock:
+            #get std dev of ecage sample set
+            return np.std(self.camera_cage_temp_stamp)
 
     def get_camera_cage_temp_std_dev(self):
-        #get std dev of camera cage sample set
-        return np.std(self.ecage_temp)
-    
+        with self.lock:
+            #get std dev of camera cage sample set
+            return np.std(self.ecage_temp)
+        
     def get_pvt(self):
-        #assuming samples are added in order
-        
-        camera_cage_sample_index = 0
-        camera_cage_sample_time = self.camera_cage_temp_stamp[0]
-        ecage_cage_sample_index = 0
-        ecage_sample_time = self.ecage_temp_stamp[0]
+        with self.lock:
+            #assuming samples are added in order
+            
+            camera_cage_sample_index = 0
+            camera_cage_sample_time = self.camera_cage_temp_stamp[0]
+            ecage_cage_sample_index = 0
+            ecage_sample_time = self.ecage_temp_stamp[0]
 
-        pvt_array = None
-        
-        #for each pressure sample, calculate the average pvt
-        for sample, i in enumerate(self.pressure):
+            pvt_array = None
+            
+            #for each pressure sample, calculate the average pvt
+            for sample, i in enumerate(self.pressure):
 
-            #get the pressure sample stamp
-            sample_time = self.pressure_stamp[i]
+                #get the pressure sample stamp
+                sample_time = self.pressure_stamp[i]
 
-            #find the closest camera cage sample time
-            while(sample_time > camera_cage_sample_time) and (camera_cage_sample_index < len(self.camera_cage_temp_stamp) - 1):
-                camera_cage_sample_index += 1
-                camera_cage_sample_time = self.camera_cage_temp_stamp[camera_cage_sample_index]
+                #find the closest camera cage sample time
+                while(sample_time > camera_cage_sample_time) and (camera_cage_sample_index < len(self.camera_cage_temp_stamp) - 1):
+                    camera_cage_sample_index += 1
+                    camera_cage_sample_time = self.camera_cage_temp_stamp[camera_cage_sample_index]
 
-            #find the closest ecage cage sample time
-            while(sample_time > ecage_sample_time) and (ecage_cage_sample_index < len(self.ecage_temp_stamp) - 1):
-                ecage_cage_sample_index += 1
-                ecage_sample_time = self.ecage_temp_stamp[ecage_cage_sample_index]
+                #find the closest ecage cage sample time
+                while(sample_time > ecage_sample_time) and (ecage_cage_sample_index < len(self.ecage_temp_stamp) - 1):
+                    ecage_cage_sample_index += 1
+                    ecage_sample_time = self.ecage_temp_stamp[ecage_cage_sample_index]
 
-            average_temp_K = (self.camera_cage_temp[camera_cage_sample_index] + self.ecage_temp[ecage_cage_sample_index]) / 2 + 273.15
-            pvt = sample * HULL_VOLUME / (average_temp_K)
+                average_temp_K = (self.camera_cage_temp[camera_cage_sample_index] + self.ecage_temp[ecage_cage_sample_index]) / 2 + 273.15
+                pvt = sample * HULL_VOLUME / (average_temp_K)
 
-            if not (pvt_array is None):
-                pvt_array.append(pvt)
-            else:
-                pvt_array = np.array([pvt])
+                if not (pvt_array is None):
+                    pvt_array.append(pvt)
+                else:
+                    pvt_array = np.array([pvt])
 
-        #return the average pvt value
-        return np.mean(pvt_array)
+            #return the average pvt value
+            return np.mean(pvt_array)
     
     def get_pvt_std(self):
-        #assuming samples are added in order
-        
-        camera_cage_sample_index = 0
-        camera_cage_sample_time = self.camera_cage_temp_stamp[0]
-        ecage_cage_sample_index = 0
-        ecage_sample_time = self.ecage_temp_stamp[0]
+        with self.lock:
+            #assuming samples are added in order
+            
+            camera_cage_sample_index = 0
+            camera_cage_sample_time = self.camera_cage_temp_stamp[0]
+            ecage_cage_sample_index = 0
+            ecage_sample_time = self.ecage_temp_stamp[0]
 
-        pvt_array = None
-        
-        #for each pressure sample, calculate the average pvt
-        for sample, i in enumerate(self.pressure):
+            pvt_array = None
+            
+            #for each pressure sample, calculate the average pvt
+            for sample, i in enumerate(self.pressure):
 
-            #get the pressure sample stamp
-            sample_time = self.pressure_stamp[i]
+                #get the pressure sample stamp
+                sample_time = self.pressure_stamp[i]
 
-            #find the closest camera cage sample time
-            while(sample_time > camera_cage_sample_time) and (camera_cage_sample_index < len(self.camera_cage_temp_stamp) - 1):
-                camera_cage_sample_index += 1
-                camera_cage_sample_time = self.camera_cage_temp_stamp[camera_cage_sample_index]
+                #find the closest camera cage sample time
+                while(sample_time > camera_cage_sample_time) and (camera_cage_sample_index < len(self.camera_cage_temp_stamp) - 1):
+                    camera_cage_sample_index += 1
+                    camera_cage_sample_time = self.camera_cage_temp_stamp[camera_cage_sample_index]
 
-            #find the closest ecage cage sample time
-            while(sample_time > ecage_sample_time) and (ecage_cage_sample_index < len(self.ecage_temp_stamp) - 1):
-                ecage_cage_sample_index += 1
-                ecage_sample_time = self.ecage_temp_stamp[ecage_cage_sample_index]
+                #find the closest ecage cage sample time
+                while(sample_time > ecage_sample_time) and (ecage_cage_sample_index < len(self.ecage_temp_stamp) - 1):
+                    ecage_cage_sample_index += 1
+                    ecage_sample_time = self.ecage_temp_stamp[ecage_cage_sample_index]
 
-            average_temp_K = (self.camera_cage_temp[camera_cage_sample_index] + self.ecage_temp[ecage_cage_sample_index]) / 2 + 273.15
-            pvt = sample * HULL_VOLUME / (average_temp_K)
+                average_temp_K = (self.camera_cage_temp[camera_cage_sample_index] + self.ecage_temp[ecage_cage_sample_index]) / 2 + 273.15
+                pvt = sample * HULL_VOLUME / (average_temp_K)
 
-            if not (pvt_array is None):
-                pvt_array.append(pvt)
-            else:
-                pvt_array = np.array([pvt])
+                if not (pvt_array is None):
+                    pvt_array.append(pvt)
+                else:
+                    pvt_array = np.array([pvt])
 
-        #return the average pvt value
-        return np.std(pvt_array)
+            #return the average pvt value
+            return np.std(pvt_array)
 
     def get_num_samples(self):
-        #return the number of pressure samples taken
-        return len(self.pressure)
+        with self.lock:
+            #return the number of pressure samples taken
+            return len(self.pressure)
 
 
 class PressureMonitor(Node):
@@ -203,16 +226,20 @@ class PressureMonitor(Node):
     def __init__(self):
         super().__init__('pressure_monitor')
 
-        self.depressurization_server = ActionServer(self, Depressurize,'depressurize', self.depressurize_callback)
+        #create call back groups so that the action servver callback can be blocking
+        self.depressurization_routine_group = MutuallyExclusiveCallbackGroup()
+        self.general_callback_group = MutuallyExclusiveCallbackGroup()
 
-        self.pressure_sub = self.create_subscription(Float32, "vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data)
-        self.ecage_temp_sub = self.create_subscription(Float32, "state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data)
-        self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data)
+        self.depressurization_server = ActionServer(self, Depressurize,'depressurize', self.depressurize_callback, callback_group=self.depressurization_routine_group)
+
+        self.pressure_sub = self.create_subscription(Float32, "vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.ecage_temp_sub = self.create_subscription(Float32, "state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
         
         self.led_pub = self.create_publisher(LedCommand, "state/LED", qos_profile_system_default)
 
         #create callback to check depressurization status
-        self.create_timer(.05, self.check_pressurization_status)
+        self.create_timer(.1, self.check_pressurization_status, callback_group=self.general_callback_group)
 
         #load in depressurization file
         self.load_pressurization_file()
@@ -255,6 +282,9 @@ class PressureMonitor(Node):
         #set the node's sampling time
         self.sampling_time = sample_time
 
+        #show sampling started on LEDs
+        self.publish_led_states(LedStates.QUICK_ANALYZE)
+
         #add sample set to target
         self.collecting_sample_set = SampleSet(self.get_current_time_as_double())
 
@@ -277,6 +307,11 @@ class PressureMonitor(Node):
         else:
             self.get_logger().error(f"Cannot proceed with depressurization, the pressure or temperature is too unstable! Pressure Dev: {initial_samples.get_pressure_std_dev()} Ecage Temp Dev: {initial_samples.get_ecage_temp_std_dev()} Camera Cage Dev: {initial_samples.get_camera_cage_temp_std_dev()}")
             goal_handle.abort()
+
+            #show error on LEDs
+            self.publish_led_states(LedStates.TEST_FAILED)
+            self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
+
             return Depressurize.Result()
         
         #determine the goal pressure
@@ -290,6 +325,9 @@ class PressureMonitor(Node):
         sampled_final_pvt_std = 0
         sampled_final_pvt_samples = 0
         while(sampled_final_pressure > target_pressure + PRESSURIZATION_TOLERANCE):
+
+            #display leds to keep pumping
+            self.publish_led_states(LedStates.KEEP_PUMPING)
 
             #wait untile pressure dips below target pressure
             last_pub_time = self.get_current_time_as_double()
@@ -310,10 +348,14 @@ class PressureMonitor(Node):
             sampled_cleanly = False 
 
             while(not sampled_cleanly):
+
+                #show LEDs in analyzing stte
+                self.publish_led_states(LedStates.QUICK_ANALYZE)
+
                 #run sampling to detect if pressurization is stable
                 self.get_logger().info("Please wait! Collecting Pressure Sample Data!")
 
-                sleep(1)
+                sleep(2)
 
                 self.get_logger().info("Collection begining!")
 
@@ -342,6 +384,10 @@ class PressureMonitor(Node):
                 else:
                     self.get_logger().info("Samples were dirty. Retaking samples!")
 
+                    #flash warning on LEDS
+                    self.publish_led_states(LedStates.DIRTY_SAMPLES)
+                    sleep(1)
+
         #publish result
         result_msg = Depressurize.Result()
         result_msg.success = True
@@ -354,6 +400,10 @@ class PressureMonitor(Node):
 
         #write the depressurization log
         self.write_depressurization_log()
+
+        #show success on leds
+        self.publish_led_states(LedStates.PUMPING_COMPLEE)
+        self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
         goal_handle.succeed()
 
@@ -548,21 +598,26 @@ class PressureMonitor(Node):
 
                 msg.mode = LedCommand.MODE_FAST_FLASH
 
+            case 8: 
+                #dirty sampling state
+                msg.red = 255
+                msg.blue = 0
+                msg.green = 0
+
+                msg.mode = LedCommand.MODE_FAST_FLASH
+
             case _:
                 self.get_logger().warn(f"Bad LED State Requested: {state}")
         
         self.led_pub.publish(msg)
-            
-
-
-
 
 def main(args=None):
     rclpy.init(args=args)
 
     pressure_monitor = PressureMonitor()
 
-    rclpy.spin(pressure_monitor)
+    executor = MultiThreadedExecutor()
+    executor.add_node(pressure_monitor)
 
 
 if __name__ == '__main__':
