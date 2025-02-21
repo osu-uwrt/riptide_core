@@ -22,12 +22,12 @@ using namespace std::placeholders;
 #define DEFAULT_FRAME "fog_link"
 
 #define TEMP_UPPER 70.0
-#define VSUPPLY_UPPER 5.1
-#define VSUPPLY_LOWER 4.9
-#define SLDCURRENT_UPPER 0.12
+#define VSUPPLY_UPPER 5.25
+#define VSUPPLY_LOWER 4.75
+#define SLDCURRENT_UPPER 0.15
 #define SLDCURRENT_LOWER 0.07
-#define DIAG_SIGNAL_LOWER 1.05
-#define DIAG_SIGNAL_UPPER 0.95
+#define DIAG_SIGNAL_LOWER 0.95
+#define DIAG_SIGNAL_UPPER 1.05
 
 namespace uwrt_gyro {
 
@@ -376,6 +376,15 @@ namespace uwrt_gyro {
             statMsg->vsupply_good = statMsg->vsupply > VSUPPLY_LOWER && statMsg->vsupply < VSUPPLY_UPPER;
             statMsg->sldcurrent_good = statMsg->sldcurrent > SLDCURRENT_LOWER && statMsg->sldcurrent < SLDCURRENT_UPPER;
             statMsg->diagsignal_good = statMsg->diagsignal > DIAG_SIGNAL_LOWER && statMsg->diagsignal < DIAG_SIGNAL_UPPER;
+            
+            statMsg->connected = processor->hasDataForField(UwrtGyroField::VRATE);
+
+            //this does not mean connection yet, need to check that the time is within 1s
+            if(statMsg->connected)
+            {
+                statMsg->connected = statMsg->connected && 
+                    get_clock()->now() - processor->getField(UwrtGyroField::VRATE).timestamp < 1s;
+            }
 
             //publish status
             statusPub->publish(*statMsg);

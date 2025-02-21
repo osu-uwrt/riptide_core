@@ -3,7 +3,7 @@
 import rclpy
 import socket
 import yaml
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import qos_profile_sensor_data, qos_profile_system_default
 from diagnostic_msgs.msg import DiagnosticStatus
 from nortek_dvl_msgs.msg import DvlStatus
 from sensor_msgs.msg import Imu
@@ -11,7 +11,7 @@ from geometry_msgs.msg import TwistWithCovarianceStamped
 from riptide_msgs2.msg import Depth, GyroStatus
 from diagnostic_updater import DiagnosticStatusWrapper, DiagnosticTask, Updater
 
-from .common import ExpiringMessage
+from common import ExpiringMessage
 
 class DVLSensorTask(DiagnosticTask):
     def __init__(self, node: 'rclpy.Node', msg_lifetime):
@@ -122,8 +122,9 @@ class DepthSensorTask(DiagnosticTask):
 
 class FOGSensorTask(DiagnosticTask):
     def __init__(self, node: 'rclpy.Node', msg_lifetime):
+        DiagnosticTask.__init__(self, "Gyro")
         self._fog_status = ExpiringMessage(node.get_clock(), msg_lifetime)
-        node.create_subscription(GyroStatus, "gyro/status", self.fog_callback)
+        node.create_subscription(GyroStatus, "gyro/status", self.fog_callback, qos_profile_system_default)
     
     def fog_callback(self, msg: 'GyroStatus'):
         self._fog_status.update_value(msg)
@@ -131,10 +132,8 @@ class FOGSensorTask(DiagnosticTask):
     def run(self, stat: 'DiagnosticStatusWrapper'):
         fog_stat: 'GyroStatus' = self._fog_status.get_value()
 
-        if fog_stat.connected:
-            if not fog_stat.temp_within_cal and fog_stat.temp_good:
-                stat.summary(DiagnosticStatus.WARN, "Temperature Out of Cal")
-            elif not fog_stat.temp_good:
+        if fog_stat is not None and fog_stat.connected:
+            if not fog_stat.temp_good:
                 stat.summary(DiagnosticStatus.ERROR, "Overheating")
             elif not fog_stat.vsupply_good:
                 stat.summary(DiagnosticStatus.ERROR, "Bad Voltage")
@@ -142,15 +141,20 @@ class FOGSensorTask(DiagnosticTask):
                 stat.summary(DiagnosticStatus.ERROR, "Bad SLDCurrent")
             elif not fog_stat.diagsignal_good:
                 stat.summary(DiagnosticStatus.ERROR, "Bad Diag Signal")
+            elif not fog_stat.temp_within_cal and fog_stat.temp_good:
+                stat.summary(DiagnosticStatus.WARN, "Temperature Out of Cal")
             else:
                 stat.summary(DiagnosticStatus.OK, "Connected")    
+            
+            stat.add("Temperature", str(fog_stat.temperature))
+            stat.add("Voltage", str(fog_stat.vsupply))
+            stat.add("SLDCurrent", str(fog_stat.sldcurrent))
+            stat.add("Diagnostic Signal", str(fog_stat.diagsignal))
         else:
             stat.summary(DiagnosticStatus.ERROR, "Not Connected")
         
-        stat.add("Temperature", str(fog_stat.temperature))
-        stat.add("Voltage", str(fog_stat.vsupply))
-        stat.add("SLDCurrent", str(fog_stat.sldcurrent))
-        stat.add("Diagnostic Signal", str(fog_stat.diagsignal))
+        return stat
+        
 
 def main():
     hostname = socket.gethostname()

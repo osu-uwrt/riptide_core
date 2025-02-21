@@ -63,7 +63,7 @@ def generate_launch_description():
             ),
             Node(
                 package='riptide_hardware2',
-                executable='fake_dvl',
+                executable='fake_dvl.py',
                 name='fake_dvl',
                 condition=IfCondition(
                     PythonExpression(["'", LC("robot"), "' == 'talos'"])
@@ -96,13 +96,13 @@ def generate_launch_description():
             ),
             Node(
                 package='riptide_hardware2',
-                executable='simple_actuator_interface',
+                executable='simple_actuator_interface.py',
                 name='simple_actuator_interface',
                 output='screen',
             ),
             Node(
                 package='riptide_hardware2',
-                executable='imu_power_cycle',
+                executable='imu_power_cycle.py',
                 name='imu_power_cycle',
                 output='screen',
             ),
