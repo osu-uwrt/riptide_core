@@ -34,6 +34,7 @@ ament_target_dependencies(depth_converter
   tf2_geometry_msgs
   riptide_msgs2
   Eigen3
+  robot_localization
 )
 
 # Install the C++ executable
@@ -48,6 +49,7 @@ ament_python_install_package(${PROJECT_NAME})
 file(GLOB python_programs riptide_hardware2/*.py)
 install(PROGRAMS ${python_programs}
   DESTINATION lib/${PROJECT_NAME})
+
 
 # Install launch files
 install(DIRECTORY launch
