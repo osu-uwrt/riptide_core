@@ -261,6 +261,7 @@ class PressureMonitor(Node):
         self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
         
         self.led_pub = self.create_publisher(LedCommand, "state/LED", qos_profile_system_default)
+        self.pressure_pub = self.create_publisher(Float32, "state/pvt", qos_profile_system_default)
 
         #create callback to check depressurization status
         self.create_timer(.1, self.check_pressurization_status, callback_group=self.general_callback_group)
@@ -471,6 +472,11 @@ class PressureMonitor(Node):
         current_pvt = self.collecting_sample_set.get_pvt()
         current_pvt_std = self.collecting_sample_set.get_pvt_std()
         current_pvt_samples = self.collecting_sample_set.get_num_samples()
+
+        #publish the current pvt
+        msg = Float32()
+        msg.data = current_pvt
+        self.pressure_pub.publish(msg)
 
         #run a truth test on wether or not the amount of gas in the hull is the same
         if(self.truth_test(self.depressurized_pvt, current_pvt,self.depressurized_pvt_std, current_pvt_std, self.depressurized_pvt_samples, current_pvt_samples) < TRUTH_CERTAINTY):
