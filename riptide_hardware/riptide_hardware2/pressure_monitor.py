@@ -260,9 +260,9 @@ class PressureMonitor(Node):
 
         self.depressurization_server = ActionServer(self, Depressurize,'depressurize', self.depressurize_callback, callback_group=self.depressurization_routine_group)
 
-        self.pressure_sub = self.create_subscription(Float32, "/talos/vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data, callback_group=self.general_callback_group)
-        self.ecage_temp_sub = self.create_subscription(Float32, "/talos/state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
-        self.camera_cage_temp_sub = self.create_subscription(Float32, "/talos/state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.pressure_sub = self.create_subscription(Float32, "vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.ecage_temp_sub = self.create_subscription(Float32, "state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
 
         self.led_pub = self.create_publisher(LedCommand, "state/LED", qos_profile_system_default)
         self.pressure_pub = self.create_publisher(Float32, "state/pvt", qos_profile_system_default)

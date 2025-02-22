@@ -111,5 +111,11 @@ def generate_launch_description():
                 name='imu_power_cycle',
                 output='screen',
             ),
+            Node(
+                package='riptide_hardware2',
+                executable='pressure_monitor.py',
+                name='pressure_monitor',
+                output='screen'
+            )
         ], scoped=True)
     ])
