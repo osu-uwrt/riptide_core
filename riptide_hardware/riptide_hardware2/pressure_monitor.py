@@ -45,7 +45,7 @@ class LedStates(Enum):
     TEST_FAILED = 4
     KEEP_PUMPING = 5
     REDUCE_PRESSURE = 6
-    PUMPING_COMPLEE = 7
+    PUMPING_COMPLETE = 7
     DIRTY_SAMPLES = 8
 
 class SampleSet():
@@ -312,7 +312,7 @@ class PressureMonitor(Node):
         self.sampling_time = sample_time
 
         #show sampling started on LEDs
-        self.publish_led_states(LedStates.QUICK_ANALYZE)
+        self.publish_led_states(LedStates.QUICK_ANALYZE.value)
 
         #add sample set to target
         self.collecting_sample_set = SampleSet(self.get_current_time_as_double())
@@ -329,7 +329,7 @@ class PressureMonitor(Node):
         #check to make sure the sampler is actually getting filled
         if not self.collecting_sample_set.is_filled():
             self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
-            self.publish_led_states(LedStates.TEST_FAILED)
+            self.publish_led_states(LedStates.TEST_FAILED.value)
             self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
             
 
@@ -340,7 +340,7 @@ class PressureMonitor(Node):
             goal_handle.abort()
 
             #show error on LEDs
-            self.publish_led_states(LedStates.TEST_FAILED)
+            self.publish_led_states(LedStates.TEST_FAILED.value)
             self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
             return Depressurize.Result()
@@ -360,7 +360,7 @@ class PressureMonitor(Node):
         while(sampled_final_pressure > target_pressure + PRESSURIZATION_TOLERANCE):
 
             #display leds to keep pumping
-            self.publish_led_states(LedStates.KEEP_PUMPING)
+            self.publish_led_states(LedStates.KEEP_PUMPING.value)
 
             #wait untile pressure dips below target pressure
             last_pub_time = self.get_current_time_as_double()
@@ -383,7 +383,7 @@ class PressureMonitor(Node):
             while(not sampled_cleanly):
 
                 #show LEDs in analyzing stte
-                self.publish_led_states(LedStates.QUICK_ANALYZE)
+                self.publish_led_states(LedStates.QUICK_ANALYZE.value)
 
                 #run sampling to detect if pressurization is stable
                 self.get_logger().info("Please wait! Collecting Pressure Sample Data!")
@@ -403,7 +403,7 @@ class PressureMonitor(Node):
                     
                 if not self.collecting_sample_set.is_filled():
                     self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
-                    self.publish_led_states(LedStates.TEST_FAILED)
+                    self.publish_led_states(LedStates.TEST_FAILED.value)
                     self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
                 #check to see if samples are satisfactory
@@ -419,7 +419,7 @@ class PressureMonitor(Node):
                     self.get_logger().info("Samples were dirty. Retaking samples!")
 
                     #flash warning on LEDS
-                    self.publish_led_states(LedStates.DIRTY_SAMPLES)
+                    self.publish_led_states(LedStates.DIRTY_SAMPLES.value)
                     sleep(1)
                     
                 self.collecting_sample_set = None
@@ -438,7 +438,7 @@ class PressureMonitor(Node):
         self.write_depressurization_log()
 
         #show success on leds
-        self.publish_led_states(LedStates.PUMPING_COMPLEE)
+        self.publish_led_states(LedStates.PUMPING_COMPLETE.value)
         self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
         goal_handle.succeed()
