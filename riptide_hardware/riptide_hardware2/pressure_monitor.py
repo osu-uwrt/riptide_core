@@ -9,6 +9,7 @@ import yaml
 
 from time import sleep
 from threading import Lock
+from copy import deepcopy
 
 import rclpy
 from rclpy.action import ActionServer
@@ -74,73 +75,73 @@ class SampleSet():
 
 
     def add_pressure_sample(self, pressure, time):
-        with self.lock:
+        with self._lock:
             #add a pressure stamp
             if not (self.pressure is None):
-                self.pressure.append(pressure)
-                self.pressure_stamp.append(time)
+                np.append(self.pressure, pressure)
+                np.append(self.pressure_stamp, time)
             else:
                 self.pressure = np.array([pressure])
                 self.pressure_stamp = np.array([time])
 
     def add_ecage_sample(self, temp, time):
-        with self.lock:
+        with self._lock:
             #add a pressure stamp
-            if not (self.pressure is None):
-                self.pressure.append(temp)
-                self.pressure_stamp.append(time)
+            if not (self.ecage_temp is None):
+                np.append(self.ecage_temp, temp)
+                np.append(self.ecage_temp_stamp, time)
             else:
-                self.pressure = np.array([temp])
-                self.pressure_stamp = np.array([time])
+                self.ecage_temp = np.array([temp])
+                self.ecage_temp_stamp = np.array([time])
 
     def add_camera_cage_sample(self, temp, time):
-        with self.lock:
+        with self._lock:
             #add a pressure stamp
-            if not (self.pressure is None):
-                self.pressure.append(temp)
-                self.pressure_stamp.append(time)
+            if not (self.camera_cage_temp is None):
+                np.append(self.camera_cage_temp, temp)
+                np.append(self.camera_cage_temp_stamp, time)
             else:
-                self.pressure = np.array([temp])
-                self.pressure_stamp = np.array([time])
+                self.camera_cage_temp = np.array([temp])
+                self.camera_cage_temp_stamp = np.array([time])
 
     def get_average_pressure(self):
-        with self.lock:
+        with self._lock:
 
-            if not self.pressure is None:
+            if not (self.pressure is None):
                 #get average of pressure sample set
                 return np.mean(self.pressure)
             else:
                 return -1
     
     def get_pressure_std_dev(self):
-        with self.lock:
+        with self._lock:
             #get std  dev of pressure sample set
-            if not self.pressure is None:
+            if not (self.pressure is None):
                 return np.std(self.pressure)
             else:
                 return -1
 
     def get_ecage_temp_std_dev(self):
-        with self.lock:
+        with self._lock:
             #get std dev of ecage sample set
-            if not self.camera_cage_temp is None:
+            if not (self.camera_cage_temp is None):
                 return np.std(self.camera_cage_temp)
             else:
                 return -1
 
     def get_camera_cage_temp_std_dev(self):
-        with self.lock:
+        with self._lock:
             #get std dev of camera cage sample set
-            if not self.camera_cage_temp is None:
+            if (not self.camera_cage_temp is None):
                 return np.std(self.ecage_temp)
             else:
                 return -1
         
     def get_pvt(self):
-        with self.lock:
+        with self._lock:
             #assuming samples are added in order
 
-            if self.camera_cage_temp is None or self.ecage_temp is None or self.pressure is None:
+            if (self.camera_cage_temp is None) or (self.ecage_temp is None) or (self.pressure is None):
                 return -1
 
             
@@ -179,10 +180,10 @@ class SampleSet():
             return np.mean(pvt_array)
     
     def get_pvt_std(self):
-        with self.lock:
+        with self._lock:
             #assuming samples are added in order
 
-            if self.camera_cage_temp is None or self.ecage_temp is None or self.pressure is None:
+            if (self.camera_cage_temp is None) or (self.ecage_temp is None) or (self.pressure is None):
                 return -1
             
             camera_cage_sample_index = 0
@@ -220,12 +221,15 @@ class SampleSet():
             return np.std(pvt_array)
 
     def get_num_samples(self):
-        with self.lock:
+        with self._lock:
             #return the number of pressure samples taken
-            return len(self.pressure)
+            if(self.pressure is not None):
+                return len(self.pressure)
+            else:
+                return 0
         
     def is_filled(self):
-        with self.lock:
+        with self._lock:
             #reutrn if all fields have been filled
             return (self.pressure is not None) and (self.ecage_temp is not None) and (self.camera_cage_temp is not None)
 
@@ -256,10 +260,10 @@ class PressureMonitor(Node):
 
         self.depressurization_server = ActionServer(self, Depressurize,'depressurize', self.depressurize_callback, callback_group=self.depressurization_routine_group)
 
-        self.pressure_sub = self.create_subscription(Float32, "vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data, callback_group=self.general_callback_group)
-        self.ecage_temp_sub = self.create_subscription(Float32, "state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
-        self.camera_cage_temp_sub = self.create_subscription(Float32, "state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
-        
+        self.pressure_sub = self.create_subscription(Float32, "/talos/vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.ecage_temp_sub = self.create_subscription(Float32, "/talos/state/poac/temp", self.update_ecage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.camera_cage_temp_sub = self.create_subscription(Float32, "/talos/state/camera_cage_bb/temp", self.update_camera_cage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
+
         self.led_pub = self.create_publisher(LedCommand, "state/LED", qos_profile_system_default)
         self.pressure_pub = self.create_publisher(Float32, "state/pvt", qos_profile_system_default)
 
@@ -319,26 +323,20 @@ class PressureMonitor(Node):
         while(sample_start_time + sample_time < self.get_current_time_as_double()):
             sleep(.01)
 
-        #copy the sample set
-        initial_samples = self.collecting_sample_set
-
-        #stop sampling
-        self.collecting_sample_set = None
-
         #decide if initial readings were okay
         initial_pressure = 0
 
         #check to make sure the sampler is actually getting filled
-        if not initial_samples.is_filled():
+        if not self.collecting_sample_set.is_filled():
             self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
             self.publish_led_states(LedStates.TEST_FAILED)
             self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
             
 
-        if(initial_samples.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and initial_samples.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and initial_samples.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
-            initial_pressure = initial_samples.get_average_pressure()
+        if(self.collecting_sample_set.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and self.collecting_sample_set.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and self.collecting_sample_set.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
+            initial_pressure = self.collecting_sample_set.get_average_pressure()
         else:
-            self.get_logger().error(f"Cannot proceed with depressurization, the pressure or temperature is too unstable! Pressure Dev: {initial_samples.get_pressure_std_dev()} Ecage Temp Dev: {initial_samples.get_ecage_temp_std_dev()} Camera Cage Dev: {initial_samples.get_camera_cage_temp_std_dev()}")
+            self.get_logger().error(f"Cannot proceed with depressurization, the pressure or temperature is too unstable! Pressure Dev: {self.collecting_sample_set.get_pressure_std_dev()} Ecage Temp Dev: {initial_samples.get_ecage_temp_std_dev()} Camera Cage Dev: {initial_samples.get_camera_cage_temp_std_dev()}")
             goal_handle.abort()
 
             #show error on LEDs
@@ -346,6 +344,8 @@ class PressureMonitor(Node):
             self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
             return Depressurize.Result()
+        
+        self.collecting_sample_set = None
         
         #determine the goal pressure
         target_pressure = initial_pressure - goal_handle.request.net_depressuization
@@ -390,7 +390,7 @@ class PressureMonitor(Node):
 
                 sleep(2)
 
-                self.get_logger().info("Collection begining!")
+                self.get_logger().info("Collection beginning!")
 
                 #add sample set to target
                 self.collecting_sample_set = SampleSet(self.get_current_time_as_double())
@@ -401,21 +401,17 @@ class PressureMonitor(Node):
                 while(sample_start_time + sample_time < self.get_current_time_as_double()):
                     sleep(.01)
                     
-                #copy the sample set
-                current_samples = self.collecting_sample_set
-                self.collecting_sample_set = None
-
-                if not current_samples.is_filled():
+                if not self.collecting_sample_set.is_filled():
                     self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
                     self.publish_led_states(LedStates.TEST_FAILED)
                     self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
                 #check to see if samples are satisfactory
-                if(current_samples.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and current_samples.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and current_samples.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
-                    sampled_final_pressure = current_samples.get_average_pressure()
-                    sampled_final_pvt = current_samples.get_pvt()
-                    sampled_final_pvt_std = current_samples.get_pvt_std()
-                    sampled_final_pvt_samples = current_samples.get_num_samples()
+                if(self.collecting_sample_set.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and self.collecting_sample_set.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and self.collecting_sample_set.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
+                    sampled_final_pressure = self.collecting_sample_set.get_average_pressure()
+                    sampled_final_pvt = self.collecting_sample_set.get_pvt()
+                    sampled_final_pvt_std = self.collecting_sample_set.get_pvt_std()
+                    sampled_final_pvt_samples = self.collecting_sample_set.get_num_samples()
                     sampled_cleanly = True
 
                     self.get_logger().info(f"Current Pressure is {sampled_final_pressure}. Samples were taken cleanly!")
@@ -425,6 +421,8 @@ class PressureMonitor(Node):
                     #flash warning on LEDS
                     self.publish_led_states(LedStates.DIRTY_SAMPLES)
                     sleep(1)
+                    
+                self.collecting_sample_set = None
 
         #publish result
         result_msg = Depressurize.Result()
@@ -556,7 +554,7 @@ class PressureMonitor(Node):
 
     def update_pressure(self, msg):
         self.current_pressure = msg.data
-
+        
         if not (self.collecting_sample_set is None):
             #add sample
             self.collecting_sample_set.add_pressure_sample(msg.data, self.get_current_time_as_double())
@@ -576,7 +574,7 @@ class PressureMonitor(Node):
     
     def turn_off_leds(self):
         #callback for delayed LED turn off
-        self.publish_led_state(0)
+        self.publish_led_states(0)
     
     def publish_led_states(self, state):
         msg = LedCommand()
@@ -584,81 +582,80 @@ class PressureMonitor(Node):
         msg.target = LedCommand.TARGET_ALL
 
         #configure state
-        match state:
-            case 0:
+        if(state == 0):
                 # off state
-                msg.red = 0
-                msg.blue = 0
-                msg.green = 0
+            msg.red = 0
+            msg.blue = 0
+            msg.green = 0
 
-                msg.mode = LedCommand.MODE_SOLID
+            msg.mode = LedCommand.MODE_SOLID
 
-            case 1:
+        elif(state == 1):
                 # analyzing state
-                msg.red = 255
-                msg.blue = 191
-                msg.green = 0
+            msg.red = 255
+            msg.blue = 191
+            msg.green = 0
 
-                msg.mode = LedCommand.MODE_FAST_FLASH
+            msg.mode = LedCommand.MODE_FAST_FLASH
 
-            case 2:
+        elif(state == 2):
                 # long term analyzing state
-                msg.red = 255
-                msg.blue = 191
-                msg.green = 0
+            msg.red = 255
+            msg.blue = 191
+            msg.green = 0
 
-                msg.mode = LedCommand.MODE_BREATH
+            msg.mode = LedCommand.MODE_BREATH
 
-            case 3:
+        elif(state == 3):
                 # all good state
-                msg.red = 0
-                msg.blue = 0
-                msg.green = 255
+            msg.red = 0
+            msg.blue = 0
+            msg.green = 255
 
-                msg.mode = LedCommand.MODE_BREATH
+            msg.mode = LedCommand.MODE_BREATH
 
-            case 4:
+        elif(state == 4):
                 #test failed state
-                msg.red = 255
-                msg.blue = 0
-                msg.green = 0
+            msg.red = 255
+            msg.blue = 0
+            msg.green = 0
 
-                msg.mode = LedCommand.MODE_BREATH
+            msg.mode = LedCommand.MODE_BREATH
 
-            case 5: 
+        elif(state == 5):
                 #keep pumping state
-                msg.red = 0
-                msg.blue = 0
-                msg.green = 255
+            msg.red = 0
+            msg.blue = 0
+            msg.green = 255
 
-                msg.mode = LedCommand.MODE_SOLID
+            msg.mode = LedCommand.MODE_SOLID
 
-            case 6:
+        elif(state == 6):
                 #reduce pressure state
-                msg.red = 255
-                msg.blue = 0
-                msg.green = 0
+            msg.red = 255
+            msg.blue = 0
+            msg.green = 0
 
-                msg.mode = LedCommand.MODE_SLOW_FLASH
+            msg.mode = LedCommand.MODE_SLOW_FLASH
 
-            case 7:
+        elif(state == 7):
                 #pumping complete state
-                msg.red = 0
-                msg.blue = 0
-                msg.green = 255
+            msg.red = 0
+            msg.blue = 0
+            msg.green = 255
 
-                msg.mode = LedCommand.MODE_FAST_FLASH
+            msg.mode = LedCommand.MODE_FAST_FLASH
 
-            case 8: 
+        elif(state == 8):
                 #dirty sampling state
-                msg.red = 255
-                msg.blue = 0
-                msg.green = 0
+            msg.red = 255
+            msg.blue = 0
+            msg.green = 0
 
-                msg.mode = LedCommand.MODE_FAST_FLASH
+            msg.mode = LedCommand.MODE_FAST_FLASH
 
-            case _:
-                self.get_logger().warn(f"Bad LED State Requested: {state}")
+        else:
+            self.get_logger().warn(f"Bad LED State Requested: {state}")
         
         self.led_pub.publish(msg)
 
