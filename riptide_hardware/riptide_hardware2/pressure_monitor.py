@@ -23,6 +23,8 @@ from riptide_msgs2.action import Depressurize
 from riptide_msgs2.msg import LedCommand
 from std_msgs.msg import Float32
 
+from ament_index_python import get_package_share_directory
+
 
 #load these from yaml eventually
 TEMP_STD_DEV_TOLERANCE = 2
@@ -32,6 +34,8 @@ HULL_VOLUME = 1 #not technically needed but makes me feel good inside
 TRUTH_CERTAINTY = .99
 
 PUBLISH_INTERVAL = 1
+
+
 
 #this is cursed and I frankly dont care
 #the pressurization file needs to be persistant across colcon builds so this file needs to hide somewhere safe
@@ -270,8 +274,13 @@ class PressureMonitor(Node):
         #create callback to check depressurization status
         self.create_timer(.1, self.check_pressurization_status, callback_group=self.general_callback_group)
 
+        #load parameters callback
+        self.create_timer(1, self.reload_params, callback_group=self.general_callback_group)
+
         #load in depressurization file
         self.load_pressurization_file()
+
+        #load in parameters
 
     def load_pressurization_file(self):
         # try to open the depressurization log
@@ -296,6 +305,21 @@ class PressureMonitor(Node):
             self.depressurized_pvt_samples = None
 
             self.remove_depressurization_log()
+
+    def load_parameters(self,):
+        #load in ros2 parameter
+
+        self.declare_parameter("robot", "")
+        self.robotName = self.get_parameter("robot").value
+
+        descriptions_share_dir = get_package_share_directory("riptide_descriptions")
+        robot_config_subpath = os.path.join("config", self.robotName + ".yaml")
+        self.configPath = os.path.join(descriptions_share_dir, robot_config_subpath)
+
+        try:
+
+        execpt
+
     
     def depressurize_callback(self, goal_handle):
         self.get_logger().info('Starting Depressurization')
@@ -658,6 +682,12 @@ class PressureMonitor(Node):
             self.get_logger().warn(f"Bad LED State Requested: {state}")
         
         self.led_pub.publish(msg)
+
+    def reload_params(self):
+        #reload ros2 parameters
+        self.temperature_standard_dev = self.get_parameter("temperature_standard_dev").value
+        self.pressure_standard_dev = self.get_parameter("pressure_standard_dev").value
+        self.pressurization_tolerance = self.get_parameter("pressurization_tolerance").value
 
 def main(args=None):
     rclpy.init(args=args)
