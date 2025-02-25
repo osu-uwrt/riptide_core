@@ -3,13 +3,12 @@
 import os
 from enum import Enum
 import numpy as np
-from math import sqrt, log
+from math import sqrt, log, exp
 from scipy import stats
 import yaml
 
 from time import sleep
 from threading import Lock
-from copy import deepcopy
 
 import rclpy
 from rclpy.action import ActionServer
@@ -26,15 +25,10 @@ from std_msgs.msg import Float32
 from ament_index_python import get_package_share_directory
 
 #load these from yaml eventually
-TEMP_STD_DEV_TOLERANCE = 2
-PRESSURE_STD_DEV_TOLERANCE = .001 #bar
-PRESSURIZATION_TOLERANCE = .01 #bar
 HULL_VOLUME = 1 #not technically needed but makes me feel good inside
 TRUTH_CERTAINTY = -100
 
 PUBLISH_INTERVAL = 1
-
-
 
 #this is cursed and I frankly dont care
 #the pressurization file needs to be persistant across colcon builds so this file needs to hide somewhere safe
@@ -287,10 +281,16 @@ class PressureMonitor(Node):
     # the current hull pressure
     current_pressure = 1
 
+    # initial pvt
+    initial_pvt = None
+
     #depressurized pvts
     depressurized_pvt = None
     depressurized_pvt_std = None
     depressurized_pvt_samples = None
+
+    #when the pressurization initially occured
+    initial_pressurization_time = None
 
     #sampling of depressurization status
     sampling_time = None
@@ -329,6 +329,7 @@ class PressureMonitor(Node):
         self.load_pressurization_file()
 
         #load in parameters
+        self.load_parameters()
 
     def load_pressurization_file(self):
         # try to open the depressurization log
@@ -341,6 +342,8 @@ class PressureMonitor(Node):
                 self.depressurized_pvt_std = depressurization_yaml["pvt_std"]
                 self.depressurized_pvt_samples = depressurization_yaml["pvt_samples"]
                 self.sampling_time = depressurization_yaml["sampling_time"]
+                self.initial_pressurization_time = depressurization_yaml["initial_pressurization_time"]
+                self.initial_pvt = depressurization_yaml["initial_pvt"]
 
         except FileNotFoundError as e:
             self.get_logger().warn("Could not find pressurization log! - This could be normal. Did you expect the vehicle to be pressurized?")
@@ -355,7 +358,7 @@ class PressureMonitor(Node):
 
             self.remove_depressurization_log()
             
-       except yaml.constructor.ConstructorError as e:
+        except yaml.constructor.ConstructorError as e:
             self.get_logger().warn("Depressurization log is Ahhh Goofy. This file will be delete and you should check the pressurization status!")
             
             #bring everything to a known state
@@ -376,9 +379,43 @@ class PressureMonitor(Node):
         self.configPath = os.path.join(descriptions_share_dir, robot_config_subpath)
 
         try:
+            with open(self.configPath, "r") as config_file:
+                config = yaml.safe_load(config_file)
 
-        execpt
-    
+                #set params from config
+                self.declare_parameter("temperature_standard_dev", config["pressure_monitoring"]["temperature_standard_dev"])
+                self.declare_parameter("pressure_standard_dev", config["pressure_monitoring"]["pressure_standard_dev"])
+                self.declare_parameter("pressurization_tolerance", config["pressure_monitoring"]["pressurization_tolerance"])
+                self.declare_parameter("hull_volume", config["hull_volume"])
+                self.declare_parameter("leak_decay", config["pressure_monitoring"]["leak_decay"])
+
+        except KeyError:
+
+            self.get_logger().warn("Cannot find keys in config!")
+
+            self.declare_parameter("temperature_standard_dev", 2)
+            self.declare_parameter("pressure_standard_dev", .001)
+            self.declare_parameter("pressurization_tolerance", .02)
+            self.declare_parameter("hull_volume", .1)
+            self.declare_parameter("leak_decay", 84000)
+
+        except FileNotFoundError as e:
+
+            self.get_logger().warn("Cannot open yaml!")
+
+            self.declare_parameter("temperature_standard_dev", 2)
+            self.declare_parameter("pressure_standard_dev", .001)
+            self.declare_parameter("pressurization_tolerance", .02)
+            self.declare_parameter("hull_volume", .1)
+            self.declare_parameter("leak_decay", 84000)
+
+
+        self.temperature_standard_dev = self.get_parameter("temperature_standard_dev").value
+        self.pressure_standard_dev = self.get_parameter("pressure_standard_dev").value
+        self.pressurization_tolerance = self.get_parameter("pressurization_tolerance").value
+        self.hull_volume = self.get_parameter("hull_volume").value
+        self.leak_decay = self.get_parameter("leak_decay").value
+
     def depressurize_callback(self, goal_handle):
         self.get_logger().info('Starting Depressurization')
 
@@ -434,8 +471,12 @@ class PressureMonitor(Node):
             return Depressurize.Result()
             
 
-        if(self.collecting_sample_set.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and self.collecting_sample_set.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and self.collecting_sample_set.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
+        if(self.collecting_sample_set.get_pressure_std_dev() < self.pressure_standard_dev and self.collecting_sample_set.get_ecage_temp_std_dev() < self.temperature_standard_dev and self.collecting_sample_set.get_camera_cage_temp_std_dev() < self.temperature_standard_dev):
             initial_pressure = self.collecting_sample_set.get_average_pressure()
+
+            #calculate and save the initial pvt
+            self.initial_pvt = self.collecting_sample_set.get_pvt()
+
         else:
             self.get_logger().error(f"Cannot proceed with depressurization, the pressure or temperature is too unstable! Pressure Dev: {self.collecting_sample_set.get_pressure_std_dev()} Ecage Temp Dev: {self.collecting_sample_set.get_ecage_temp_std_dev()} Camera Cage Dev: {self.collecting_sample_set.get_camera_cage_temp_std_dev()}")
             goal_handle.abort()
@@ -458,7 +499,7 @@ class PressureMonitor(Node):
         sampled_final_pvt = 0 
         sampled_final_pvt_std = 0
         sampled_final_pvt_samples = 0
-        while(sampled_final_pressure > target_pressure + PRESSURIZATION_TOLERANCE):
+        while(sampled_final_pressure > target_pressure + self.pressurization_tolerance):
 
             #display leds to keep pumping
             self.publish_led_states(LedStates.KEEP_PUMPING.value)
@@ -508,7 +549,7 @@ class PressureMonitor(Node):
                     self.turnoff_led_timer = self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
                 #check to see if samples are satisfactory
-                if(self.collecting_sample_set.get_pressure_std_dev() < PRESSURE_STD_DEV_TOLERANCE and self.collecting_sample_set.get_ecage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE and self.collecting_sample_set.get_camera_cage_temp_std_dev() < TEMP_STD_DEV_TOLERANCE):
+                if(self.collecting_sample_set.get_pressure_std_dev() < self.pressure_standard_dev and self.collecting_sample_set.get_ecage_temp_std_dev() < self.temperature_standard_dev and self.collecting_sample_set.get_camera_cage_temp_std_dev() < self.temperature_standard_dev):
                     sampled_final_pressure = self.collecting_sample_set.get_average_pressure()
                     sampled_final_pvt = self.collecting_sample_set.get_pvt()
                     sampled_final_pvt_std = self.collecting_sample_set.get_pvt_std()
@@ -545,6 +586,9 @@ class PressureMonitor(Node):
         self.depressurized_pvt_std = sampled_final_pvt_std
         self.depressurized_pvt_samples = sampled_final_pvt_samples
 
+        #record the initial pressurization time
+        self.initial_pressurization_time  = self.get_current_time_as_double()
+
         #write the depressurization log
         self.write_depressurization_log()
 
@@ -580,8 +624,6 @@ class PressureMonitor(Node):
         
         #get the stats on the current sample set
         current_pvt = self.collecting_sample_set.get_pvt()
-        current_pvt_std = self.collecting_sample_set.get_pvt_std()
-        current_pvt_samples = self.collecting_sample_set.get_num_samples()
 
         #publish the current pvt
         msg = Float32()
@@ -590,9 +632,11 @@ class PressureMonitor(Node):
 
         #run a truth test on wether or not the amount of gas in the hull is the same
         #self.get_logger().info(f"{self.depressurized_pvt}, {current_pvt}, {self.depressurized_pvt_std}, {current_pvt_std}, {self.depressurized_pvt_samples}, {current_pvt_samples}")
-        leak_certainty = self.truth_test(self.depressurized_pvt, current_pvt,self.depressurized_pvt_std, current_pvt_std, self.depressurized_pvt_samples, current_pvt_samples)
-        if(leak_certainty < TRUTH_CERTAINTY):
-            #depressurization has been detected
+        # leak_certainty = self.truth_test(self.depressurized_pvt, current_pvt,self.depressurized_pvt_std, current_pvt_std, self.depressurized_pvt_samples, current_pvt_samples)
+        # if(leak_certainty < TRUTH_CERTAINTY):
+        maximum_pvt = self.check_pvt()
+        if(current_pvt > maximum_pvt):
+        #     #depressurization has been detected
 
             #probably make a bigger fuss than this
             self.get_logger().error(f"Depressurization Detected!!!!!!!!! Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
@@ -610,41 +654,52 @@ class PressureMonitor(Node):
 
             return
         else:
-            self.get_logger().info(f"Depressurization Status: Leak Certainty: {leak_certainty} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
+            self.get_logger().info(f"Depressurization Status: Leak Certainty: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
             self.current_pvt_w_state = current_pvt
         
         #clear samples and start again
         self.collecting_sample_set = None
             
-    def truth_test(self, mean1, mean2, std1, std2, samples1, samples2):
-        #generic t test returns the probability that the samples are significantly different
+    # def truth_test(self, mean1, mean2, std1, std2, samples1, samples2):
+    #     #generic t test returns the probability that the samples are significantly different
 
-        #check to make sure enought samples
-        if(samples2 < 2 or samples1 < 2):
-            self.get_logger().info("Severe Lack of Samples - take a look at sum")
-            return 0
+    #     #check to make sure enought samples
+    #     if(samples2 < 2 or samples1 < 2):
+    #         self.get_logger().info("Severe Lack of Samples - take a look at sum")
+    #         return 0
 
-        #using Welch's T-Test - uneven varience and uneven number of samples 
-        #ref: https://www.investopedia.com/terms/t/t-test.asp
-        t_value = abs(mean1 - mean2) / sqrt((pow(std1,2) / samples1) + (pow(std2,2) / samples2))
-        dof = pow(((pow(std1,4) / samples1) + (pow(std2,4) / samples2)),2) / (pow(pow(std1,4) / samples1, 2) / (samples1 - 1) + pow((pow(std2,4) / samples2),2) / (samples2 - 1))
+    #     #using Welch's T-Test - uneven varience and uneven number of samples 
+    #     #ref: https://www.investopedia.com/terms/t/t-test.asp
+    #     t_value = abs(mean1 - mean2) / sqrt((pow(std1,2) / samples1) + (pow(std2,2) / samples2))
+    #     dof = pow(((pow(std1,4) / samples1) + (pow(std2,4) / samples2)),2) / (pow(pow(std1,4) / samples1, 2) / (samples1 - 1) + pow((pow(std2,4) / samples2),2) / (samples2 - 1))
 
-        #calculare p-value
-        #scale scales the t value lol so the actual stats are bs
-        p = stats.t.cdf(t_value, df=dof, scale=10)
+    #     #calculare p-value
+    #     #scale scales the t value lol so the actual stats are bs
+    #     p = stats.t.cdf(t_value, df=dof, scale=10)
 
-        #convert to two tailed distribution - statisticall make is 10e15 more times uncertain
+    #     #convert to two tailed distribution - statisticall make is 10e15 more times uncertain
         
-        if not (p == 1):
-            #conversion to reasonable values
-            p_two_tail = log(2 * (1 - p))
-        else:
-            p_two_tail = 2 * TRUTH_CERTAINTY
+    #     if not (p == 1):
+    #         #conversion to reasonable values
+    #         p_two_tail = log(2 * (1 - p))
+    #     else:
+    #         p_two_tail = 2 * TRUTH_CERTAINTY
         
-        #self.get_logger().info(f"{t_value}, {dof}, {p}, {p_two_tail}")
+    #     #self.get_logger().info(f"{t_value}, {dof}, {p}, {p_two_tail}")
 
-        return p_two_tail
+    #     return p_two_tail
     
+    def check_pvt(self):
+        #check what the minimum should be at this points
+        current_time = self.get_current_time_as_double()
+
+        #calcuate the delta time
+        delta_time = current_time - self.initial_pressurization_time 
+
+        #calculate the acceptable amount of decay for this time periods
+        return self.depressurized_pvt - (self.initial_pvt - self.depressurized_pvt) * exp(-delta_time / self.leak_decay)
+
+
     def do_panic(self):
         #overwrite this with the panic behavoir
         self.get_logger().info("I am panic")
@@ -665,6 +720,8 @@ class PressureMonitor(Node):
         data["pvt_std"] = float(self.depressurized_pvt_std)
         data["pvt_samples"] = float(self.depressurized_pvt_samples)
         data["sampling_time"] = self.sampling_time
+        data["initial_pressurization_time"] = self.initial_pressurization_time
+        data["initial_pvt"] = self.initial_pvt
 
         try:
             with open(PRESSURIZATION_LOG_LOCATION, "w") as file:
@@ -814,6 +871,9 @@ class PressureMonitor(Node):
         self.temperature_standard_dev = self.get_parameter("temperature_standard_dev").value
         self.pressure_standard_dev = self.get_parameter("pressure_standard_dev").value
         self.pressurization_tolerance = self.get_parameter("pressurization_tolerance").value
+        self.hull_volume = self.declare_parameter("hull_volume", .1).value
+        self.leak_decay = self.get_parameter("leak_decay").value
+
 
 def main(args=None):
     rclpy.init(args=args)

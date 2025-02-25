@@ -168,6 +168,20 @@ controller:
     #time required for a barrel roll
     barrel_roll_duration: 1.9
 
+pressure_monitoring:
+  #pressurization parameters
+
+  #pressurizating parameters
+  temperature_standard_dev: 2
+  pressure_standard_dev: .001
+  pressurization_tolerance: .01
+
+  #time constant for full return to pressure - modelling leak as linear
+  leak_decay: 86400 # - (1/s)
+
+  #tolerance in leak detection for pulling the pump -> valve emits some error
+  pump_pull_tolerance: .001 # - (factor of initial depressurization delta)
+  
 
 #this is for the newly developed solver
 thruster_solver:
