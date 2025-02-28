@@ -27,29 +27,41 @@ controller:
     base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
 
     auto_tune:
-      #positional error threshold to begin autotuning
+      #positional error threshold to begin autotuning 
       positional_error_threshold: 0.1
 
-      #max velocity threshold for ff autotune
+      #max velocity threshold for ff autotune #
       velocity_threshold: 0.1
 
-      #minimum strength of measurement to be counted in autotuning
+      #minimum strength of measurement to be counted in autotuning #DEPRICATED
       strength_threshold: 0.5
 
-      #learning multiplier for feed forward learning
+      #learning multiplier for feed forward learning #DEPRICATED
       learning_rate: 1.0
       
-      #the maximum buffer length in seconds for autotuning
+      #the maximum buffer length in seconds for autotuning #DEPRICATED
       buffer_duration: 3.0
 
-      #time taken for convergence to occur
+      #time taken for convergence to occur #DEPRICATED
       convergence_time: 10.0
 
-      #the maximum deviation for a measurement for convergence to occur
+      #the maximum deviation for a measurement for convergence to occur #DEPRICATED
       convergence_threshold: 0.02
 
       #axis to perform autotune on (either zero or one)
       auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+
+      #decay factor for FF difference
+      decay_factor: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+
+      #trust threshold for FF changes - minimum trust
+      trust_threshold: [0.97, 0.97, 0.97, 0.97, 0.97, 0.97]
+
+      #variation_threshold for FF changes (max standard variation)
+      variation_threshold: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+      #axis weights for auto FF convergence
+      axis_weights: [1.0, 1.0, 1.0, 2.0, 2.0, 2.0]
 
   controller_scale:
 
