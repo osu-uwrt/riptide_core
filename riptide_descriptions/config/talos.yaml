@@ -49,19 +49,22 @@ controller:
       convergence_threshold: 0.02
 
       #axis to perform autotune on (either zero or one)
-      auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0]
 
       #decay factor for FF difference
-      decay_factor: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]
+      decay_factor: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
 
       #trust threshold for FF changes - minimum trust
-      trust_threshold: [0.97, 0.97, 0.97, 0.97, 0.97, 0.97]
+      trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
 
       #variation_threshold for FF changes (max standard variation)
-      variation_threshold: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+      variation_threshold: [5.0, 5.0, 5.0, 1.0, 1.0, 1.0]
+      
+      #variation_threshold for FF changes (max standard variation)
+      variation_der_threshold: [0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
 
       #axis weights for auto FF convergence
-      axis_weights: [1.0, 1.0, 1.0, 2.0, 2.0, 2.0]
+      axis_weights: [1.0, 1.0, 1.0, 10.0, 10.0, 10.0]
 
   controller_scale:
 
