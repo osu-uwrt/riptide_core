@@ -86,8 +86,39 @@ controller:
     #nominal time
     nominal_time: .6 #seconds
 
+  #params for auto drag compensations
+  drag_compensator:
+
+    #which axis to apply correction to based on which velocities
+    #columns are the axes to base the drag compensation off of -- rows are the axes with compensation
+    apply_mask: [0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,1.0,1.0,0.0,0.0,0.0,
+                1.0,1.0,0.0,0.0,0.0,0.0,
+                1.0,1.0,0.0,0.0,0.0,0.0]
+
+    #minimum samples of motion to use for compensation cycle
+    minimum_samples: 60.0
+
+    #minimum velocity to count as motion for the sampler
+    minimum_absolute_velocity: 0.2
+
+    #minimum positional_error to count as motion for the sampler
+    minimum_absolute_positional_error: 0.2
+
+    #minimum average compensation velocity to update the drag compensation
+    minimum_average_sampled_velocity: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+
+    #minimum correspondance coeffiecent to update compensation
+    minimum_R2_coeffiecent: 0.7
+
+    #learning rate for drag compensation
+    learning_rate: 0.2
+
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
+    #DEPRICATED
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
                 -7.4651,   17.7641,    7.0013,    0.3067, #y
                 -7.0964,   27.6349,    6.9723,    0.3827, #z
