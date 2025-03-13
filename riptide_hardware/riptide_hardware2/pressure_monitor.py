@@ -288,6 +288,7 @@ class PressureMonitor(Node):
     depressurized_pvt = None
     depressurized_pvt_std = None
     depressurized_pvt_samples = None
+    pvt_leak_rate_compensation = None #allows for the max pvt to be lowered such that the pvt checker also makes sure the AUV does not leak at a fast rate
 
     #when the pressurization initially occured
     initial_pressurization_time = None
@@ -344,6 +345,7 @@ class PressureMonitor(Node):
                 self.sampling_time = depressurization_yaml["sampling_time"]
                 self.initial_pressurization_time = depressurization_yaml["initial_pressurization_time"]
                 self.initial_pvt = depressurization_yaml["initial_pvt"]
+                self.pvt_leak_rate_compensation = depressurization_yaml["pvt_leak_rate_compensation"]
 
         except FileNotFoundError as e:
             self.get_logger().warn("Could not find pressurization log! - This could be normal. Did you expect the vehicle to be pressurized?")
@@ -355,6 +357,7 @@ class PressureMonitor(Node):
             self.depressurized_pvt = None
             self.depressurized_pvt_std = None
             self.depressurized_pvt_samples = None
+            self.pvt_leak_rate_compensation = None
 
             self.remove_depressurization_log()
             
@@ -365,6 +368,7 @@ class PressureMonitor(Node):
             self.depressurized_pvt = None
             self.depressurized_pvt_std = None
             self.depressurized_pvt_samples = None
+            self.pvt_leak_rate_compensation = None
 
             self.remove_depressurization_log()
 
@@ -428,6 +432,7 @@ class PressureMonitor(Node):
         self.depressurized_pvt = None
         self.depressurized_pvt_std = None
         self.depressurized_pvt_samples = None
+        self.pvt_leak_rate_compensation = None
 
         #remove depressurization log
         self.remove_depressurization_log()
@@ -590,6 +595,7 @@ class PressureMonitor(Node):
         self.depressurized_pvt = sampled_final_pvt
         self.depressurized_pvt_std = sampled_final_pvt_std
         self.depressurized_pvt_samples = sampled_final_pvt_samples
+        self.pvt_leak_rate_compensation = 0
 
         #record the initial pressurization time
         self.initial_pressurization_time  = self.get_current_time_as_double()
@@ -635,11 +641,9 @@ class PressureMonitor(Node):
         msg.data = current_pvt
         self.pressure_pub.publish(msg)
 
-        #run a truth test on wether or not the amount of gas in the hull is the same
-        #self.get_logger().info(f"{self.depressurized_pvt}, {current_pvt}, {self.depressurized_pvt_std}, {current_pvt_std}, {self.depressurized_pvt_samples}, {current_pvt_samples}")
-        # leak_certainty = self.truth_test(self.depressurized_pvt, current_pvt,self.depressurized_pvt_std, current_pvt_std, self.depressurized_pvt_samples, current_pvt_samples)
-        # if(leak_certainty < TRUTH_CERTAINTY):
+        #check to see if there is more air in the AUV than there should be
         maximum_pvt = self.check_pvt()
+
         if(current_pvt > maximum_pvt):
         #     #depressurization has been detected
 
@@ -653,6 +657,7 @@ class PressureMonitor(Node):
             self.depressurized_pvt = None
             self.depressurized_pvt_std = None
             self.depressurized_pvt_samples = None
+            self.pvt_leak_rate_compensation = None
 
             #remove depressurization log
             self.remove_depressurization_log()
@@ -662,37 +667,11 @@ class PressureMonitor(Node):
             self.get_logger().info(f"Depressurization Status: Max PVT: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
             self.current_pvt_w_state = current_pvt
         
+            #adjust the rate compensator - only move down
+            self.pvt_leak_rate_compensation += min(0, current_pvt + self.leak_init * (self.initial_pvt - self.depressurized_pvt) - maximum_pvt)
+
         #clear samples and start again
         self.collecting_sample_set = None
-            
-    # def truth_test(self, mean1, mean2, std1, std2, samples1, samples2):
-    #     #generic t test returns the probability that the samples are significantly different
-
-    #     #check to make sure enought samples
-    #     if(samples2 < 2 or samples1 < 2):
-    #         self.get_logger().info("Severe Lack of Samples - take a look at sum")
-    #         return 0
-
-    #     #using Welch's T-Test - uneven varience and uneven number of samples 
-    #     #ref: https://www.investopedia.com/terms/t/t-test.asp
-    #     t_value = abs(mean1 - mean2) / sqrt((pow(std1,2) / samples1) + (pow(std2,2) / samples2))
-    #     dof = pow(((pow(std1,4) / samples1) + (pow(std2,4) / samples2)),2) / (pow(pow(std1,4) / samples1, 2) / (samples1 - 1) + pow((pow(std2,4) / samples2),2) / (samples2 - 1))
-
-    #     #calculare p-value
-    #     #scale scales the t value lol so the actual stats are bs
-    #     p = stats.t.cdf(t_value, df=dof, scale=10)
-
-    #     #convert to two tailed distribution - statisticall make is 10e15 more times uncertain
-        
-    #     if not (p == 1):
-    #         #conversion to reasonable values
-    #         p_two_tail = log(2 * (1 - p))
-    #     else:
-    #         p_two_tail = 2 * TRUTH_CERTAINTY
-        
-    #     #self.get_logger().info(f"{t_value}, {dof}, {p}, {p_two_tail}")
-
-    #     return p_two_tail
     
     def check_pvt(self):
         #check what the minimum should be at this points
@@ -702,7 +681,7 @@ class PressureMonitor(Node):
         delta_time = current_time - self.initial_pressurization_time 
 
         #calculate the acceptable amount of decay for this time periods
-        return self.initial_pvt - (self.initial_pvt - self.depressurized_pvt) * exp(-delta_time / self.leak_decay) + self.leak_init * (self.initial_pvt - self.depressurized_pvt)
+        return self.initial_pvt - (self.initial_pvt - self.depressurized_pvt) * exp(-delta_time / self.leak_decay) + self.leak_init * (self.initial_pvt - self.depressurized_pvt) + self.pvt_leak_rate_compensation
 
 
     def do_panic(self):
@@ -727,6 +706,7 @@ class PressureMonitor(Node):
         data["sampling_time"] = self.sampling_time
         data["initial_pressurization_time"] = self.initial_pressurization_time
         data["initial_pvt"] = self.initial_pvt
+        data["leak_rate_compensation"] = self.pvt_leak_rate_compensation
 
         try:
             with open(PRESSURIZATION_LOG_LOCATION, "w") as file:
