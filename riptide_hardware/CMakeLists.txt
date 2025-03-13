@@ -35,6 +35,7 @@ ament_target_dependencies(depth_converter
   riptide_msgs2
   Eigen3
   robot_localization
+  nortek_dvl
 )
 
 # Install the C++ executable
