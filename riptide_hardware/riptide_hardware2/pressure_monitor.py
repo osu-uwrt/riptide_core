@@ -404,7 +404,7 @@ class PressureMonitor(Node):
 
         except FileNotFoundError as e:
 
-            self.get_logger().warn("Cannot open yaml!")
+            self.get_logger().warn(f"Cannot open yaml {self.configPath}!")
 
             self.declare_parameter("temperature_standard_dev", 2)
             self.declare_parameter("pressure_standard_dev", .001)
@@ -535,7 +535,7 @@ class PressureMonitor(Node):
                 #run sampling to detect if pressurization is stable
                 self.get_logger().info("Please wait! Collecting Pressure Sample Data!")
 
-                sleep(3)
+                sleep(30)
 
                 self.get_logger().info("Collection beginning!")
 
@@ -702,7 +702,7 @@ class PressureMonitor(Node):
         delta_time = current_time - self.initial_pressurization_time 
 
         #calculate the acceptable amount of decay for this time periods
-        return self.initial_pvt - (self.initial_pvt - self.depressurized_pvt) * exp(-delta_time / self.leak_decay) + self.leak_init
+        return self.initial_pvt - (self.initial_pvt - self.depressurized_pvt) * exp(-delta_time / self.leak_decay) + self.leak_init * (self.initial_pvt - self.depressurized_pvt)
 
 
     def do_panic(self):

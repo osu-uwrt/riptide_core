@@ -110,7 +110,8 @@ def generate_launch_description():
                 package='riptide_hardware2',
                 executable='pressure_monitor.py',
                 name='pressure_monitor',
-                output='screen'
+                output='screen',
+                parameters=[{"robot":LC('robot')}]
             )        
         ], scoped=True)
     ])

@@ -9,6 +9,7 @@ mass: 31.998
 com: [-0.148, 0.040, -0.071]
 inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 
+hull_volume: .11 #make this real
 
 # Controller parameters
 #params for the newly developed overseer
@@ -223,10 +224,10 @@ pressure_monitoring:
   pressurization_tolerance: .01
 
   #time constant for full return to pressure - modelling leak as linear
-  leak_decay: 86400 # - (1/s)
+  leak_decay: 14400 # - (1/s)
 
   #tolerance in leak detection for pulling the pump -> valve emits some error
-  pump_pull_tolerance: .001 # - (factor of initial depressurization delta)
+  initial_leak: .0025 # - (factor of initial depressurization delta)
   
 
 #this is for the newly developed solver
@@ -289,10 +290,11 @@ imu:
   sigma_omega: 0.01 # Stdev in deg/s. Used by sim
   sigma_angle: 0.5 # Std dev in deg. Used by sim
   yaw_drift:   1.5 # deg/min 
-  pose: [-0.0505, -0.0769, 0.0529, 3.141, 0.0, -1.5707] #[-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
+  # pose: [-0.0505, -0.0769, 0.0529, 3.141, 0.0, -1.5707] #[-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
+  pose: [-0.1722, -0.13072, 0.02537, 3.141, 0.0, -1.5707]
 
 fog:
-  pose: [0.0, 0.0, 0.0, 3.1415, 0.0, 0.0]
+  pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
