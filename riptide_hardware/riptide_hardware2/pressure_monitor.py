@@ -639,7 +639,6 @@ class PressureMonitor(Node):
         #publish the current pvt
         msg = Float32()
         msg.data = current_pvt
-        self.pressure_pub.publish(msg)
 
         #check to see if there is more air in the AUV than there should be
         maximum_pvt = self.check_pvt()
@@ -844,8 +843,8 @@ class PressureMonitor(Node):
         #send the pressure state
         msg = Float32()
         
-        if not (self.current_pvt_w_state is None):
-            msg.data = float(self.current_pvt_w_state)
+        if not (self.current_pvt_w_state is None) and (self.initial_pvt is None):
+            msg.data = float((self.current_pvt_w_state - self.depressurized_pvt)/ (self.initial_pvt - self.depressurized_pvt))
         else:
             msg.data = 0.0
         
