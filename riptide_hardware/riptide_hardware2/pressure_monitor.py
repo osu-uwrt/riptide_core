@@ -374,7 +374,7 @@ class PressureMonitor(Node):
         self.declare_parameter("robot", "")
         self.robotName = self.get_parameter("robot").value
 
-        descriptions_share_dir = get_package_share_directory("riptide_descriptions")
+        descriptions_share_dir = get_package_share_directory("riptide_descriptions2")
         robot_config_subpath = os.path.join("config", self.robotName + ".yaml")
         self.configPath = os.path.join(descriptions_share_dir, robot_config_subpath)
 
@@ -388,6 +388,7 @@ class PressureMonitor(Node):
                 self.declare_parameter("pressurization_tolerance", config["pressure_monitoring"]["pressurization_tolerance"])
                 self.declare_parameter("hull_volume", config["hull_volume"])
                 self.declare_parameter("leak_decay", config["pressure_monitoring"]["leak_decay"])
+                self.declare_parameter("leak_init", config["pressure_monitoring"]["initial_leak"])
 
         except KeyError:
 
@@ -398,6 +399,8 @@ class PressureMonitor(Node):
             self.declare_parameter("pressurization_tolerance", .02)
             self.declare_parameter("hull_volume", .1)
             self.declare_parameter("leak_decay", 84000)
+            self.declare_parameter("leak_init", .00001)
+
 
         except FileNotFoundError as e:
 
@@ -408,6 +411,7 @@ class PressureMonitor(Node):
             self.declare_parameter("pressurization_tolerance", .02)
             self.declare_parameter("hull_volume", .1)
             self.declare_parameter("leak_decay", 84000)
+            self.declare_parameter("leak_init", .00001)
 
 
         self.temperature_standard_dev = self.get_parameter("temperature_standard_dev").value
@@ -415,6 +419,7 @@ class PressureMonitor(Node):
         self.pressurization_tolerance = self.get_parameter("pressurization_tolerance").value
         self.hull_volume = self.get_parameter("hull_volume").value
         self.leak_decay = self.get_parameter("leak_decay").value
+        self.leak_init = self.get_parameter("leak_init").value
 
     def depressurize_callback(self, goal_handle):
         self.get_logger().info('Starting Depressurization')
@@ -639,7 +644,7 @@ class PressureMonitor(Node):
         #     #depressurization has been detected
 
             #probably make a bigger fuss than this
-            self.get_logger().error(f"Depressurization Detected!!!!!!!!! Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
+            self.get_logger().error(f"Depressurization Detected!!!!!!!!!  Max PVT: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
 
             #maybe hinge this on if the system is in the water?
             self.do_panic()
@@ -654,7 +659,7 @@ class PressureMonitor(Node):
 
             return
         else:
-            self.get_logger().info(f"Depressurization Status: Leak Certainty: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
+            self.get_logger().info(f"Depressurization Status: Max PVT: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
             self.current_pvt_w_state = current_pvt
         
         #clear samples and start again
@@ -697,7 +702,7 @@ class PressureMonitor(Node):
         delta_time = current_time - self.initial_pressurization_time 
 
         #calculate the acceptable amount of decay for this time periods
-        return self.depressurized_pvt - (self.initial_pvt - self.depressurized_pvt) * exp(-delta_time / self.leak_decay)
+        return self.initial_pvt - (self.initial_pvt - self.depressurized_pvt) * exp(-delta_time / self.leak_decay) + self.leak_init
 
 
     def do_panic(self):
@@ -871,8 +876,9 @@ class PressureMonitor(Node):
         self.temperature_standard_dev = self.get_parameter("temperature_standard_dev").value
         self.pressure_standard_dev = self.get_parameter("pressure_standard_dev").value
         self.pressurization_tolerance = self.get_parameter("pressurization_tolerance").value
-        self.hull_volume = self.declare_parameter("hull_volume", .1).value
+        self.hull_volume = self.get_parameter("hull_volume").value
         self.leak_decay = self.get_parameter("leak_decay").value
+        self.leak_init = self.get_parameter("leak_init").value
 
 
 def main(args=None):
