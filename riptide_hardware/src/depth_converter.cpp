@@ -6,8 +6,11 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "nortek_dvl_msgs/msg/dvl.hpp"
 #include "Eigen/Dense"
+#include <chrono>
 
 using std::placeholders::_1;
+
+using namespace std::chrono_literals;
 
 class DepthConverter : public rclcpp::Node {
 public:
@@ -27,9 +30,9 @@ public:
 
         this->declare_parameter("use_dvl", true);
         //calculate the depth depth factor based on the dvl providing the pressure in decibar
-        double dvl_depth_factor_init = 1000 * 9.81 / 10000 // db per meter
+        double dvl_depth_factor_init = -1000 * 9.81 / 10000; // db per meter
         this->declare_parameter("dvl_depth_factor", dvl_depth_factor_init);
-        this->declare_parameter("dvl_depth_factor", .01);
+        this->declare_parameter("dvl_varaince", .01);
 
         this->param_refresh_timer = this->create_wall_timer(1000ms, std::bind(&DepthConverter::refresh_parameters, this));
     }
@@ -71,7 +74,7 @@ private:
         }
     }
 
-    void depth_callback_dvl(){
+    void depth_callback_dvl(const nortek_dvl_msgs::msg::Dvl::SharedPtr msg){
         if(!this->use_dvl){
             return;
         }
@@ -114,7 +117,7 @@ private:
     }
 
     rclcpp::Subscription<riptide_msgs2::msg::Depth>::SharedPtr sub_;
-    rclcpp::Subscription<riptide_msgs2::msg::Depth>::SharedPtr sub_dvl;
+    rclcpp::Subscription<nortek_dvl_msgs::msg::Dvl>::SharedPtr sub_dvl;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pub_;
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -124,8 +127,8 @@ private:
     rclcpp::TimerBase::SharedPtr param_refresh_timer;
 
     bool use_dvl = false;
-    double dvl_depth_factor = 0
-    double dvl_variance = 0
+    double dvl_depth_factor = 0;
+    double dvl_variance = 0;
 };
 
 int main(int argc, char * argv[]) {

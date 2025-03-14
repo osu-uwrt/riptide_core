@@ -20,6 +20,7 @@ find_package(diagnostic_updater REQUIRED)
 find_package(diagnostic_aggregator REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nortek_dvl REQUIRED)
+find_package(nortek_dvl_msgs REQUIRED)
 find_package(robot_localization REQUIRED)
 
 # Include directories
@@ -36,6 +37,7 @@ ament_target_dependencies(depth_converter
   Eigen3
   robot_localization
   nortek_dvl
+  nortek_dvl_msgs
 )
 
 # Install the C++ executable

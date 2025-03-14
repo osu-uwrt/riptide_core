@@ -25,7 +25,7 @@ controller:
 
   feed_forward:
     #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
-    base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
+    base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
 
     auto_tune:
       #positional error threshold to begin autotuning 
@@ -95,8 +95,8 @@ controller:
     apply_mask: [0.0,0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,0.0,
-                0.0,1.0,1.0,0.0,0.0,0.0,
-                1.0,0.0,1.0,0.0,0.0,0.0,
+                0.0,1.0,0.0,0.0,0.0,0.0,
+                1.0,0.0,0.0,0.0,0.0,0.0,
                 1.0,1.0,0.0,0.0,0.0,0.0]
 
     #minimum samples of motion to use for compensation cycle
@@ -112,10 +112,10 @@ controller:
     minimum_average_sampled_velocity: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 
     #minimum correspondance coeffiecent to update compensation
-    minimum_R2_coeffiecent: 0.7
+    minimum_R2_coeffiecent: 0.9
 
     #learning rate for drag compensation
-    learning_rate: 0.2
+    learning_rate: 0.5
 
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
