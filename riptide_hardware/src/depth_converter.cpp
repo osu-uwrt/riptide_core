@@ -45,7 +45,7 @@ public:
         double dvl_depth_factor_init = -1000 * 9.81 / 10000; // db per meter
         this->declare_parameter("dvl_depth_factor", dvl_depth_factor_init);
         this->declare_parameter("dvl_varaince", .01);
-        this->declare_parameter("pub_rate", true);
+        this->declare_parameter("pub_rate", false);
 
         this->param_refresh_timer = this->create_wall_timer(1000ms, std::bind(&DepthConverter::refresh_parameters, this));
     }
@@ -94,7 +94,7 @@ private:
                 out_msg.header = msg->header;
                 out_msg.header.frame_id = "odom";
                 out_msg.twist.twist.linear.z = depth_roc;
-                out_msg.twist.covariance[14] = msg->variance;
+                out_msg.twist.covariance[14] = 1;
                 out_msg.header.stamp = this->get_clock()->now();
 
                 if(this->pub_rate){
