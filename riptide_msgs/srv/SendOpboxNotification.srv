@@ -1,0 +1,11 @@
+# should correspond to the enum in opboxframes.hpp in the opbox_software package
+uint8 NOTIFICATION_WARNING=0
+uint8 NOTIFICATION_ERROR=1
+uint8 NOTIFICATION_FATAL=2
+
+uint8 severity
+string sensor
+string description
+---
+bool success
+string message
