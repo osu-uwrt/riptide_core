@@ -60,6 +60,13 @@
                     false, false, true,
                     false, false, false]
 
+    pose2: depth/twist
+    pose2_config: [false, false, true,
+                  false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, false]
+
     pose0: depth/pose
     pose0_config: [false, false, true,
                   false, false, false,
