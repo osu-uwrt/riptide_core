@@ -45,6 +45,7 @@ public:
         double dvl_depth_factor_init = -1000 * 9.81 / 10000; // db per meter
         this->declare_parameter("dvl_depth_factor", dvl_depth_factor_init);
         this->declare_parameter("dvl_varaince", .01);
+        this->declare_parameter("pub_rate", true);
 
         this->param_refresh_timer = this->create_wall_timer(1000ms, std::bind(&DepthConverter::refresh_parameters, this));
     }
@@ -95,7 +96,10 @@ private:
                 out_msg.twist.twist.linear.z = depth_roc;
                 out_msg.twist.covariance[14] = msg->variance;
                 out_msg.header.stamp = this->get_clock()->now();
-                pub_twist->publish(out_msg);
+
+                if(this->pub_rate){
+                    pub_twist->publish(out_msg);
+                }
 
                 //save data for the next time around
                 previous_depth = current_depth;
@@ -153,6 +157,7 @@ private:
     }
     void refresh_parameters(){
         this->use_dvl = this->get_parameter("use_dvl").as_bool();
+        this->pub_rate = this->get_parameter("pub_rate").as_bool();
         this->dvl_depth_factor = this->get_parameter("dvl_depth_factor").as_double();
         this->dvl_variance = this->get_parameter("dvl_varaince").as_double();
 
@@ -170,6 +175,7 @@ private:
     rclcpp::TimerBase::SharedPtr param_refresh_timer;
 
     bool use_dvl = false;
+    bool pub_rate = false;
     double dvl_depth_factor = 0;
     double dvl_variance = 0;
 
