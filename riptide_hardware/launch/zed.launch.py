@@ -53,6 +53,7 @@ def generate_launch_description():
                     'pos_tracking.publish_tf': False,
                     'pos_tracking.publish_map_tf': False,
                     'sensors.publish_imu_tf': False,
+                    'general.optional_opencv_calibration_file': "/home/ros/zed_cals/ffc_calibration.yaml"
                     # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
                 },
             ]
@@ -75,6 +76,7 @@ def generate_launch_description():
                     'pos_tracking.publish_tf': False,
                     'pos_tracking.publish_map_tf': False,
                     'sensors.publish_imu_tf': False,
+                    'general.optional_opencv_calibration_file': "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
                     # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
                 },
             ]

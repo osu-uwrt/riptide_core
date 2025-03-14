@@ -282,7 +282,7 @@ torpedos:
   baseline: 0.0333375 #1 5/16 in
 
 droppers:
-  pose: [-0.35, 0.0, 0.05, 0.0, 0.0, 0.0]
+  pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
 
 cameras: [
   {
@@ -291,11 +291,11 @@ cameras: [
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
-  {
+ {
     type: zed,
     name: dfc,
     baseline: 0.045,
-    pose: [0.06, 0, -0.01, 0, 1.5707, 0]
+    pose: [-0.145, -0.080, -0.08, 1.5707, 1.5707, 0]
   }
 ]
 
