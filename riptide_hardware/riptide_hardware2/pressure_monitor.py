@@ -345,13 +345,13 @@ class PressureMonitor(Node):
                 self.sampling_time = depressurization_yaml["sampling_time"]
                 self.initial_pressurization_time = depressurization_yaml["initial_pressurization_time"]
                 self.initial_pvt = depressurization_yaml["initial_pvt"]
-                self.pvt_leak_rate_compensation = depressurization_yaml["pvt_leak_rate_compensation"]
+                self.pvt_leak_rate_compensation = depressurization_yaml["leak_rate_compensation"]
 
         except FileNotFoundError as e:
             self.get_logger().warn("Could not find pressurization log! - This could be normal. Did you expect the vehicle to be pressurized?")
 
         except KeyError as e:
-            self.get_logger().warn("The depressurization file was corrupted! This file will be delete and you should check the pressurization status!")
+            self.get_logger().warn("The depressurization file was corrupted! This file will be deleted and you should check the pressurization status!")
 
             #bring everything to a known state
             self.depressurized_pvt = None
@@ -647,7 +647,7 @@ class PressureMonitor(Node):
         #     #depressurization has been detected
 
             #probably make a bigger fuss than this
-            self.get_logger().error(f"Depressurization Detected!!!!!!!!!  Max PVT: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
+            self.get_logger().error(f"Depressurization Detected!!!!!!!!!  Max PVT: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT: {current_pvt} Diff: {maximum_pvt - current_pvt}")
 
             #maybe hinge this on if the system is in the water?
             self.do_panic()
@@ -663,7 +663,7 @@ class PressureMonitor(Node):
 
             return
         else:
-            self.get_logger().info(f"Depressurization Status: Max PVT: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT{current_pvt}")
+            self.get_logger().info(f"Depressurization Status: Max PVT: {maximum_pvt} Original PVT: {self.depressurized_pvt} New PVT: {current_pvt} Diff: {maximum_pvt - current_pvt}")
             self.current_pvt_w_state = current_pvt
         
             #adjust the rate compensator - only move down
@@ -704,7 +704,7 @@ class PressureMonitor(Node):
         data["pvt_samples"] = float(self.depressurized_pvt_samples)
         data["sampling_time"] = self.sampling_time
         data["initial_pressurization_time"] = self.initial_pressurization_time
-        data["initial_pvt"] = self.initial_pvt
+        data["initial_pvt"] = float(self.initial_pvt)
         data["leak_rate_compensation"] = self.pvt_leak_rate_compensation
 
         try:
@@ -843,7 +843,7 @@ class PressureMonitor(Node):
         #send the pressure state
         msg = Float32()
         
-        if not (self.current_pvt_w_state is None) and (self.initial_pvt is None):
+        if not (self.current_pvt_w_state is None) and not (self.initial_pvt is None):
             msg.data = float((self.current_pvt_w_state - self.depressurized_pvt)/ (self.initial_pvt - self.depressurized_pvt))
         else:
             msg.data = 0.0
