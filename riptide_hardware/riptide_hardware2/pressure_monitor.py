@@ -850,7 +850,8 @@ class PressureMonitor(Node):
         if(self.current_pvt_w_state == -1.0):
             msg.data = -1.0
         elif not (self.current_pvt_w_state is None) and not (self.initial_pvt is None):
-            msg.data = float((self.current_pvt_w_state - self.depressurized_pvt)/ (self.initial_pvt - self.depressurized_pvt))
+            msg.data = max(float((self.current_pvt_w_state - self.depressurized_pvt)/ (self.initial_pvt - self.depressurized_pvt)), 0)
+
         else:
             msg.data = 0.0
         
