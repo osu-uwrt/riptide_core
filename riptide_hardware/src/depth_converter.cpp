@@ -125,6 +125,8 @@ private:
             return;
         }
 
+
+
         try {
             auto b2o_transform = tf_buffer_->lookupTransform("odom", namespace_ + "/base_link", tf2::TimePointZero);
             Eigen::Quaterniond b2o_orientation(
@@ -141,6 +143,8 @@ private:
                     pressure_transform.transform.translation.y,
                     pressure_transform.transform.translation.z);
             }
+
+            RCLCPP_WARN(this->get_logger(), "OG Depth: %f", msg->pressure / dvl_depth_factor);
 
             double added_depth = b2o_matrix.col(2).dot(b2p_vector_.value());
 

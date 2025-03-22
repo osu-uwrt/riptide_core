@@ -630,8 +630,12 @@ class PressureMonitor(Node):
             return
         
         if not self.collecting_sample_set.is_filled():
-            self.get_logger().warn("Sample collcector is not filling! Please ensure sampling time is long enough and all publishers are working!")
+            self.get_logger().warn("Sample collector is not filling! Please ensure sampling time is long enough and all publishers are working!")
             self.do_not_getting_pressure()
+            
+            #reset and wait for samples
+            self.collecting_sample_set = None
+            return
         
         #get the stats on the current sample set
         current_pvt = self.collecting_sample_set.get_pvt()
