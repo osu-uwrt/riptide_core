@@ -40,7 +40,7 @@ public:
         std::string full_namespace = this->get_namespace();
         namespace_ = full_namespace.substr(1); // Skip the leading slash
 
-        this->declare_parameter("use_dvl", true);
+        this->declare_parameter("use_dvl", false);
         //calculate the depth depth factor based on the dvl providing the pressure in decibar
         double dvl_depth_factor_init = -1000 * 9.81 / 10000; // db per meter
         this->declare_parameter("dvl_depth_factor", dvl_depth_factor_init);
