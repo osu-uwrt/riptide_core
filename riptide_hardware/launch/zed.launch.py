@@ -46,7 +46,6 @@ def generate_launch_description():
                     plugin='sterolabs::ZedCamera',
                     namespace="ffc",
                     name='zed_node',
-                    output='screen',
                     parameters=[
                         # YAML files
                         zed_config_path,  # Common parameters
@@ -70,7 +69,6 @@ def generate_launch_description():
                     plugin='sterolabs::ZedCamera',
                     namespace="dfc",
                     name='zed_node',
-                    output='screen',
                     parameters=[
                         # YAML files
                         zed_config_path,  # Common parameters
