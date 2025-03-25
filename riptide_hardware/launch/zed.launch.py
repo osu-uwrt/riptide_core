@@ -10,6 +10,7 @@ import os
 zed_launch_file = os.path.join(get_package_share_directory(
     "zed_wrapper"), "launch", "zed_camera.launch.py")
 zed_config_path = os.path.join(get_package_share_directory('riptide_hardware2'), "cfg", "zed_common.yaml")
+zed_compression_path = os.path.join(get_package_share_directory('riptide_hardware2'), "cfg", "zed_compression.yaml")
 
 def generate_launch_description():
     zed2i_camera_path = os.path.join(
@@ -46,6 +47,7 @@ def generate_launch_description():
             parameters=[
                 # YAML files
                 zed_config_path,  # Common parameters
+                zed_compression_path,
                 zed2i_camera_path,  # Camera related parameters
                 # Overriding
                 {
