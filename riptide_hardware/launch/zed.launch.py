@@ -1,6 +1,7 @@
 from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
+from launch_ros.descriptions import ComposableNode
 from launch.substitutions import LaunchConfiguration as LC, PythonExpression
 from launch.conditions import IfCondition
 from ament_index_python import get_package_share_directory
@@ -36,9 +37,9 @@ def generate_launch_description():
             default_value=[LC("robot"), "/zed"]
         ),
         
-        Node(
-            package='zed_wrapper',
-            executable='zed_wrapper',
+        ComposableNode(
+            package='zed_components',
+            plugin='sterolabs::ZedCamera',
             namespace="ffc",
             name='zed_node',
             output='screen',
@@ -59,9 +60,9 @@ def generate_launch_description():
             ]
         ),
         
-        Node(
-            package='zed_wrapper',
-            executable='zed_wrapper',
+        ComposableNode(
+            package='zed_components',
+            plugin='sterolabs::ZedCamera',
             namespace="dfc",
             name='zed_node',
             output='screen',
