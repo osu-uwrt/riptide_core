@@ -301,6 +301,9 @@ class PressureMonitor(Node):
     #current pvt
     current_pvt_w_state = None
 
+    #is running a depressurization
+    is_running_depressurization = False
+
     def __init__(self):
         super().__init__('pressure_monitor')
 
@@ -426,6 +429,11 @@ class PressureMonitor(Node):
         self.leak_init = self.get_parameter("leak_init").value
 
     def depressurize_callback(self, goal_handle):
+        if(self.is_running_depressurization):
+            self.get_logger().error("I'm gonna blame this one on you! Restart hardware and I may have hapiness again. I detected another pressurization callback running")
+
+        self.is_running_depressurization = True
+
         self.get_logger().info('Starting Depressurization')
 
         #clear the previous depressurization state if any
@@ -436,7 +444,6 @@ class PressureMonitor(Node):
 
         #remove depressurization log
         self.remove_depressurization_log()
-
         
         #get the sampling time
         sample_time = goal_handle.request.sampling_time
@@ -477,7 +484,7 @@ class PressureMonitor(Node):
             self.publish_led_states(LedStates.TEST_FAILED.value)
             self.turnoff_led_timer = self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
         
-
+            self.is_running_depressurization = False
             return Depressurize.Result()
             
 
@@ -495,6 +502,7 @@ class PressureMonitor(Node):
             self.publish_led_states(LedStates.TEST_FAILED.value)
             self.turnoff_led_timer = self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
+            self.is_running_depressurization = False
             return Depressurize.Result()
         
         self.collecting_sample_set = None
@@ -523,7 +531,7 @@ class PressureMonitor(Node):
 
                     #publish feedback
                     feedback_msg = Depressurize.Feedback()
-                    feedback_msg.current_pressure = self.current_pressure
+                    feedback_msg.current_pressure = sampled_final_pressure - self.current_pressure # net change -> makes cal bar happy
                     goal_handle.publish_feedback(feedback_msg)
 
                     #update the publish time
@@ -584,6 +592,7 @@ class PressureMonitor(Node):
             self.publish_led_states(LedStates.TEST_FAILED.value)
             self.turnoff_led_timer = self.create_timer(15, self.turn_off_leds, callback_group=self.general_callback_group)
 
+            self.is_running_depressurization = False
             return Depressurize.Result()
                     
         #publish result
@@ -609,6 +618,7 @@ class PressureMonitor(Node):
 
         goal_handle.succeed()
 
+        self.is_running_depressurization = False
         return result_msg             
 
     def check_pressurization_status(self):

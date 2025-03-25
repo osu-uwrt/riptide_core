@@ -210,11 +210,11 @@ pressure_monitoring:
   #time constant for full return to pressure - modelling leak as linear
   #leak_decay: 14400 # - (1/s) works in lab
   #leak_decay: 7200 # 12 C
-  leak_decay: 3600
+  leak_decay: 3600 # lake validated
 
   #tolerance in leak detection for pulling the pump -> valve emits some error
   #initial_leak: .0025 # - (factor of initial depressurization delta) lab
-  initial_leak: .005
+  initial_leak: .005 #lake validated
 
 #this is for the newly developed solver
 thruster_solver:
