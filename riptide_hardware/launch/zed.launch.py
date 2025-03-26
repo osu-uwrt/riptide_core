@@ -38,12 +38,17 @@ def generate_launch_description():
             default_value=[LC("robot"), "/zed"]
         ),
         
-        LoadComposableNodes(
-            target_container="/zed",
-            composable_node_descriptions= [
+        ComposableNodeContainer(
+            name="zed_container",
+            namespace="ffc",
+            package='rclcpp_components',
+            executable="component_container",
+            arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
+            output='screen',
+            composable_node_descriptions=[
                 ComposableNode(
                     package='zed_components',
-                    plugin='sterolabs::ZedCamera',
+                    plugin='stereolabs::ZedCamera',
                     namespace="ffc",
                     name='zed_node',
                     parameters=[
@@ -63,10 +68,20 @@ def generate_launch_description():
                         },
                     ]
                 ),
-                
-                ComposableNode(
+            ]
+        ),
+        
+        ComposableNodeContainer(
+            name="zed_container",
+            namespace="dfc",
+            package='rclcpp_components',
+            executable="component_container",
+            arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
+            output='screen',
+            composable_node_descriptions=[
+                                ComposableNode(
                     package='zed_components',
-                    plugin='sterolabs::ZedCamera',
+                    plugin='stereolabs::ZedCamera',
                     namespace="dfc",
                     name='zed_node',
                     parameters=[
@@ -87,6 +102,7 @@ def generate_launch_description():
                 )
             ]
         ),
+
         # start the zed pose converter
         Node(
             package='riptide_hardware2',
