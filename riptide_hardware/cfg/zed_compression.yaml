@@ -27,7 +27,7 @@
           # qmax: 0 # max allowed quantization. The lower the better quality
           # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
 
-          .zed_node.depth.depth_registered.ffmpeg:
+        .zed_node.depth.depth_registered.ffmpeg:
             # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
@@ -40,13 +40,75 @@
           # qmax: 0 # max allowed quantization. The lower the better quality
           # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
 
-          .zed_node.left.image_rect_color.ffmpeg:
-          .zed_node.left_gray.image_rect_gray.ffmpeg:
-          .zed_node.left_raw.image_raw_color.ffmpeg:
-          .zed_node.left_raw_gray.image_raw_gray.ffmpeg:
-          .zed_node.rgb.image_rect_color.ffmpeg:
+        .zed_node.left.image_rect_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
+          delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
+          encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
+          gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
+          # measure_performance: false # Enable performance analysis
+          # performance_interval: 100 # number of frames between perf printouts
+          # pixel_format: ''
+          # preset: '' # 'll','ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
+          # profile: '' # 'baseline','main' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
+          # qmax: 0 # max allowed quantization. The lower the better quality
+          # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
+        
+        .zed_node.left_gray.image_rect_gray.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
+          delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
+          encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
+          gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
+          # measure_performance: false # Enable performance analysis
+          # performance_interval: 100 # number of frames between perf printouts
+          # pixel_format: ''
+          # preset: '' # 'll','ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
+          # profile: '' # 'baseline','main' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
+          # qmax: 0 # max allowed quantization. The lower the better quality
+          # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
 
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.left_raw.image_raw_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
+          delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
+          encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
+          gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
+          # measure_performance: false # Enable performance analysis
+          # performance_interval: 100 # number of frames between perf printouts
+          # pixel_format: ''
+          # preset: '' # 'll','ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
+          # profile: '' # 'baseline','main' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
+          # qmax: 0 # max allowed quantization. The lower the better quality
+          # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
+
+        .zed_node.left_raw_gray.image_raw_gray.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
+          delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
+          encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
+          gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
+          # measure_performance: false # Enable performance analysis
+          # performance_interval: 100 # number of frames between perf printouts
+          # pixel_format: ''
+          # preset: '' # 'll','ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
+          # profile: '' # 'baseline','main' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
+          # qmax: 0 # max allowed quantization. The lower the better quality
+          # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
+
+        .zed_node.rgb.image_rect_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
+          delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
+          encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
+          gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
+          # measure_performance: false # Enable performance analysis
+          # performance_interval: 100 # number of frames between perf printouts
+          # pixel_format: ''
+          # preset: '' # 'll','ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
+          # profile: '' # 'baseline','main' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
+          # qmax: 0 # max allowed quantization. The lower the better quality
+          # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
+
+
+          
+        .zed_node.rgb_gray.image_rect_gray.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -60,9 +122,8 @@
 
 
 
-          .zed_node.rgb_gray.image_rect_gray.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.rgb_raw.image_raw_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -76,9 +137,8 @@
 
 
 
-          .zed_node.rgb_raw.image_raw_color.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.rgb_raw_gray.image_raw_gray.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -92,9 +152,8 @@
 
 
 
-          .zed_node.rgb_raw_gray.image_raw_gray.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.right.image_rect_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -108,9 +167,8 @@
 
 
 
-          .zed_node.right.image_rect_color.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.right_gray.image_rect_gray.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -124,9 +182,8 @@
 
 
 
-          .zed_node.right_gray.image_rect_gray.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.right_raw.image_raw_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -140,9 +197,8 @@
 
 
 
-          .zed_node.right_raw.image_raw_color.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.right_raw_gray.image_raw_gray.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -156,9 +212,8 @@
 
 
 
-          .zed_node.right_raw_gray.image_raw_gray.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.stereo.image_rect_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
@@ -172,25 +227,8 @@
 
 
 
-          .zed_node.stereo.image_rect_color.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
-          delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
-          encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
-          gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
-          # measure_performance: false # Enable performance analysis
-          # performance_interval: 100 # number of frames between perf printouts
-          # pixel_format: ''
-          # preset: '' # 'll','ultrafast','superfast','veryfast','faster','fast','medium','slow','slower','veryslow' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Preset
-          # profile: '' # 'baseline','main' -> https://trac.ffmpeg.org/wiki/Encode/H.264#Tune
-          # qmax: 0 # max allowed quantization. The lower the better quality
-          # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
-
-
-
-          .zed_node.stereo_raw.image_raw_color.ffmpeg:
-
-# bit_rate: 4194304 # Default: 8242880
+        .zed_node.stereo_raw.image_raw_color.ffmpeg:
+          # bit_rate: 4194304 # Default: 8242880
           delay: '0' # default is 4 frames for parallel processing. 0 is lowest latency
           encoding: 'hevc_nvmpi' # Only ever tested: libx264, h264_nvenc, h264, hevc_nvenc, h264_vaapi. If you have an Nvidia card it most likely supports hevc_nvenc. This will dramatically reduce the CPU load compare to libx264 (the default). You can list all available codecs with ffmpeg -codecs. In the relevant row, look for what it says under (encoders).
           gop_size: 10 # The number of frames inbetween keyframes. Default is 15. The larger this number the more latency you will have, but also the more efficient the transmission becomes.
