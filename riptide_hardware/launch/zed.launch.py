@@ -1,6 +1,7 @@
 from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch_ros.actions import Node
+from launch_ros.actions import Node, LoadComposableNodes, ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
 from launch.substitutions import LaunchConfiguration as LC, PythonExpression
 from launch.conditions import IfCondition
 from ament_index_python import get_package_share_directory
@@ -9,6 +10,7 @@ import os
 zed_launch_file = os.path.join(get_package_share_directory(
     "zed_wrapper"), "launch", "zed_camera.launch.py")
 zed_config_path = os.path.join(get_package_share_directory('riptide_hardware2'), "cfg", "zed_common.yaml")
+zed_compression_path = os.path.join(get_package_share_directory('riptide_hardware2'), "cfg", "zed_compression.yaml")
 
 def generate_launch_description():
     zed2i_camera_path = os.path.join(
@@ -36,49 +38,69 @@ def generate_launch_description():
             default_value=[LC("robot"), "/zed"]
         ),
         
-        Node(
-            package='zed_wrapper',
-            executable='zed_wrapper',
+        ComposableNodeContainer(
+            name="zed_container",
             namespace="ffc",
-            name='zed_node',
+            package='rclcpp_components',
+            executable="component_container",
+            arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
             output='screen',
-            parameters=[
-                # YAML files
-                zed_config_path,  # Common parameters
-                zed2i_camera_path,  # Camera related parameters
-                # Overriding
-                {
-                    'general.camera_name': "talos/ffc",
-                    'general.camera_model': "zed2i",
-                    'pos_tracking.publish_tf': False,
-                    'pos_tracking.publish_map_tf': False,
-                    'sensors.publish_imu_tf': False,
-                    'general.optional_opencv_calibration_file': "/home/ros/zed_cals/ffc_calibration.yaml"
-                    # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
-                },
+            composable_node_descriptions=[
+                ComposableNode(
+                    package='zed_components',
+                    plugin='stereolabs::ZedCamera',
+                    namespace="ffc",
+                    name='zed_node',
+                    parameters=[
+                        # YAML files
+                        zed_config_path,  # Common parameters
+                        zed_compression_path,
+                        zed2i_camera_path,  # Camera related parameters
+                        # Overriding
+                        {
+                            'general.camera_name': "talos/ffc",
+                            'general.camera_model': "zed2i",
+                            'pos_tracking.publish_tf': False,
+                            'pos_tracking.publish_map_tf': False,
+                            'sensors.publish_imu_tf': False,
+                            'general.optional_opencv_calibration_file': "/home/ros/zed_cals/ffc_calibration.yaml"
+                            # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
+                        },
+                    ]
+                ),
             ]
         ),
         
-        Node(
-            package='zed_wrapper',
-            executable='zed_wrapper',
+        ComposableNodeContainer(
+            name="zed_container",
             namespace="dfc",
-            name='zed_node',
+            package='rclcpp_components',
+            executable="component_container",
+            arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
             output='screen',
-            parameters=[
-                # YAML files
-                zed_config_path,  # Common parameters
-                zedxm_camera_path,  # Camera related parameters
-                # Overriding
-                {
-                    'general.camera_name': "talos/dfc",
-                    'general.camera_model': "zedxm",
-                    'pos_tracking.publish_tf': False,
-                    'pos_tracking.publish_map_tf': False,
-                    'sensors.publish_imu_tf': False,
-                    'general.optional_opencv_calibration_file': "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
-                    # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
-                },
+            composable_node_descriptions=[
+                                ComposableNode(
+                    package='zed_components',
+                    plugin='stereolabs::ZedCamera',
+                    namespace="dfc",
+                    name='zed_node',
+                    parameters=[
+                        # YAML files
+                        zed_config_path,  # Common parameters
+                        zed_compression_path,
+                        zedxm_camera_path,  # Camera related parameters
+                        # Overriding
+                        {
+                            'general.camera_name': "talos/dfc",
+                            'general.camera_model': "zedxm",
+                            'pos_tracking.publish_tf': False,
+                            'pos_tracking.publish_map_tf': False,
+                            'sensors.publish_imu_tf': False,
+                            'general.optional_opencv_calibration_file': "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
+                            # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
+                        },
+                    ]
+                )
             ]
         ),
 
