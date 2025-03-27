@@ -15,51 +15,51 @@
           # tune: '' # 'film','animation','grain','stillimage','fastdecode','zerolatency'
 
 
-          zed_node.depth.depth_registered.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.left.image_rect_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.left_gray.image_rect_gray.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.left_raw.image_raw_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.left_raw_gray.image_raw_gray.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.point_cloud.cloud_registered.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.rgb.image_rect_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.rgb_gray.image_rect_gray.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.rgb_raw.image_raw_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.rgb_raw_gray.image_raw_gray.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.right.image_rect_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.right_gray.image_rect_gray.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.right_raw.image_raw_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.right_raw_gray.image_raw_gray.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.stereo.image_rect_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
-          zed_node.stereo_raw.image_raw_color.enable_pub_plugins:
-            - "image_transport/raw"
-            - "image_transport/ffmpeg"
+        zed_node.depth.depth_registered.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.left.image_rect_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.left_gray.image_rect_gray.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.left_raw.image_raw_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.left_raw_gray.image_raw_gray.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.point_cloud.cloud_registered.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.rgb.image_rect_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.rgb_gray.image_rect_gray.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.rgb_raw.image_raw_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.rgb_raw_gray.image_raw_gray.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.right.image_rect_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.right_gray.image_rect_gray.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.right_raw.image_raw_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.right_raw_gray.image_raw_gray.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.stereo.image_rect_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
+        zed_node.stereo_raw.image_raw_color.enable_pub_plugins:
+          - "image_transport/raw"
+          - "image_transport/ffmpeg"
