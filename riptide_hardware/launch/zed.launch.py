@@ -87,6 +87,7 @@ def generate_launch_description():
                     parameters=[
                         # YAML files
                         zed_config_path,  # Common parameters
+                        zed_compression_path,
                         zedxm_camera_path,  # Camera related parameters
                         # Overriding
                         {
