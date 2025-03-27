@@ -30,9 +30,9 @@
         zed_node.left_raw_gray.image_raw_gray.enable_pub_plugins:
           - "image_transport/raw"
           - "image_transport/ffmpeg"
-        zed_node.point_cloud.cloud_registered.enable_pub_plugins:
-          - "image_transport/raw"
-          - "image_transport/ffmpeg"
+        # zed_node.point_cloud.cloud_registered.enable_pub_plugins:
+        #   - "image_transport/raw"
+        #   - "image_transport/ffmpeg"
         zed_node.rgb.image_rect_color.enable_pub_plugins:
           - "image_transport/raw"
           - "image_transport/ffmpeg"
