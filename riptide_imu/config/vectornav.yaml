@@ -1,6 +1,6 @@
 /**/riptide_imu:
   ros__parameters:
-    port: "/dev/ttyTHS0"
+    port: "/dev/ttyTHS1"
     baud: 230400
     reconnect_ms: 500
     frame_id: "talos/imu_link"

@@ -540,6 +540,12 @@ class PressureMonitor(Node):
             #get a clean pressure sample
             sampled_cleanly = False 
 
+             #publish feedback
+            feedback_msg = Depressurize.Feedback()
+            feedback_msg.current_pressure = sampled_final_pressure - target_pressure # force 100% pub on status bar
+            goal_handle.publish_feedback(feedback_msg)
+
+
             while(not sampled_cleanly):
 
                 #show LEDs in analyzing stte
@@ -860,7 +866,7 @@ class PressureMonitor(Node):
         if(self.current_pvt_w_state == -1.0):
             msg.data = -1.0
         elif not (self.current_pvt_w_state is None) and not (self.initial_pvt is None):
-            msg.data = max(float((self.current_pvt_w_state - self.depressurized_pvt)/ (self.initial_pvt - self.depressurized_pvt)), 0.0)
+            msg.data = max(float((self.current_pvt_w_state - self.depressurized_pvt)/ (self.initial_pvt - self.depressurized_pvt)), 0.0000000000000001)
 
         else:
             msg.data = 0.0

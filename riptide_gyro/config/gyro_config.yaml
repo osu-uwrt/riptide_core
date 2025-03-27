@@ -1,7 +1,7 @@
 /**/riptide_gyro:
   ros__parameters:
     # configuration information
-    gyro_port: /dev/ttyUSB0
+    gyro_port: /dev/ttyTHS2
     gyro_frame: talos/fog_link
 
     # calibration parameters
