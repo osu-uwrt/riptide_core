@@ -43,7 +43,7 @@ def generate_launch_description():
             namespace="ffc",
             package='rclcpp_components',
             executable="component_container",
-            arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
+            # arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
             output='screen',
             composable_node_descriptions=[
                 ComposableNode(
@@ -63,7 +63,7 @@ def generate_launch_description():
                             'pos_tracking.publish_tf': False,
                             'pos_tracking.publish_map_tf': False,
                             'sensors.publish_imu_tf': False,
-                            'general.optional_opencv_calibration_file': "/home/ros/zed_cals/ffc_calibration.yaml"
+                            'general.optional_opencv_calibration_file': "/home/ros/zed_cals/ffc_calibration3.yaml"
                             # 'general.svo_file': "/home/ros/svos/practice_sat.svo"
                         },
                     ]
@@ -76,7 +76,7 @@ def generate_launch_description():
             namespace="dfc",
             package='rclcpp_components',
             executable="component_container",
-            arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
+            # arguments=['--use_multi_threaded_executor','--ros-args', '--log-level', 'info'],
             output='screen',
             composable_node_descriptions=[
                                 ComposableNode(
