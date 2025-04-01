@@ -30,11 +30,6 @@ gyro_launch_file = os.path.join(
     "launch", "gyro.launch.py"
 )
 
-zed_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "launch", "zed.launch.py"
-)
-
 apriltag_launch_file = os.path.join(
     get_package_share_directory('riptide_hardware2'),
     "launch", "apriltag.launch.py"
@@ -87,12 +82,6 @@ def generate_launch_description():
                 ]
             ),
             
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(zed_launch_file),
-                launch_arguments=[
-                    ('robot', LC('robot')),
-                ]
-            ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(apriltag_launch_file),
                 launch_arguments=[
