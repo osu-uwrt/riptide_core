@@ -9,6 +9,7 @@ mass: 31.998
 com: [-0.148, 0.040, -0.071]
 inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 
+hull_volume: .11 #make this real
 
 # Controller parameters
 #params for the newly developed overseer
@@ -23,33 +24,33 @@ controller:
   drag_enable: [1, 1, 0, 0, 0, 0]
 
   feed_forward:
-    #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
-    base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
+    #base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
+    base_wrench: [0.0, 0.0, -4.9, -0.95, 2.1, 0.0]
 
     auto_tune:
-      #positional error threshold to begin autotuning
-      positional_error_threshold: 0.1
+      #positional error threshold to begin autotuning 
+      positional_error_threshold: 0.15
 
-      #max velocity threshold for ff autotune
-      velocity_threshold: 0.1
-
-      #minimum strength of measurement to be counted in autotuning
-      strength_threshold: 0.5
-
-      #learning multiplier for feed forward learning
-      learning_rate: 1.0
-      
-      #the maximum buffer length in seconds for autotuning
-      buffer_duration: 3.0
-
-      #time taken for convergence to occur
-      convergence_time: 10.0
-
-      #the maximum deviation for a measurement for convergence to occur
-      convergence_threshold: 0.02
+      #max velocity threshold for ff autotune #
+      velocity_threshold: 0.2
 
       #axis to perform autotune on (either zero or one)
-      auto_tune_mask: [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
+      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0]
+
+      #decay factor for FF difference
+      decay_factor: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
+
+      #trust threshold for FF changes - minimum trust
+      trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
+
+      #variation_threshold for FF changes (max standard variation)
+      variation_threshold: [5.0, 5.0, 5.0, 10.0, 10.0, 10.0]
+      
+      #variation_threshold for FF changes (max standard variation)
+      variation_der_threshold: [0.25, 0.25, 0.5, 0.5, 0.5, 0.25]
+
+      #axis weights for auto FF convergence
+      axis_weights: [1.0, 1.0, 1.0, 10.0, 10.0, 10.0]
 
   controller_scale:
 
@@ -71,14 +72,44 @@ controller:
     #nominal time
     nominal_time: .6 #seconds
 
+  #params for auto drag compensations
+  drag_compensator:
+
+    #which axis to apply correction to based on which velocities
+    #columns are the axes to base the drag compensation off of -- rows are the axes with compensation
+    apply_mask: [0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,1.0,0.0,0.0,0.0,0.0,
+                1.0,0.0,0.0,0.0,0.0,0.0,
+                1.0,1.0,0.0,0.0,0.0,0.0]
+
+    #minimum samples of motion to use for compensation cycle
+    minimum_samples: 60.0
+
+    #minimum velocity to count as motion for the sampler
+    minimum_absolute_velocity: 0.2
+
+    #minimum positional_error to count as motion for the sampler
+    minimum_absolute_positional_error: 0.2
+
+    #minimum average compensation velocity to update the drag compensation
+    minimum_average_sampled_velocity: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+
+    #minimum correspondance coeffiecent to update compensation
+    minimum_R2_coeffiecent: 0.9
+
+    #learning rate for drag compensation
+    learning_rate: 0.5
+
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
-                -7.4651,   17.7641,    7.0013,    0.3067, #y
-                -7.0964,   27.6349,    6.9723,    0.3827, #z
-                -4.6881,    5.2662,    6.2630,    1.2739, #r
-               -18.1269,   -3.1893,   17.3711,    2.0801, #p
-               -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
+              -7.4651,   17.7641,    7.0013,    0.3067, #y
+              -7.0964,   27.6349,    6.9723,    0.3827, #z
+              -4.6881,    5.2662,    6.2630,    1.2739, #r
+              -18.1269,   -3.1893,   17.3711,    2.0801, #p
+              -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
 
     #tunable paramters for controller
     SMC_params:
@@ -168,6 +199,22 @@ controller:
     #time required for a barrel roll
     barrel_roll_duration: 1.9
 
+pressure_monitoring:
+  #pressurization parameters
+
+  #pressurizating parameters
+  temperature_standard_dev: 2
+  pressure_standard_dev: .001
+  pressurization_tolerance: .01
+
+  #time constant for full return to pressure - modelling leak as linear
+  #leak_decay: 14400 # - (1/s) works in lab
+  #leak_decay: 7200 # 12 C
+  leak_decay: 3600 # lake validated
+
+  #tolerance in leak detection for pulling the pump -> valve emits some error
+  #initial_leak: .0025 # - (factor of initial depressurization delta) lab
+  initial_leak: .005 #lake validated
 
 #this is for the newly developed solver
 thruster_solver:
@@ -229,10 +276,11 @@ imu:
   sigma_omega: 0.01 # Stdev in deg/s. Used by sim
   sigma_angle: 0.5 # Std dev in deg. Used by sim
   yaw_drift:   1.5 # deg/min 
-  pose: [-0.0505, -0.0769, 0.0529, 3.141, 0.0, -1.5707] #[-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
+  # pose: [-0.0505, -0.0769, 0.0529, 3.141, 0.0, -1.5707] #[-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
+  pose: [-0.1722, -0.13072, 0.02537, 3.141, 0.0, -1.5707]
 
 fog:
-  pose: [0.0, 0.0, 0.0, 3.1415, 0.0, 0.0]
+  pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
@@ -242,7 +290,7 @@ torpedos:
   baseline: 0.0333375 #1 5/16 in
 
 droppers:
-  pose: [-0.35, 0.0, 0.05, 0.0, 0.0, 0.0]
+  pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
 
 cameras: [
   {
@@ -255,7 +303,7 @@ cameras: [
     type: zed,
     name: dfc,
     baseline: 0.045,
-    pose: [0.06, 0, -0.01, 0, 1.5707, 0]
+    pose: [-0.145, -0.080, -0.08, 1.5707, 1.5707, 0]
   }
 ]
 
