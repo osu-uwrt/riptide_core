@@ -10,7 +10,7 @@ from rclpy.qos import qos_profile_system_default
 from riptide_msgs2.msg import ElectricalCommand
 
 class ImuPowerCycleNode(Node):
-    POWER_CYCLE_PIN = 21
+    POWER_CYCLE_PIN = 22
 
     def __init__(self):
         super().__init__('imu_power_cycle')

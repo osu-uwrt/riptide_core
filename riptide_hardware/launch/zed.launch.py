@@ -68,6 +68,7 @@ def generate_launch_description():
                                 'pos_tracking.publish_tf': False,
                                 'pos_tracking.publish_map_tf': False,
                                 'sensors.publish_imu_tf': False,
+                                'sensors.sensors_image_sync': True, # If using imu use this
                                 'general.optional_opencv_calibration_file': "/home/ros/zed_cals/ffc_calibration3.yaml",
                                 'debug.debug_common': False,
                                 'debug.debug_point_cloud': False
