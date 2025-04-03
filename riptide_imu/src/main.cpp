@@ -1,24 +1,25 @@
 #include <chrono>
 #include <queue>
 
-#include "vn/sensors.h"
-#include "vn/compositedata.h"
-#include "vn/exceptions.h"
+#include <vn/sensors.h>
+#include <vn/compositedata.h>
+#include <vn/exceptions.h>
 
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
-#include "sensor_msgs/msg/imu.hpp"
-#include "std_msgs/msg/float32.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <std_msgs/msg/float32.hpp>
 
 #include <fcntl.h>
 #include <linux/serial.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include "riptide_msgs2/action/mag_cal.hpp"
-#include "riptide_msgs2/msg/imu_config.hpp"
+#include <riptide_msgs2/action/mag_cal.hpp>
+#include <riptide_msgs2/msg/imu_config.hpp>
+#include <riptide_msgs2/srv/query_imu_serial.hpp>
 
 using namespace vn::sensors;
 using namespace std::placeholders;
@@ -27,6 +28,7 @@ using namespace std::chrono_literals;
 class Vectornav : public rclcpp::Node {
   using MagCal = riptide_msgs2::action::MagCal;
   using MagCalGH = rclcpp_action::ServerGoalHandle<MagCal>;
+  using SerialRequest = riptide_msgs2::srv::QueryImuSerial;
 
 
   public:
@@ -62,8 +64,9 @@ class Vectornav : public rclcpp::Node {
       std::bind(&Vectornav::handleCalAccept, this, _1)
     );
 
-    optimizeSerialConnection(port);
+    configSrv = this->create_service<SerialRequest>("vectornav/config", std::bind(&Vectornav::configSrvRequest, this, _1, _2));
 
+    optimizeSerialConnection(port);
     vnConnect(port, baud);
 
     // Setup spin to monitor connection (since packets are async)
@@ -282,13 +285,13 @@ class Vectornav : public rclcpp::Node {
   void monitorConnection() {
     // Don't try to reconnect during magcal
     // Doing so throws vn::timeout and crashes driver
-    if(doingMagCal) {
-      RCLCPP_WARN(get_logger(), "IMU ignored reconnect request during magcal");
+    if (!doMonitorConnection) {
+      RCLCPP_WARN(get_logger(), "IMU ignored reconnect request");
       return;
     }
     
     // Check if VN is connected
-    if(vs && vs->verifySensorConnectivity())
+    if (vs && vs->verifySensorConnectivity())
       // All good
       return;
 
@@ -400,7 +403,7 @@ class Vectornav : public rclcpp::Node {
 
   void executeMagCal(const std::shared_ptr<MagCalGH> goalHandle) {
     // Let other async threads know that magcal is happening
-    doingMagCal = true;
+    doMonitorConnection = false;
 
     // Setup a ros rate timer (input is hz)
     rclcpp::Rate loopRate(4.0);
@@ -557,7 +560,36 @@ class Vectornav : public rclcpp::Node {
 
     // Reconnect to IMU and let async threads know magcal is done
     vnConnect(get_parameter("port").as_string(), get_parameter("baud").as_int());
-    doingMagCal = false;
+    doMonitorConnection = true;
+  }
+
+    std::string executeConfigRequest(std::string request) {
+        if(!vs->isConnected())
+            return "IMU not connected";
+
+        return vs->transaction(request);
+    }
+
+  void configSrvRequest(std::shared_ptr<SerialRequest::Request> request, std::shared_ptr<SerialRequest::Response> response) {
+      std::string responseStr;
+      if (request->request == "$VNWNV") {
+          try {
+              responseStr = executeConfigRequest(request->request);
+          }
+          catch (vn::timeout) {
+            doMonitorConnection = false;
+            RCLCPP_INFO(this->get_logger(), "Caught vn::timeout");
+            responseStr = "$VNWNV";
+
+            rclcpp::sleep_for(5s);
+            doMonitorConnection = true;
+          }
+      }
+      else {
+          responseStr = executeConfigRequest(request->request);
+      }
+      
+      response->response = responseStr;
   }
   
 
@@ -576,7 +608,9 @@ class Vectornav : public rclcpp::Node {
   rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
   std::thread magCalThread;
 
-  bool doingMagCal = false;
+  bool doMonitorConnection = true;
+
+  rclcpp::Service<SerialRequest>::SharedPtr configSrv;
 };
 
 int main(int argc, char* argv[]) {
