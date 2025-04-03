@@ -1,0 +1,40 @@
+#super secret yaml file for all things Nathan sim
+
+#The Vehicle should never load this file!!! 
+#If you are loading things from here onto the vehicle you are doing something wrong!
+#You should likely look at vehicle.yaml located in this directory
+#This file is made to serpate out parameters that are used only in the simulator, some of these may be depricated parameters from the vehicle!
+#Even if it looks like a vehicle parameter, its not one!
+
+vehicle_properties:
+  cod: [-0.148, 0.040, -0.055]
+  inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
+              -0.0599, 0.7341, 0.0427,  # Iyx Iyy Iyz
+              -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^2
+  thruster_max_force: 28.0
+
+
+controller:
+  #sim discrepency - allows to test control when feed forward is not perfect
+  sim_discrepancy: [0.0, 0.0, -0.5, 0.1, -0.05, 0.0]
+
+claw:
+  fake_objects: #I've arbilitrailly set these properties - measure at some point
+    coral:
+      net_buoyancy: 2.0 #positive =  positively bouyant, negative = negatively buoyant
+      com: [.1, 0.0, -0.1] # the "origin" of the object is where the end affector grips the object      
+    tubeworm:
+      net_buoyancy: 1.0 #positive =  positively bouyant, negative = negatively buoyant
+      com: [.1, 0.0, -0.1] # the "origin" of the object is where the end affector grips the object
+    nautilus:
+      net_buoyancy: 2.0 #positive =  positively bouyant, negative = negatively buoyant
+      com: [.4, 0.0, -0.0] # the "origin" of the object is where the end affector grips the object
+
+
+acoustics:
+    #fake pinger location for simulaation
+  fake_pinger:
+    pose: [3.0, 2.0, -1.0, 0.0, 0.0, 0.0]
+
+preferences:
+  sync_odom: true

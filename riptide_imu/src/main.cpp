@@ -54,6 +54,7 @@ class Vectornav : public rclcpp::Node {
     imuPub = this->create_publisher<sensor_msgs::msg::Imu>("vectornav/imu", 10);
     magPub = this->create_publisher<geometry_msgs::msg::Vector3>("vectornav/magnetometer", 10);
     magHeadingPub = this->create_publisher<std_msgs::msg::Float32>("vectornav/magheading", 10);
+    pressurePub = this->create_publisher<std_msgs::msg::Float32>("vectornav/pressure_bar", 10);
 
     // Mag cal server
     magCalServer = rclcpp_action::create_server<MagCal>(
@@ -187,6 +188,7 @@ class Vectornav : public rclcpp::Node {
     auto msg = sensor_msgs::msg::Imu();
     auto magMsg = geometry_msgs::msg::Vector3();
     auto headingMsg = std_msgs::msg::Float32();
+    auto pressureMsg = std_msgs::msg::Float32();
 
     try {
       // Parse into compositedata
@@ -216,6 +218,8 @@ class Vectornav : public rclcpp::Node {
       node->fillCovarianceFromParam("angular_velocity_covariance", msg.angular_velocity_covariance);
       node->fillCovarianceFromParam("linear_acceleration_covariance", msg.linear_acceleration_covariance);
 
+      pressureMsg.data = cd.pressure() / 100.0f;
+
       try {
         // magMsg = toMsg(cd.magnetic());
 
@@ -239,8 +243,9 @@ class Vectornav : public rclcpp::Node {
     // Publish output, throw error if publish failed
     try {
       node->imuPub->publish(msg);
-      node->magPub->publish(magMsg);
+      // node->magPub->publish(magMsg);
       // node->magHeadingPub->publish(headingMsg);
+      node->pressurePub->publish(pressureMsg);
     } catch(...) {
       RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
     }
@@ -598,6 +603,7 @@ class Vectornav : public rclcpp::Node {
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imuPub;
   rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr magPub;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr magHeadingPub;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pressurePub;
 
   rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
   std::thread magCalThread;

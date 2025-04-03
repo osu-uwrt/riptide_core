@@ -1,4 +1,7 @@
-import gpiod
+#!/usr/bin/env python3
+
+import Jetson.GPIO as GPIO
+
 import rclpy
 import time
 from rclpy.node import Node
@@ -7,27 +10,25 @@ from rclpy.qos import qos_profile_system_default
 from riptide_msgs2.msg import ElectricalCommand
 
 class ImuPowerCycleNode(Node):
+    POWER_CYCLE_PIN = 21
+
     def __init__(self):
         super().__init__('imu_power_cycle')
-        self.req = gpiod.line_request()
-        self.req.consumer = "imu_power_cycle"
-        self.req.request_type=gpiod.line_request.DIRECTION_OUTPUT
 
-        # Get IO Line
-        self.gpiochip = gpiod.chip('gpiochip0')
-        self.resetline = self.gpiochip.get_line(96)  # Get GPIO 17 (Pin PP.04)
-        self.resetline.request(self.req, default_val=1)
-        self.nextPowerupTime = time.time()
+        # Init GPIO
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(self.POWER_CYCLE_PIN, GPIO.OUT, initial=GPIO.HIGH)
 
-        # Create the subscription
+        # Setup subscription and timer
         self.sub = self.create_subscription(ElectricalCommand, "command/electrical", self.commandCb, qos_profile_system_default)
+        self.nextPowerupTime = time.time()
         self.resetTimer = self.create_timer(1.0, self.resetTimerPoll)
 
     def resetTimerPoll(self):
         if time.time() < self.nextPowerupTime:
-            self.resetline.set_value(0)
+            GPIO.output(self.POWER_CYCLE_PIN, GPIO.LOW)
         else:
-            self.resetline.set_value(1)
+            GPIO.output(self.POWER_CYCLE_PIN, GPIO.HIGH)
 
     def commandCb(self, msg: 'ElectricalCommand'):
         if msg.command == ElectricalCommand.CYCLE_IMU:
@@ -39,6 +40,8 @@ def main(args=None):
     rclpy.init(args=args)
     node = ImuPowerCycleNode()
     rclpy.spin(node)
+
+    GPIO.cleanup()
 
 if __name__ == '__main__':
     main()

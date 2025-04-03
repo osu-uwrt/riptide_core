@@ -30,6 +30,33 @@
     </xacro:pressure_plugin_macro>
   <!-- </xacro:if> -->
 
+  <!-- port acoustic pod -->
+  <xacro:property name="acoustics_port" value="${config['acoustics']['port']}"/>
+  <xacro:acoustics_plugin_macro
+    namespace="${namespace}"
+    suffix="_port"
+    parent_link="${namespace}/origin">
+    <origin xyz="${acoustics_port['pose'][0]} ${acoustics_port['pose'][1]} ${acoustics_port['pose'][2]}" 
+            rpy="${acoustics_port['pose'][3]} ${acoustics_port['pose'][4]} ${acoustics_port['pose'][5]}"/>
+  </xacro:acoustics_plugin_macro>
+  <!--starboard acoustic pod-->
+  <xacro:property name="acoustics_starboard" value="${config['acoustics']['starboard']}"/>
+  <xacro:acoustics_plugin_macro
+  namespace="${namespace}"
+  suffix="_starboard"
+  parent_link="${namespace}/origin">
+  <origin xyz="${acoustics_starboard['pose'][0]} ${acoustics_starboard['pose'][1]} ${acoustics_starboard['pose'][2]}" 
+          rpy="${acoustics_starboard['pose'][3]} ${acoustics_starboard['pose'][4]} ${acoustics_starboard['pose'][5]}"/>
+  </xacro:acoustics_plugin_macro>
+
+  <xacro:property name="fog" value="${config['fog']}"/>
+  <xacro:fog_plugin_macro
+  namespace="${namespace}"
+  parent_link="${namespace}/origin">
+  <origin xyz="${fog['pose'][0]} ${fog['pose'][1]} ${fog['pose'][2]}" 
+          rpy="${fog['pose'][3]} ${fog['pose'][4]} ${fog['pose'][5]}"/>
+  </xacro:fog_plugin_macro>
+
   <!-- IMU  -->
   <!-- TODO: Get imu model from config -->
   <!-- TODO: restore below if when xacro releases 1.14.4 -->
@@ -97,7 +124,7 @@
           <xacro:if value="${camera['type'] == 'zed'}">
             <xacro:zed_macro
              namespace="${namespace}"
-             name="talos/${camera['name']}_link"
+             name="talos/${camera['name']}"
              parent_link="${camera_base_link}" />
           </xacro:if>
         </xacro:unless>

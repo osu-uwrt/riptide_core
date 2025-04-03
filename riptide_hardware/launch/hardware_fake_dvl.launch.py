@@ -1,4 +1,3 @@
-import launch
 from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
 from launch_ros.actions import PushRosNamespace, Node
@@ -26,11 +25,20 @@ imu_launch_file = os.path.join(
     "launch", "imu.launch.py"
 )
 
-zed_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "launch", "zed.launch.py"
+gyro_launch_file = os.path.join(
+    get_package_share_directory('riptide_gyro'),
+    "launch", "gyro.launch.py"
 )
 
+apriltag_launch_file = os.path.join(
+    get_package_share_directory('riptide_hardware2'),
+    "launch", "apriltag.launch.py"
+)
+
+# opbox_launch_file = os.path.join(
+#     get_package_share_directory('opbox_ros_client'),
+#     "launch", "opbox_ros_client.launch.py"
+# )
 
 def generate_launch_description():
     return LaunchDescription([
@@ -55,7 +63,7 @@ def generate_launch_description():
             ),
             Node(
                 package='riptide_hardware2',
-                executable='fake_dvl',
+                executable='fake_dvl.py',
                 name='fake_dvl',
                 condition=IfCondition(
                     PythonExpression(["'", LC("robot"), "' == 'talos'"])
@@ -68,23 +76,42 @@ def generate_launch_description():
                 ]
             ),
             IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(zed_launch_file),
+                AnyLaunchDescriptionSource(gyro_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
             ),
-
+            
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(apriltag_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(opbox_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # ),
             Node(
                 package='riptide_hardware2',
-                executable='simple_actuator_interface',
+                executable='simple_actuator_interface.py',
                 name='simple_actuator_interface',
                 output='screen',
             ),
             Node(
                 package='riptide_hardware2',
-                executable='imu_power_cycle',
+                executable='imu_power_cycle.py',
                 name='imu_power_cycle',
                 output='screen',
             ),
+            Node(
+                package='riptide_hardware2',
+                executable='pressure_monitor.py',
+                name='pressure_monitor',
+                output='screen',
+                parameters=[{"robot":LC('robot')}]
+            )        
         ], scoped=True)
     ])

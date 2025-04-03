@@ -10,7 +10,7 @@ from riptide_msgs2.msg import BatteryStatus, FirmwareStatus
 from std_msgs.msg import Bool
 from diagnostic_msgs.msg import DiagnosticStatus
 
-from .common import ExpiringMessage, Mk2Board
+from common import ExpiringMessage, Mk2Board
 
 
 class FirmwareMonitor(diagnostic_updater.DiagnosticTask):

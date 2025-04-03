@@ -1,6 +1,6 @@
 /**/riptide_imu:
   ros__parameters:
-    port: "/dev/ttyTHS0"
+    port: "/dev/ttyTHS1"
     baud: 230400
     reconnect_ms: 500
     frame_id: "talos/imu_link"
@@ -21,11 +21,11 @@
       "output buffer overflow",
       "insufficient baud rate"]
     # Covariance data
-    orientation_covariance: [0.01,  0.0,   0.0,
-                            0.0,   0.01,  0.0,
+    orientation_covariance: [0.00001,  0.0,   0.0,
+                            0.0,   0.00001,  0.0,
                             0.0,   0.0,   0.01]
-    angular_velocity_covariance: [0.01,  0.0,   0.0,
-                         0.0,   0.01,  0.0,
+    angular_velocity_covariance: [0.00001,  0.0,   0.0,
+                         0.0,   0.00001,  0.0,
                          0.0,   0.0,   0.01]
     linear_acceleration_covariance: [0.01,  0.0,   0.0,
                          0.0,   0.01,  0.0,
