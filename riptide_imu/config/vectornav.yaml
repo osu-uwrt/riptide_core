@@ -1,7 +1,7 @@
 /**/riptide_imu:
   ros__parameters:
     port: "/dev/ttyTHS1"
-    baud: 230400
+    baud: 921600
     reconnect_ms: 500
     frame_id: "talos/imu_link"
     # declination of current location (degrees) https://www.magnetic-declination.com/
