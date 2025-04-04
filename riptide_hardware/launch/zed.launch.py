@@ -1,9 +1,8 @@
 from launch.launch_description import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction
-from launch_ros.actions import Node, PushRosNamespace, LoadComposableNodes, ComposableNodeContainer
+from launch_ros.actions import PushRosNamespace, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
-from launch.substitutions import LaunchConfiguration as LC, PythonExpression
-from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration as LC
 from ament_index_python import get_package_share_directory
 import os
 
@@ -68,7 +67,7 @@ def generate_launch_description():
                                 'pos_tracking.publish_tf': False,
                                 'pos_tracking.publish_map_tf': False,
                                 'sensors.publish_imu_tf': False,
-                                'sensors.sensors_image_sync': True, # If using imu use this
+                                'sensors.sensors_image_sync': False, # If using imu use this
                                 'general.optional_opencv_calibration_file': "/home/ros/zed_cals/ffc_calibration3.yaml",
                                 'debug.debug_common': False,
                                 'debug.debug_point_cloud': False
@@ -104,6 +103,7 @@ def generate_launch_description():
                                 'pos_tracking.publish_tf': False,
                                 'pos_tracking.publish_map_tf': False,
                                 'sensors.publish_imu_tf': False,
+                                'sensors.sensors_image_sync': False, # If using imu use this
                                 'general.optional_opencv_calibration_file': "/home/ros/zed_cals/zed_dfc_calibration2.yaml",
                                 'debug.debug_common': False,
                                 'debug.debug_point_cloud': False
