@@ -44,10 +44,10 @@ controller:
       trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
 
       #variation_threshold for FF changes (max standard variation)
-      variation_threshold: [5.0, 5.0, 5.0, 10.0, 10.0, 10.0]
+      variation_threshold: [5.0, 5.0, 10.0, 20.0, 20.0, 10.0]
       
       #variation_threshold for FF changes (max standard variation)
-      variation_der_threshold: [0.25, 0.25, 0.5, 0.5, 0.5, 0.25]
+      variation_der_threshold: [0.25, 0.25, 1.0, 1.0, 1.0, 0.25]
 
       #axis weights for auto FF convergence
       axis_weights: [1.0, 1.0, 1.0, 10.0, 10.0, 10.0]
