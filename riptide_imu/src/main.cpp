@@ -216,14 +216,36 @@ class Vectornav : public rclcpp::Node {
       q_ned2body.setRPY(M_PI, 0.0, M_PI/2.0);
       msg.orientation = tf2::toMsg(q_ned2body * q);
 
+      if(abs(msg.orientation.x) > 1
+        || abs(msg.orientation.y) > 1
+        || abs(msg.orientation.z) > 1
+        || abs(msg.orientation.w) > 1)
+      {
+        RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad orientation");
+      }
+
       // Set angular velocity data
       msg.angular_velocity = toMsg(cd.angularRate());
+
+      if(abs(msg.angular_velocity.x) > 2 * M_PI
+        || abs(msg.angular_velocity.y) > 2 * M_PI
+        || abs(msg.angular_velocity.z) > 2 * M_PI)
+      {
+        RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad angular velocity");
+      }
 
       // Set linear acceleration data
       vn::math::vec3f acceleration = cd.acceleration();
       msg.linear_acceleration.x = acceleration.x;
       msg.linear_acceleration.y = acceleration.y;
       msg.linear_acceleration.z = acceleration.z;
+
+      if(abs(msg.linear_acceleration.x) > 20
+        || abs(msg.linear_acceleration.y) > 20
+        || abs(msg.linear_acceleration.z) > 20)
+      {
+        RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad linear acceleration");
+      }
 
       // Fill covariance data
       node->fillCovarianceFromParam("orientation_covariance", msg.orientation_covariance);
