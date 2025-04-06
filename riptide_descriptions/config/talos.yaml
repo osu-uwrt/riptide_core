@@ -29,7 +29,7 @@ controller:
 
     auto_tune:
       #positional error threshold to begin autotuning 
-      positional_error_threshold: 0.15
+      positional_error_threshold: 0.07
 
       #max velocity threshold for ff autotune #
       velocity_threshold: 0.2
@@ -82,7 +82,7 @@ controller:
                 0.0,0.0,0.0,0.0,0.0,0.0,
                 0.0,1.0,0.0,0.0,0.0,0.0,
                 1.0,0.0,0.0,0.0,0.0,0.0,
-                1.0,1.0,0.0,0.0,0.0,0.0]
+                0.0,0.0,0.0,0.0,0.0,0.0]
 
     #minimum samples of motion to use for compensation cycle
     minimum_samples: 60.0
@@ -147,7 +147,7 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 1.0]
+    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 2.5]
     i_gains: [0.0, 0.0, 0.0, 0.01, 1.0, 0.0]
     d_gains: [5.0, 5.0, 90.0, 1.0, 0.05, 0.9]
 
