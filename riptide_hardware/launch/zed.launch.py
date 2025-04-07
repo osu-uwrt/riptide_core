@@ -43,11 +43,6 @@ def generate_launch_description():
             description = "name of the robot"
         ),
         
-        DeclareLaunchArgument(
-            "zed_name",
-            default_value=[LC("robot"), "/zed"]
-        ),
-        
         GroupAction([
             PushRosNamespace(
                 LC("robot")
