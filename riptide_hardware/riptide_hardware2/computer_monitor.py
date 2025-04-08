@@ -8,49 +8,7 @@ import diagnostic_updater
 import subprocess
 import yaml
 import re
-
-
-# Shared class to run tegrastats only once and share data
-class TegrastatsReader:
-    _instance = None
-    _data = None
-    _last_update = 0
-
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = TegrastatsReader()
-        return cls._instance
-
-    def read_tegrastats(self):
-        try:
-            # Run tegrastats to get information - same approach as original
-            p = subprocess.Popen('tegrastats', stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, shell=True)
-            # Read a single line then terminate
-            o, e = p.stdout.readline(), b''
-            output = o.decode('utf-8')
-            self._data = output
-            return output
-        except Exception as e:
-            return None
-
-    def get_data(self):
-        # Read fresh data each time to ensure we're getting current state
-        return self.read_tegrastats()
-
-    @staticmethod
-    def has_hardware():
-        try:
-            p = subprocess.Popen('tegrastats', stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, shell=True)
-            # Read a single line then terminate
-            o = p.stdout.readline()
-            output = o.decode('utf-8')
-            # Check if any expected data is present in the output
-            return any(x in output.lower() for x in ['cpu@', 'soc', 'gr3d_freq', 'vdd_gpu_soc'])
-        except Exception:
-            return False
+import sys
 
 
 class CpuTask(diagnostic_updater.DiagnosticTask):
@@ -74,133 +32,6 @@ class CpuTask(diagnostic_updater.DiagnosticTask):
             stat.summary(DiagnosticStatus.OK, "Average CPU utilization {:.2f}%".format(cpu_average))
 
         return stat
-
-
-class CoreTempTask(diagnostic_updater.DiagnosticTask):
-    def __init__(self, warning_percentage, error_temp):
-        diagnostic_updater.DiagnosticTask.__init__(self, "Core Temperature")
-        self._error_temp = error_temp
-        self._warning_temp = error_temp * (int(warning_percentage) / 100.0)
-        self._tegrastats_reader = TegrastatsReader.get_instance()
-
-    def run(self, stat):
-        try:
-            # Get the tegrastats output from the shared reader
-            output = self._tegrastats_reader.get_data()
-            if not output:
-                stat.summary(DiagnosticStatus.ERROR, "Failed to get tegrastats data")
-                return stat
-
-            # Parse CPU temperatures from tegrastats output
-            # Example format: cpu@58.406C
-            cpu_temp_match = re.search(r'cpu@([\d\.]+)C', output, re.IGNORECASE)
-            
-            temps = []
-            if cpu_temp_match:
-                cpu_temp = float(cpu_temp_match.group(1))
-                temps.append(cpu_temp)
-                stat.add("CPU Temperature", "{:.2f} C".format(cpu_temp))
-            
-            # Also look for other temperature readings
-            soc_temps = re.findall(r'soc\d+@([\d\.]+)C', output)
-            for i, temp in enumerate(soc_temps):
-                temps.append(float(temp))
-                stat.add("SOC {} Temperature".format(i), "{:.2f} C".format(float(temp)))
-            
-            # Check for TJ temperature (junction temperature)
-            tj_match = re.search(r'tj@([\d\.]+)C', output)
-            if tj_match:
-                tj_temp = float(tj_match.group(1))
-                temps.append(tj_temp)
-                stat.add("Junction Temperature", "{:.2f} C".format(tj_temp))
-            
-            if not temps:
-                stat.summary(DiagnosticStatus.ERROR, "Failed to read temperature data")
-                return stat
-                
-            max_temp = max(temps)
-            
-            if max_temp >= self._error_temp:
-                stat.summary(DiagnosticStatus.ERROR,
-                            "Core temp exceeds {:.2f} C @ {:.2f} C".format(self._error_temp, max_temp))
-            elif max_temp >= self._warning_temp:
-                stat.summary(DiagnosticStatus.WARN,
-                            "Core temp exceeds {:.2f} C @ {:.2f} C".format(self._warning_temp, max_temp))
-            else:
-                stat.summary(DiagnosticStatus.OK, "Max core temp {:.2f} C".format(max_temp))
-                
-        except Exception as e:
-            stat.summary(DiagnosticStatus.ERROR, "Failed to read temperature: {}".format(str(e)))
-            
-        return stat
-
-    @staticmethod
-    def has_hardware():
-        # Use the shared hardware check
-        data = TegrastatsReader.get_instance().get_data()
-        if not data:
-            return False
-        return 'cpu@' in data.lower() or 'soc' in data.lower()
-
-
-class ComputerTempTask(diagnostic_updater.DiagnosticTask):
-    def __init__(self, warning_percentage, error_temp):
-        diagnostic_updater.DiagnosticTask.__init__(self, "Computer Temperature")
-        self._warning_percentage = int(warning_percentage)
-        self._error_temp = error_temp
-        self._warning_temp = error_temp * (int(warning_percentage) / 100.0)
-        self._tegrastats_reader = TegrastatsReader.get_instance()
-
-    def run(self, stat):
-        try:
-            # Get the tegrastats output from the shared reader
-            output = self._tegrastats_reader.get_data()
-            if not output:
-                stat.summary(DiagnosticStatus.ERROR, "Failed to get tegrastats data")
-                return stat
-            
-            # Parse all thermal data for system temperature
-            # First try to get the SOC temps as they're the most system-representative
-            soc_temps = []
-            soc_matches = re.findall(r'soc\d+@([\d\.]+)C', output)
-            for temp in soc_matches:
-                soc_temps.append(float(temp))
-            
-            if soc_temps:
-                # Average of SOC temperatures for overall system temp
-                computer_temp = sum(soc_temps) / len(soc_temps)
-                stat.add("SOC Average Temperature", "{:.2f} C".format(computer_temp))
-            else:
-                # If no SOC temps, try CPU temp
-                cpu_match = re.search(r'cpu@([\d\.]+)C', output, re.IGNORECASE)
-                if cpu_match:
-                    computer_temp = float(cpu_match.group(1))
-                    stat.add("CPU Temperature", "{:.2f} C".format(computer_temp))
-                else:
-                    stat.summary(DiagnosticStatus.ERROR, "Failed to read system temperature")
-                    return stat
-
-            if computer_temp >= self._error_temp:
-                stat.summary(DiagnosticStatus.ERROR,
-                             "System temp exceeds {:.2f} C @ {:.2f} C".format(self._error_temp, computer_temp))
-            elif computer_temp >= self._warning_temp:
-                stat.summary(DiagnosticStatus.WARN,
-                             "System temp exceeds {:.2f} C @ {:.2f} C".format(self._warning_temp, computer_temp))
-            else:
-                stat.summary(DiagnosticStatus.OK, "System temp {:.2f} C".format(computer_temp))
-
-        except Exception as e:
-            stat.summary(DiagnosticStatus.ERROR, "Failed to read system temperature: {}".format(str(e)))
-            
-        return stat
-
-    @staticmethod
-    def has_hardware():
-        # Use the shared hardware check
-        data = TegrastatsReader.get_instance().get_data()
-        if not data:
-            return False
-        return 'soc' in data.lower() or 'cpu@' in data.lower()
 
 
 class MemoryTask(diagnostic_updater.DiagnosticTask):
@@ -257,16 +88,172 @@ class DiskTask(diagnostic_updater.DiagnosticTask):
         return stat
 
 
+# The tegrastats provider that runs tegrastats only once
+class TegrastatsProvider:
+    _output = None
+    _has_hardware = None
+    
+    @classmethod
+    def get_output(cls):
+        if cls._output is None:
+            try:
+                # Run tegrastats using the original method
+                p = subprocess.Popen('tegrastats', stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, shell=True)
+                # Read a single line
+                o = p.stdout.readline()
+                cls._output = o.decode('utf-8')
+            except Exception:
+                cls._output = ""
+        return cls._output
+    
+    @classmethod
+    def reset(cls):
+        cls._output = None
+    
+    @classmethod
+    def has_hardware(cls):
+        if cls._has_hardware is None:
+            output = cls.get_output()
+            cls._has_hardware = any(x in output.lower() for x in 
+                                  ['cpu@', 'soc', 'gr3d_freq', 'vdd_gpu_soc'])
+        return cls._has_hardware
+
+
+class CoreTempTask(diagnostic_updater.DiagnosticTask):
+    def __init__(self, warning_percentage, error_temp):
+        diagnostic_updater.DiagnosticTask.__init__(self, "Core Temperature")
+        self._error_temp = error_temp
+        self._warning_temp = error_temp * (int(warning_percentage) / 100.0)
+        # Reset the provider to force a fresh tegrastats run
+        TegrastatsProvider.reset()
+
+    def run(self, stat):
+        try:
+            # Get the shared tegrastats output
+            output = TegrastatsProvider.get_output()
+            if not output:
+                stat.summary(DiagnosticStatus.ERROR, "Failed to get tegrastats data")
+                return stat
+
+            # Parse CPU temperatures from tegrastats output
+            # Example format: cpu@58.406C
+            cpu_temp_match = re.search(r'cpu@([\d\.]+)C', output, re.IGNORECASE)
+            
+            temps = []
+            if cpu_temp_match:
+                cpu_temp = float(cpu_temp_match.group(1))
+                temps.append(cpu_temp)
+                stat.add("CPU Temperature", "{:.2f} C".format(cpu_temp))
+            
+            # Also look for other temperature readings
+            soc_temps = re.findall(r'soc\d+@([\d\.]+)C', output)
+            for i, temp in enumerate(soc_temps):
+                temps.append(float(temp))
+                stat.add("SOC {} Temperature".format(i), "{:.2f} C".format(float(temp)))
+            
+            # Check for TJ temperature (junction temperature)
+            tj_match = re.search(r'tj@([\d\.]+)C', output)
+            if tj_match:
+                tj_temp = float(tj_match.group(1))
+                temps.append(tj_temp)
+                stat.add("Junction Temperature", "{:.2f} C".format(tj_temp))
+            
+            if not temps:
+                stat.summary(DiagnosticStatus.ERROR, "Failed to read temperature data")
+                return stat
+                
+            max_temp = max(temps)
+            
+            if max_temp >= self._error_temp:
+                stat.summary(DiagnosticStatus.ERROR,
+                            "Core temp exceeds {:.2f} C @ {:.2f} C".format(self._error_temp, max_temp))
+            elif max_temp >= self._warning_temp:
+                stat.summary(DiagnosticStatus.WARN,
+                            "Core temp exceeds {:.2f} C @ {:.2f} C".format(self._warning_temp, max_temp))
+            else:
+                stat.summary(DiagnosticStatus.OK, "Max core temp {:.2f} C".format(max_temp))
+                
+        except Exception as e:
+            stat.summary(DiagnosticStatus.ERROR, "Failed to read temperature: {}".format(str(e)))
+            
+        return stat
+
+    @staticmethod
+    def has_hardware():
+        output = TegrastatsProvider.get_output()
+        if not output:
+            return False
+        return 'cpu@' in output.lower() or 'soc' in output.lower()
+
+
+class ComputerTempTask(diagnostic_updater.DiagnosticTask):
+    def __init__(self, warning_percentage, error_temp):
+        diagnostic_updater.DiagnosticTask.__init__(self, "Computer Temperature")
+        self._warning_percentage = int(warning_percentage)
+        self._error_temp = error_temp
+        self._warning_temp = error_temp * (int(warning_percentage) / 100.0)
+
+    def run(self, stat):
+        try:
+            # Get the shared tegrastats output
+            output = TegrastatsProvider.get_output()
+            if not output:
+                stat.summary(DiagnosticStatus.ERROR, "Failed to get tegrastats data")
+                return stat
+            
+            # Parse all thermal data for system temperature
+            # First try to get the SOC temps as they're the most system-representative
+            soc_temps = []
+            soc_matches = re.findall(r'soc\d+@([\d\.]+)C', output)
+            for temp in soc_matches:
+                soc_temps.append(float(temp))
+            
+            if soc_temps:
+                # Average of SOC temperatures for overall system temp
+                computer_temp = sum(soc_temps) / len(soc_temps)
+                stat.add("SOC Average Temperature", "{:.2f} C".format(computer_temp))
+            else:
+                # If no SOC temps, try CPU temp
+                cpu_match = re.search(r'cpu@([\d\.]+)C', output, re.IGNORECASE)
+                if cpu_match:
+                    computer_temp = float(cpu_match.group(1))
+                    stat.add("CPU Temperature", "{:.2f} C".format(computer_temp))
+                else:
+                    stat.summary(DiagnosticStatus.ERROR, "Failed to read system temperature")
+                    return stat
+
+            if computer_temp >= self._error_temp:
+                stat.summary(DiagnosticStatus.ERROR,
+                             "System temp exceeds {:.2f} C @ {:.2f} C".format(self._error_temp, computer_temp))
+            elif computer_temp >= self._warning_temp:
+                stat.summary(DiagnosticStatus.WARN,
+                             "System temp exceeds {:.2f} C @ {:.2f} C".format(self._warning_temp, computer_temp))
+            else:
+                stat.summary(DiagnosticStatus.OK, "System temp {:.2f} C".format(computer_temp))
+
+        except Exception as e:
+            stat.summary(DiagnosticStatus.ERROR, "Failed to read system temperature: {}".format(str(e)))
+            
+        return stat
+
+    @staticmethod
+    def has_hardware():
+        output = TegrastatsProvider.get_output()
+        if not output:
+            return False
+        return 'soc' in output.lower() or 'cpu@' in output.lower()
+
+
 class GPUTask(diagnostic_updater.DiagnosticTask):
     def __init__(self, warning_percentage):
         diagnostic_updater.DiagnosticTask.__init__(self, "GPU Information")
         self._warning_percentage = int(warning_percentage)
-        self._tegrastats_reader = TegrastatsReader.get_instance()
 
     def run(self, stat):
         try:
-            # Get the tegrastats output from the shared reader
-            output = self._tegrastats_reader.get_data()
+            # Get the shared tegrastats output
+            output = TegrastatsProvider.get_output()
             if not output:
                 stat.summary(DiagnosticStatus.ERROR, "Failed to get tegrastats data")
                 return stat
@@ -311,47 +298,47 @@ class GPUTask(diagnostic_updater.DiagnosticTask):
 
     @staticmethod
     def has_hardware():
-        # Use the shared hardware check
-        data = TegrastatsReader.get_instance().get_data()
-        if not data:
+        output = TegrastatsProvider.get_output()
+        if not output:
             return False
-        return 'GR3D_FREQ' in data or 'VDD_GPU_SOC' in data
+        return 'GR3D_FREQ' in output or 'VDD_GPU_SOC' in output
 
 
 def main():
-    hostname = socket.gethostname()
-    rclpy.init()
-    node = rclpy.create_node('computer_monitor')
-    node.declare_parameter('diag_thresholds_file', rclpy.Parameter.Type.STRING)
+    try:
+        hostname = socket.gethostname()
+        rclpy.init()
+        node = rclpy.create_node('computer_monitor')
+        node.declare_parameter('diag_thresholds_file', rclpy.Parameter.Type.STRING)
 
-    # Load config file
-    with open(node.get_parameter('diag_thresholds_file').value, 'r') as stream:
-        thresholds_file = yaml.safe_load(stream)
-    thresholds = thresholds_file["computer_monitor_thresholds"]
+        # Load config file
+        with open(node.get_parameter('diag_thresholds_file').value, 'r') as stream:
+            thresholds_file = yaml.safe_load(stream)
+        thresholds = thresholds_file["computer_monitor_thresholds"]
 
-    # Create diagnostics updater
-    updater = diagnostic_updater.Updater(node)
-    updater.setHardwareID(hostname)
+        # Create diagnostics updater
+        updater = diagnostic_updater.Updater(node)
+        updater.setHardwareID(hostname)
 
-    # Initialize the TegrastatsReader singleton
-    tegrastat_available = TegrastatsReader.has_hardware()
-
-    updater.add(CpuTask(thresholds["cpu_warning_percentage"]))
-    updater.add(MemoryTask(thresholds["memory_warning_percentage"]))
-    updater.add(DiskTask(thresholds["disk_warning_percentage"]))
-    
-    if tegrastat_available:
-        # Only add these tasks if tegrastats is available
-        if ComputerTempTask.has_hardware():
+        # Always add the basic tasks
+        updater.add(CpuTask(thresholds["cpu_warning_percentage"]))
+        updater.add(MemoryTask(thresholds["memory_warning_percentage"]))
+        updater.add(DiskTask(thresholds["disk_warning_percentage"]))
+        
+        # Check if tegrastats is available
+        tegrastat_available = TegrastatsProvider.has_hardware()
+        
+        if tegrastat_available:
+            # Add diagnostic tasks in the original order
             updater.add(ComputerTempTask(thresholds["temp_warning_percentage"], thresholds["computer_error_temp_c"]))
-        if CoreTempTask.has_hardware():
             updater.add(CoreTempTask(thresholds["temp_warning_percentage"], thresholds["computer_error_temp_c"]))
-        if GPUTask.has_hardware():
             updater.add(GPUTask(thresholds["gpu_warning_percentage"]))
 
-    updater.force_update()
-
-    rclpy.spin(node, None)
+        updater.force_update()
+        rclpy.spin(node, None)
+    except Exception as e:
+        print(f"Error in computer_monitor: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 from launch.launch_description import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction
+from launch.actions import DeclareLaunchArgument, GroupAction, Shutdown
 from launch_ros.actions import PushRosNamespace, ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
 from launch.substitutions import LaunchConfiguration as LC
@@ -54,7 +54,7 @@ def generate_launch_description():
                 package='rclcpp_components',
                 executable="component_container",
                 output='screen',
-                on_exit=launch.actions.Shutdown(), # Zombie slayer
+                on_exit=Shutdown(), # Zombie slayer
                 respawn=True,
                 composable_node_descriptions=[
                     ComposableNode(
@@ -66,7 +66,7 @@ def generate_launch_description():
                             zed_config_path, 
                             zed2i_camera_path,
                             ffc_config_path,      
-                            'general.camera_name': [LC("robot"), "/ffc"],
+                            {'general.camera_name': [LC("robot"), "/ffc"]},
                         ]
                     ),
                 ]
@@ -78,7 +78,7 @@ def generate_launch_description():
                 package='rclcpp_components',
                 executable="component_container",
                 output='screen',
-                on_exit=launch.actions.Shutdown(), # Zombie slayer
+                on_exit=Shutdown(), # Zombie slayer
                 respawn=True,
                 composable_node_descriptions=[
                     ComposableNode(
@@ -90,7 +90,7 @@ def generate_launch_description():
                             zed_config_path,
                             zedxm_camera_path,
                             dfc_config_path,
-                            'general.camera_name': [LC("robot"), "/dfc"],
+                            {'general.camera_name': [LC("robot"), "/dfc"]},
                         ]
                     )
                 ]

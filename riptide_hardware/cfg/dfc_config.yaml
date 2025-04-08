@@ -1,18 +1,14 @@
 /**:
-  zed_node:
-    ros__parameters:
-      general:
-        camera_model: "zedxm"
-        serial_number: 51491740
-        optional_opencv_calibration_file: "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
-      svo:
-        # svo.svo_path: "" # Path must be absolute
-      pos_tracking:
-        publish_tf: false
-        publish_map_tf: false
-      sensors:
-        publish_imu_tf: false
-        sensors_image_sync: false
-      debug:
-        debug_common: false
-        debug_point_cloud: false
+  ros__parameters:
+    general:
+      camera_model: "zedxm"
+      serial_number: 51491740
+      optional_opencv_calibration_file: "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
+    # svo:
+    #   svo_path: "" # Must be absolute path
+    sensors:
+      publish_imu_tf: false
+      sensors_image_sync: false
+    debug:
+      debug_common: false
+      debug_point_cloud: false
