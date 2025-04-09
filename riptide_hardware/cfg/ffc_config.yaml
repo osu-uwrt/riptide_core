@@ -9,6 +9,3 @@
     debug:
       debug_common: false
       debug_point_cloud: false
-    sensors:
-      publish_imu_tf: false
-      sensors_image_sync: false

@@ -6,9 +6,6 @@
       optional_opencv_calibration_file: "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
     # svo:
     #   svo_path: "" # Must be absolute path
-    sensors:
-      publish_imu_tf: false
-      sensors_image_sync: false
     debug:
       debug_common: false
       debug_point_cloud: false

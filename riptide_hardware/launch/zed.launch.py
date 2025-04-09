@@ -63,10 +63,10 @@ def generate_launch_description():
                         namespace="ffc",
                         name='zed_node',
                         parameters=[
-                            zed_config_path, 
                             zed2i_camera_path,
+                            zed_config_path,
                             ffc_config_path,      
-                            {'general.camera_name': [LC("robot"), "/ffc"]},
+                            {'general.camera_name': "talos/ffc"},
                         ]
                     ),
                 ]
@@ -87,10 +87,10 @@ def generate_launch_description():
                         namespace="dfc",
                         name='zed_node',
                         parameters=[
-                            zed_config_path,
                             zedxm_camera_path,
+                            zed_config_path,
                             dfc_config_path,
-                            {'general.camera_name': [LC("robot"), "/dfc"]},
+                            {'general.camera_name': "talos/dfc"}
                         ]
                     )
                 ]
