@@ -202,6 +202,9 @@ class Vectornav : public rclcpp::Node {
     auto dumpMsg = riptide_msgs2::msg::VnDump();
     auto vpeMsg = riptide_msgs2::msg::VnVpeStatus();
 
+    // Error flag to stop bad data from being published (except for dump diagnostic topic)
+    bool error = false;
+
     try {
       // Parse into compositedata
       CompositeData cd = cd.parse(asyncPacket);
@@ -216,22 +219,41 @@ class Vectornav : public rclcpp::Node {
       q_ned2body.setRPY(M_PI, 0.0, M_PI/2.0);
       msg.orientation = tf2::toMsg(q_ned2body * q);
 
+      // Validate orientation
+      if (std::isnan(msg.orientation.x) || 
+          std::isnan(msg.orientation.y) || 
+          std::isnan(msg.orientation.z) ||
+          std::isnan(msg.orientation.w))
+      {
+        RCLCPP_ERROR(node->get_logger(), "NaN detected in orientation, not publishing IMU message");
+        error = true;
+      }
       if(abs(msg.orientation.x) > 1
         || abs(msg.orientation.y) > 1
         || abs(msg.orientation.z) > 1
         || abs(msg.orientation.w) > 1)
       {
         RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad orientation");
+        error = true;
       }
 
       // Set angular velocity data
       msg.angular_velocity = toMsg(cd.angularRate());
 
+      // Validate angular velocity
+      if (std::isnan(msg.angular_velocity.x) || 
+          std::isnan(msg.angular_velocity.y) || 
+          std::isnan(msg.angular_velocity.z))
+      {
+        RCLCPP_ERROR(node->get_logger(), "NaN detected in angular velocity, not publishing IMU message");
+        error = true;
+      }
       if(abs(msg.angular_velocity.x) > 2 * M_PI
         || abs(msg.angular_velocity.y) > 2 * M_PI
         || abs(msg.angular_velocity.z) > 2 * M_PI)
       {
         RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad angular velocity");
+        error = true;
       }
 
       // Set linear acceleration data
@@ -241,11 +263,20 @@ class Vectornav : public rclcpp::Node {
       msg.linear_acceleration.y = acceleration.y;
       msg.linear_acceleration.z = acceleration.z;
 
+      // Validate linear acceleration
+      if (std::isnan(msg.linear_acceleration.x) || 
+          std::isnan(msg.linear_acceleration.y) || 
+          std::isnan(msg.linear_acceleration.z))
+      {
+        RCLCPP_ERROR(node->get_logger(), "NaN detected in angular acceleration, not publishing IMU message");
+        error = true;
+      }
       if(abs(msg.linear_acceleration.x) > 20
         || abs(msg.linear_acceleration.y) > 20
         || abs(msg.linear_acceleration.z) > 20)
       {
         RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad linear acceleration");
+        error = true;
       }
 
       // Fill covariance data
@@ -299,15 +330,24 @@ class Vectornav : public rclcpp::Node {
       return;
     }
 
-    // Publish output, throw error if publish failed
+    // Publish diagnostics regardless of error state, throw error if publish failed
     try {
-      node->imuPub->publish(msg);
-      // node->magPub->publish(magMsg);
-      // node->magHeadingPub->publish(headingMsg);
-      node->pressurePub->publish(pressureMsg);
       node->dumpPub->publish(dumpMsg);
     } catch(...) {
-      RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
+      RCLCPP_WARN(node->get_logger(), "Failed to publish diagnostic dump messages");
+    }
+
+    // Publish output if no error, throw error if publish failed
+    if (!error)
+    {
+      try {
+        node->imuPub->publish(msg);
+        // node->magPub->publish(magMsg);
+        // node->magHeadingPub->publish(headingMsg);
+        node->pressurePub->publish(pressureMsg);
+      } catch(...) {
+        RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
+      }
     }
       
   }
