@@ -1,6 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, Shutdown
-from launch_ros.actions import PushRosNamespace, ComposableNodeContainer
+from launch_ros.actions import PushRosNamespace, ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
 from launch.substitutions import LaunchConfiguration as LC
 from ament_index_python import get_package_share_directory
@@ -54,9 +54,9 @@ def generate_launch_description():
         # Group actions under the robot namespace
         GroupAction([
             PushRosNamespace(LC("robot")),
-            # Single container hosting both camera nodes with intra-process communication enabled
+
             ComposableNodeContainer(
-                name="zed_container",
+                name="ffc_container",
                 namespace="",
                 package="rclcpp_components",
                 executable="component_container",
@@ -75,9 +75,19 @@ def generate_launch_description():
                             ffc_config_path,
                             zed_compression_path,
                             {"general.camera_name": "talos/ffc"},
-                        ],
-                        extra_arguments=[{'use_intra_process_comms': True}]
-                    ),
+                        ]
+                    ),                
+                ]
+            ),
+            
+            ComposableNodeContainer(
+                name="dfc_container",
+                namespace="",
+                package="rclcpp_components",
+                executable="component_container",
+                output="screen",
+                respawn=True,
+                composable_node_descriptions=[
                     # Second ZED Node (DFC)
                     ComposableNode(
                         package="zed_components",
@@ -89,12 +99,21 @@ def generate_launch_description():
                             zed_config_path,
                             dfc_config_path,
                             zed_compression_path,
-                            {"general.camera_name": "talos/dfc",
-                             "image_transport": "raw"},
-                        ],
-                        extra_arguments=[{'use_intra_process_comms': True}]
-                    )
+                            {"general.camera_name": "talos/dfc"},
+                        ]
+                    ),
                 ]
+            ),
+            
+            # Launch the ZedManager node
+            Node(
+                package='riptide_hardware2',
+                executable='zed_manager.py',
+                name='ZedManager',
+                output='screen'
             )
-        ], scoped=True)
+            
+        ], scoped=True),
+
+
     ])

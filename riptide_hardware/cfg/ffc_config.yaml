@@ -10,5 +10,6 @@
     # svo:
     #   svo_path: "" # Must be absolute path
     debug:
-      debug_common: false
+      debug_common: true
       debug_point_cloud: false
+      debug_video_depth: true
