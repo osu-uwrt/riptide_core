@@ -12,3 +12,4 @@
     debug:
       debug_common: false
       debug_point_cloud: false
+      debug_video_depth: false
