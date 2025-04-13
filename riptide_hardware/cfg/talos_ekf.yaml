@@ -33,7 +33,7 @@
                   true,  true,  true]
 
     # Imu comes in faster than the ekf runs so we need a queue
-    imu0_queue_size: 4
+    imu0_queue_size: 13
     imu0_remove_gravitational_acceleration: true
     gravitational_acceleration: 9.79604
 
@@ -59,6 +59,7 @@
                     false, false, false,
                     false, false, true,
                     false, false, false]
+    twist1_queue_size: 267
 
     # pose2: depth/twist
     # pose2_config: [false, false, true,
