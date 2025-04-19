@@ -64,6 +64,11 @@ class SampleSet():
     pressure_stamp = None
     pressure_index = 0
 
+    #water
+    depth = None
+    depth_stamp = None
+    depth_index = 0    
+
     #thread safe lock
     lock = None
 
@@ -143,6 +148,29 @@ class SampleSet():
                 self.camera_cage_index +=1
                 
                 return 0
+            
+    def add_depth_sample(self, temp, time):
+        with self._lock:
+            #add a pressure stamp
+            if (not (self.depth_temp is None)) and (self.depth_index < MAX_SAMPLES):
+                self.depth_temp[self.depth_index] = temp
+                self.depth_temp_stamp[self.depth_index] = time
+                
+                self.depth_index +=1
+                
+                return self.depth_index
+            else:
+                self.depth_temp = np.zeros(MAX_SAMPLES)
+                self.depth_temp_stamp = np.zeros(MAX_SAMPLES)
+
+                self.depth_index = 0
+                
+                self.depth_temp[self.depth_index] = temp
+                self.depth_temp_stamp[self.depth_index] = time
+                
+                self.depth_index +=1
+                
+                return 0
 
 
     def get_average_pressure(self):
@@ -153,6 +181,15 @@ class SampleSet():
                 return np.mean(self.pressure[0:self.pressure_index])
             else:
                 return -1
+    
+    def get_average_depth(self):
+        with self._lock:
+            if not (self.depth_temp is None):
+                #get the average depth temperature of the sample set
+                return np.mean(self.pressure[0:self.depth_index])
+            else:
+                return -1
+
     
     def get_pressure_std_dev(self):
         with self._lock:
@@ -177,7 +214,46 @@ class SampleSet():
                 return np.std(self.camera_cage_temp[0:self.camera_cage_index])
             else:
                 return -1
+    
+    #NOTE: it is understood that for a single set of samples both has auv been place into pool and removed from pool can return True
+    #this is intentional as this can happen in life, it is known that this may cause recurrant recals but otherwisre the user could create failure conditions
+
+    def has_auv_been_placed_in_pool(self, initial_depth, pool_relative_depth, positive_samples_ratio, histerisous):
+        #determine how many samples suggest the AUV is in the pool
+        depth_relative_pool =  self.depth - initial_depth + (pool_relative_depth * histerisous)
+
+        depth_samples_count = 0
+        for sample in depth_relative_pool:
+            if(sample < 0):
+                depth_samples_count += 1
+
+        #determine the percentage of samples
+        samples_fraction = depth_samples_count / len(self.depth)
+
+        # at least samples ratio must be in pool
+        if(samples_fraction > positive_samples_ratio):
+            return True
+        else:
+            return False
         
+    def has_auv_been_removed_from_pool(self, initial_depth, pool_relative_depth, positive_samples_ratio, histerisous):
+        #determine how many samples suggest the AUV is in the pool
+        depth_relative_pool =  self.depth - initial_depth + (pool_relative_depth * (1 - histerisous))
+
+        depth_samples_count = 0
+        for sample in depth_relative_pool:
+            if(sample > 0):
+                depth_samples_count += 1
+
+        #determine the percentage of samples
+        samples_fraction = depth_samples_count / len(self.depth)
+
+        # if at least samples ratio is out
+        if(samples_fraction > positive_samples_ratio):
+            return True
+        else:
+            return False
+
     def get_pvt(self):
         with self._lock:
             #assuming samples are added in order
@@ -304,6 +380,15 @@ class PressureMonitor(Node):
     #is running a depressurization
     is_running_depressurization = False
 
+    #depth the depressurization was ran at
+    surface_evalutation_depth = None
+
+    #"zero" depth - allows for mutliple pressure atmospheric
+    zero_depth = None
+
+    #has been placed in pool
+    in_pool = False
+
     def __init__(self):
         super().__init__('pressure_monitor')
 
@@ -316,6 +401,7 @@ class PressureMonitor(Node):
         self.pressure_sub = self.create_subscription(Float32, "vectornav/pressure_bar", self.update_pressure, qos_profile_sensor_data, callback_group=self.general_callback_group)
         self.ecage_temp_sub = self.create_subscription(Float32, "state/temp/poacboard", self.update_ecage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
         self.camera_cage_temp_sub = self.create_subscription(Float32, "state/temp/cameracage", self.update_camera_cage_temp, qos_profile_sensor_data, callback_group=self.general_callback_group)
+        self.external_depth_sub = self.create_subscription(Float32, "state/depth", self.update_depth, qos_profile_sensor_data, callback_group=self.general_callback_group)
 
         self.led_pub = self.create_publisher(LedCommand, "command/led", qos_profile_system_default)
         self.pressure_pub = self.create_publisher(Float32, "state/pvt", qos_profile_system_default)
@@ -396,6 +482,9 @@ class PressureMonitor(Node):
                 self.declare_parameter("hull_volume", config["hull_volume"])
                 self.declare_parameter("leak_decay", config["pressure_monitoring"]["leak_decay"])
                 self.declare_parameter("leak_init", config["pressure_monitoring"]["initial_leak"])
+                self.declare_parameter("in_pool_depth", config["pressure_monitoring"]["in_pool_depth"])
+                self.declare_parameter("in_pool_samples_ratio", config["pressure_monitoring"]["in_pool_samples_ratio"])
+                self.declare_parameter("in_pool_histerisous", config["pressure_monitoring"]["in_pool_histerisous"])
 
         except KeyError:
 
@@ -407,6 +496,9 @@ class PressureMonitor(Node):
             self.declare_parameter("hull_volume", .1)
             self.declare_parameter("leak_decay", 84000)
             self.declare_parameter("leak_init", .00001)
+            self.declare_parameter("in_pool_depth", 2.0)
+            self.declare_parameter("in_pool_samples_ratio", 0.05)
+            self.declare_parameter("in_pool_histerisous", 0.75)
 
 
         except FileNotFoundError as e:
@@ -419,6 +511,9 @@ class PressureMonitor(Node):
             self.declare_parameter("hull_volume", .1)
             self.declare_parameter("leak_decay", 84000)
             self.declare_parameter("leak_init", .00001)
+            self.declare_parameter("in_pool_depth", 2.0)
+            self.declare_parameter("in_pool_samples_ratio", 0.05)
+            self.declare_parameter("in_pool_histerisous", 0.75)
 
 
         self.temperature_standard_dev = self.get_parameter("temperature_standard_dev").value
@@ -427,6 +522,9 @@ class PressureMonitor(Node):
         self.hull_volume = self.get_parameter("hull_volume").value
         self.leak_decay = self.get_parameter("leak_decay").value
         self.leak_init = self.get_parameter("leak_init").value
+        self.pool_relative_depth = self.get_parameter("in_pool_depth").value
+        self.pool_samples_ratio = self.get_parameter("in_pool_samples_ratio").value
+        self.pool_histerious = self.get_parameter("in_pool_histerisous").value
 
     def depressurize_callback(self, goal_handle):
         if(self.is_running_depressurization):
@@ -517,6 +615,7 @@ class PressureMonitor(Node):
         sampled_final_pvt = 0 
         sampled_final_pvt_std = 0
         sampled_final_pvt_samples = 0
+        depth = 0
         while(sampled_final_pressure > target_pressure + self.pressurization_tolerance):
 
             #display leds to keep pumping
@@ -572,6 +671,7 @@ class PressureMonitor(Node):
                     sampled_final_pvt = self.collecting_sample_set.get_pvt()
                     sampled_final_pvt_std = self.collecting_sample_set.get_pvt_std()
                     sampled_final_pvt_samples = self.collecting_sample_set.get_num_samples()
+                    depth = self.collecting_sample_set.get_average_depth()
                     sampled_cleanly = True
 
                     self.get_logger().info(f"Current Pressure is {sampled_final_pressure}. Samples were taken cleanly!")
@@ -604,6 +704,8 @@ class PressureMonitor(Node):
         self.depressurized_pvt = sampled_final_pvt
         self.depressurized_pvt_std = sampled_final_pvt_std
         self.depressurized_pvt_samples = sampled_final_pvt_samples
+        self.surface_evalutation_depth = depth
+        self.zero_depth = self.surface_evalutation_depth - self.pool_relative_depth
         self.pvt_leak_rate_compensation = 0
 
         #record the initial pressurization time
@@ -647,6 +749,43 @@ class PressureMonitor(Node):
             self.collecting_sample_set = None
             return
         
+        if(self.collecting_sample_set.has_auv_been_placed_in_pool(self.surface_evalutation_depth, self.pool_relative_depth, self.pool_samples_ratio, self.pool_histerious) and not self.in_pool):
+            #allow AUV to recal in pool
+            self.in_pool = True
+            self.recal = True
+
+            #warn user
+            self.get_logger().warn("It has been detected that the AUV has entered or exited the pool. Forcing a recalibration of the system. Please be vigalent in checking for leaks!")
+
+            self.collecting_sample_set = None
+            return
+
+        elif(self.collecting_sample_set.has_auv_been_removed_from_pool(self.surface_evalutation_depth, self.pool_relative_depth, self.pool_samples_ratio, self.pool_histerious) and self.in_pool):
+            #allow AUV to recal on surface
+            self.in_pool = False
+            self.recal = True
+
+            #warn user
+            self.get_logger().warn("It has been detected that the AUV has entered or exited the pool. Forcing a recalibration of the system. Please be vigalent in checking for leaks!")
+
+            self.collecting_sample_set = None
+            return
+
+        if(self.recal):
+            #if this is a recalibration cycle as the AUV has been taken in or out to of the pool
+            if(self.collecting_sample_set.get_pressure_std_dev() < self.pressure_standard_dev and self.collecting_sample_set.get_ecage_temp_std_dev() < self.temperature_standard_dev and self.collecting_sample_set.get_camera_cage_temp_std_dev() < self.temperature_standard_dev):
+                self.depressurized_pvt = self.collecting_sample_set.get_pvt()
+                self.depressurized_pvt_std = self.collecting_sample_set.get_pvt_std()
+                self.depressurized_pvt_samples = self.collecting_sample_set.get_num_samples()
+
+                self.get_logger().warn("Recalibration Sucessful! Operating as usual!")
+
+            else:
+                self.get_logger().warn("Recalibration failed due to inconsistent data! Forcing a recalibration of the system. Please be vigalent in checking for leaks!")
+
+            self.collecting_sample_set = None
+            return
+
         #get the stats on the current sample set
         current_pvt = self.collecting_sample_set.get_pvt()
 
@@ -753,6 +892,11 @@ class PressureMonitor(Node):
         if not (self.collecting_sample_set is None):
             #add sample
             self.collecting_sample_set.add_ecage_sample(msg.data, self.get_current_time_as_double())
+
+    def update_depth(self, msg):
+        if not (self.collecting_sample_set is None):
+            #add sample
+            self.collecting_sample_set.add_depth_sample(msg.data, self.get_current_time_as_double())
 
     def get_current_time_as_double(self):
         return self.get_clock().now().seconds_nanoseconds()[0] + self.get_clock().now().seconds_nanoseconds()[1] * 1e-9

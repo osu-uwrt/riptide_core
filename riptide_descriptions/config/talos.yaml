@@ -97,7 +97,7 @@ controller:
     minimum_average_sampled_velocity: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 
     #minimum correspondance coeffiecent to update compensation
-    minimum_R2_coeffiecent: 0.9
+    minimum_R2_coeffiecent: 0.7
 
     #learning rate for drag compensation
     learning_rate: 0.5
@@ -215,6 +215,15 @@ pressure_monitoring:
   #tolerance in leak detection for pulling the pump -> valve emits some error
   #initial_leak: .0025 # - (factor of initial depressurization delta) lab
   initial_leak: .005 #lake validated
+
+  #tolerance for water temperature fluxuations
+  in_pool_depth: 0.2 #C, the max tolerance for water temperature change before recalibrating
+  
+  #histerisous threshold
+  histerisous_threshold: 0.75
+
+  #pool samples ratio to allow recalk
+  pool_samples_ratio: 0.05
 
 #this is for the newly developed solver
 thruster_solver:
