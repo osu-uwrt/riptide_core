@@ -24,7 +24,7 @@ class ZedManager(Node):
         self.declare_parameter('ffc_ready_topic', '/talos/ffc/zed_node/rgb/camera_info')
         self.declare_parameter('dfc_ready_topic', '/talos/dfc/zed_node/rgb/camera_info')
         self.declare_parameter('auto_sleep_ffc', False)  # Whether to auto sleep dfc during init
-        self.declare_parameter('auto_sleep_dfc', True) # Whether to auto sleep ffc during init
+        self.declare_parameter('auto_sleep_dfc', False) # Whether to auto sleep ffc during init
         
         # Set defaults: ffc_container awake and dfc_container with topic checking auto sleep
         self.init_process('ffc_container', sleep=False, check_topic=self.get_parameter('auto_sleep_ffc').value)
