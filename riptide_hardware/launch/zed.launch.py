@@ -105,13 +105,14 @@ def generate_launch_description():
                 ]
             ),
             
-            # Launch the ZedManager node
-            Node(
-                package='riptide_hardware2',
-                executable='zed_manager.py',
-                name='ZedManager',
-                output='screen'
-            )
+            # Disabled for now as both are on by default
+            # # Launch the ZedManager node
+            # Node(
+            #     package='riptide_hardware2',
+            #     executable='zed_manager.py',
+            #     name='ZedManager',
+            #     output='screen'
+            # )
             
         ], scoped=True),
 
