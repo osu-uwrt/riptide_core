@@ -96,9 +96,9 @@ namespace uwrt_gyro {
             frame,
             SerialFrame({
                 FIELD_SYNC,
-                UwrtGyroField::RESERVED,
-                UwrtGyroField::RESERVED,
-                UwrtGyroField::RESERVED,
+                UwrtGyroField::VRATE,
+                UwrtGyroField::VRATE,
+                UwrtGyroField::VRATE,
                 FIELD_FRAME,
                 UwrtGyroField::RESERVED,
                 UwrtGyroField::CHECKSUM,
@@ -130,6 +130,10 @@ namespace uwrt_gyro {
 
     struct NodeParameters {
         std::string frame;
+
+        int
+            rateFreq,
+            statusFreq;
         
         double
             a,
@@ -160,6 +164,15 @@ namespace uwrt_gyro {
         int
             acquiredSamples,
             desiredSamples;
+    };
+
+    struct RateStatus {
+        RateStatus()
+         : accum(0),
+           samples(0) { }
+
+        double accum;
+        int samples;
     };
 
 
@@ -206,6 +219,8 @@ namespace uwrt_gyro {
             //declare parameters
             declare_parameter<std::string>("gyro_port", DEFAULT_PORT);
             declare_parameter<std::string>("gyro_frame", DEFAULT_FRAME);
+            declare_parameter<int>("rate_frequency", 50);
+            declare_parameter<int>("status_frequency", 1);
             declare_parameter<double>("a", 0);
             declare_parameter<double>("b", 0);
             declare_parameter<double>("c", 0);
@@ -250,7 +265,7 @@ namespace uwrt_gyro {
             //start timer
             timer = create_wall_timer(
                 20ms,
-                std::bind(&GyroDriver::timerCb, this));
+                std::bind(&GyroDriver::statusTimerCb, this));
             
             //create publishers
             rawDataPub = create_publisher<riptide_msgs2::msg::Int32Stamped>("gyro/raw", rclcpp::SensorDataQoS());
@@ -297,6 +312,8 @@ namespace uwrt_gyro {
             RCLCPP_INFO(get_logger(), "Reloading gyro parameters");
             NodeParameters *params = nodeParamsResource.lockResource();
             params->frame = get_parameter("gyro_frame").as_string();
+            params->rateFreq = get_parameter("rate_frequency").as_int();
+            params->statusFreq = get_parameter("status_frequency").as_int();
             params->a = get_parameter("a").as_double();
             params->b = get_parameter("b").as_double();
             params->c = get_parameter("c").as_double();
@@ -339,7 +356,7 @@ namespace uwrt_gyro {
         }
 
         //this timer routine publishes diagnostics and everything else that isnt rate
-        void timerCb()
+        void statusTimerCb()
         {
             NodeParameters *params = nodeParamsResource.lockResource();
             std::string frame = params->frame;
@@ -392,6 +409,31 @@ namespace uwrt_gyro {
         }
 
 
+        void rateTimerCb()
+        {
+            //get fog frame id from params resource
+            NodeParameters *params = nodeParamsResource.lockResource();
+            std::string frame = params->frame;
+            double variance = params->variance;
+            nodeParamsResource.unlockResource();
+
+            RateStatus *rate = rateStatusResource.lockResource();
+            if(rate->samples > 0)
+            {
+                geometry_msgs::msg::TwistWithCovarianceStamped twistMsg;
+                twistMsg.header.frame_id = frame;
+                twistMsg.header.stamp = get_clock()->now();
+                twistMsg.twist.covariance[35] = variance;
+                twistMsg.twist.twist.angular.z = rate->accum / (double) rate->samples;
+                rate->accum = 0;
+                rate->samples = 0;
+                twistPub->publish(twistMsg);
+            }
+
+            rateStatusResource.unlockResource();
+        }
+
+
         void gyroFrameReceived()
         {
             if(!processor->hasDataForField(UwrtGyroField::VRATE))
@@ -426,24 +468,23 @@ namespace uwrt_gyro {
             //get params struct
             NodeParameters *params = nodeParamsResource.lockResource();
 
-            //publish raw message
-            riptide_msgs2::msg::Int32Stamped rawMsg;
-            rawMsg.header.frame_id = params->frame;
-            rawMsg.header.stamp = data.timestamp;
-            rawMsg.data = signedRawReading;
-            rawDataPub->publish(rawMsg);
+            //publish raw message if someone wants it
+            if(rawDataPub->get_subscription_count() > 0)
+            {
+                riptide_msgs2::msg::Int32Stamped rawMsg;
+                rawMsg.header.frame_id = params->frame;
+                rawMsg.header.stamp = data.timestamp;
+                rawMsg.data = signedRawReading;
+                rawDataPub->publish(rawMsg);
+            }
 
-            //calculate and publish twist
-            geometry_msgs::msg::TwistWithCovarianceStamped twistMsg;
-            twistMsg.header = rawMsg.header;
-            twistMsg.twist.covariance[35] = params->variance;
-
+            //calculate and store rate
             double 
                 normalizedRawReading = (signedRawReading - params->rateNormMean) / params->rateNormStd,
                 normalizedGyroTemperature = (gyroTemperature - params->tempNormMean) / params->tempNormStd;
 
             //formula: z(x,y) = a + b*x^3 + c*x*y + d*cos(f*x + g)
-            twistMsg.twist.twist.angular.z = 
+            double rate = 
                 params->a + 
                 params->b * normalizedRawReading * normalizedRawReading * normalizedRawReading +
                 params->c * normalizedRawReading * normalizedGyroTemperature +
@@ -453,18 +494,22 @@ namespace uwrt_gyro {
             TareStatus *tareStatus = tareStatusResource.lockResource();
             if(tareStatus->active && tareStatus->acquiredSamples < tareStatus->desiredSamples)
             {
-                tareStatus->offset += twistMsg.twist.twist.angular.z / (double) tareStatus->desiredSamples;
+                tareStatus->offset += rate / (double) tareStatus->desiredSamples;
                 tareStatus->acquiredSamples++;
             } else
             {
                 //apply tare to twist before publishing
-                twistMsg.twist.twist.angular.z -= tareStatus->offset;
+                rate -= tareStatus->offset;
             }
 
             tareStatusResource.unlockResource();
-
             nodeParamsResource.unlockResource();
-            twistPub->publish(twistMsg);
+
+            //now add the rate to the resource, which will be divided into an average later
+            RateStatus *rateStatus = rateStatusResource.lockResource();
+            rateStatus->accum += rate;
+            rateStatus->samples++;
+            rateStatusResource.unlockResource();
         }
 
 
@@ -612,6 +657,7 @@ namespace uwrt_gyro {
         //status
         ProtectedResource<riptide_msgs2::msg::GyroStatus*> statusResource;
         ProtectedResource<TareStatus*> tareStatusResource;
+        ProtectedResource<RateStatus*> rateStatusResource;
 
         //tools
         std::shared_ptr<LinuxSerialTransceiver> transceiver;

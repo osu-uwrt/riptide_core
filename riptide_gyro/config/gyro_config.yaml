@@ -4,6 +4,9 @@
     gyro_port: /dev/ttyTHS2
     gyro_frame: talos/fog_link
 
+    rate_frequency: 1000 #hz
+    status_frequency: 1 #hz
+
     # calibration parameters
     # formula: z(x,y) = a + b*x^3 + c*x*y + d*cos(f*x + g)
     a: 0.003388
@@ -20,4 +23,4 @@
     variance: 0.0001
 
     #calibration limits
-    cal_temp_limits: [37.57019, 51.303101]
+    cal_temp_limits: [42.11, 57.16]
