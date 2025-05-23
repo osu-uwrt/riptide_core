@@ -1,9 +1,9 @@
 # Configuartion file for robot_localization's ekf_localization_node
-/talos/ekf_localization_node:
+/liltank/ekf_localization_node:
   ros__parameters:
     world_frame: odom
     odom_frame: odom
-    base_link_frame: talos/base_link
+    base_link_frame: liltank/base_link
 
     #used for learning drag
     publish_acceleration: true
@@ -27,33 +27,20 @@
 
     imu0: vectornav/imu
     imu0_config: [false, false, false,
-                  true,  true,  false,
+                  true,  true,  true,
                   false, false, false,
                   true,  true,  true,
-                  true,  true,  true]
+                  false,  false,  true]
 
     # Imu comes in faster than the ekf runs so we need a queue
     imu0_queue_size: 13
     imu0_remove_gravitational_acceleration: true
     gravitational_acceleration: 9.79604
 
-    twist0: dvl_twist
-    twist0_config: [false, false, false,
-                    false, false, false,
-                    true,  true,  false,
-                    false, false, false,
-                    false, false, false]
 
-    twist1: gyro/twist
-    twist1_config: [false, false, false,
-                    false, false, false,
-                    false, false, false,
-                    false, false, true,
-                    false, false, false]
-    twist1_queue_size: 267
-
+    # using depth pose for x and y as well ensures that robot doesnt shoot off into infinity
     pose0: depth/pose
-    pose0_config: [false, false, true,
+    pose0_config: [true, true, true,
                   false, false, false,
                   false, false, false,
                   false, false, false,

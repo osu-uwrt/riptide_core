@@ -86,8 +86,13 @@ def evaluate_xacro(context, *args, **kwargs):
         # zed state publisher
         #
         try:
-            nodes.append(get_zed_description("ffc", "zed2i", robot, context, debug))
-            nodes.append(get_zed_description("dfc", "zedxm", robot, context, debug))
+            if robot == "talos":
+                nodes.append(get_zed_description("ffc", "zed2i", robot, context, debug))
+                nodes.append(get_zed_description("dfc", "zedxm", robot, context, debug))
+
+            if robot == "liltank":
+                nodes.append(get_zed_description("ffc", "zedxm", robot, context, debug))
+                
         except PackageNotFoundError:
             print("zed_wrapper not found. Launching without zed TF")
         
@@ -110,7 +115,8 @@ def launch_ekf(context, *args, **kwargs):
     tag_odom_enabled = LC("tag_odom_enabled").perform(context) == 'True'
     
     if LC("ekf_enabled").perform(context) == "True":
-        ekf_config_name = "talos_ekf.yaml" if not tag_odom_enabled else "talos_ekf_tag_odom.yaml"
+        robot = LC("robot").perform(context)
+        ekf_config_name = f"{robot}_ekf.yaml" if not tag_odom_enabled else f"{robot}_ekf_tag_odom.yaml"
         
         config = os.path.join(
             get_package_share_directory('riptide_hardware2'),

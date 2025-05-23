@@ -1,4 +1,4 @@
-# Positions are in meters from back left foot. ENU convention
+# Positions are in meters from farthest-port screw on front of camera cage. ENU convention
 # Pose is xyzrpy with rpy in radians
 
 # Point which represents robot position. Must be near center
@@ -285,7 +285,7 @@ fog:
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
-torpedos: 
+torpedoes: 
   pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
   baseline: 0.0333375 #1 5/16 in
 

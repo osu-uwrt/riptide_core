@@ -1,0 +1,63 @@
+# Positions are in meters from TBD. ENU convention
+# Pose is xyzrpy with rpy in radians
+
+# Point which represents robot position. Must be near center
+base_link: [-0.14, 0.03, -0.09]
+
+# Vehicle mass properties
+mass: 10.998
+com: [-0.148, 0.040, -0.071]
+inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
+hull_volume: .21 #make this real
+
+controller_overseer:
+  #the height above water at which to kill the thrusters (m)
+  thruster_kill_plane: 1.0
+
+depth:
+  # topic: depth/pressure
+  rate: 20 # Hz
+  sigma: 0.010 # Stdev in m. Used by gazebo
+  pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
+
+imu:
+  # topic: /imu/imu/data
+  rate: 100 #Hz
+  sigma_accel: 0.016 # Stdev in m/s^2. Used by sim
+  sigma_omega: 0.01 # Stdev in deg/s. Used by sim
+  sigma_angle: 0.5 # Std dev in deg. Used by sim
+  yaw_drift:   1.5 # deg/min 
+  # pose: [-0.0505, -0.0769, 0.0529, 3.141, 0.0, -1.5707] #[-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
+  pose: [-0.1722, -0.13072, 0.02537, 3.141, 0.0, -1.5707]
+
+cameras: [
+  {
+    type: zed, 
+    name: ffc,
+    baseline: 0.045, # m. Distance between cameras (manually measured) 
+    pose: [-0.0195, -0.0889, 0, 0, 0, 0]
+  }
+]
+
+# Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
+# Thruster naming convention:
+#  - first letter:  direction         (Heave/Vector)
+#  - second letter: vertical position (Upper/Lower)
+#  - third letter:  lateral position  (Port/Starboard)
+thrusters: [
+  {
+    name: "VUS", #thruster 0
+    type: 1,
+    pose: [-0.134, -0.369, 0.242, 0.0, 0.0, 0.0]
+  },
+  {
+    name: "VUP", #thruster 1
+    type: 0,
+    pose: [-0.134, 0.438, 0.242, 0.0, 0.0, 0.0]
+  },
+  {
+    name: "TES",
+    type: 1,
+    pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  }
+]

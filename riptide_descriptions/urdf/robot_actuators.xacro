@@ -64,7 +64,7 @@
   </xacro:macro>
 
   <xacro:macro name="torpedo_macro" params="namespace config">
-    <xacro:property name="torpedo" value="${config['torpedos']}"/>
+    <xacro:property name="torpedo" value="${config['torpedoes']}"/>
     <joint name="${namespace}/torpedo_joint" type="fixed">
       <origin xyz="${torpedo['pose'][0]} ${torpedo['pose'][1]} ${torpedo['pose'][2]}"
               rpy="${torpedo['pose'][3]} ${torpedo['pose'][4]} ${torpedo['pose'][5]}" />
@@ -108,15 +108,21 @@
         thrusters="${config['thrusters']}"
         index="0"/>
   
-  <xacro:poker_macro
-        namespace="${namespace}"
-        config="${config}"/>
+  <xacro:if value="${'poker' in config}">
+    <xacro:poker_macro
+          namespace="${namespace}"
+          config="${config}"/>
+  </xacro:if>
 
-  <xacro:torpedo_macro
-        namespace="${namespace}"
-        config="${config}"/>
+  <xacro:if value="${'torpedoes' in config}">
+    <xacro:torpedo_macro
+          namespace="${namespace}"
+          config="${config}"/>
+  </xacro:if>
 
-  <xacro:dropper_macro
-        namespace="${namespace}"
-        config="${config}"/>
+  <xacro:if value="${'droppers' in config}">
+    <xacro:dropper_macro
+          namespace="${namespace}"
+          config="${config}"/>
+  </xacro:if>
 </robot>
