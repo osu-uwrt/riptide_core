@@ -10,14 +10,18 @@ from rclpy.qos import qos_profile_system_default
 from riptide_msgs2.msg import ElectricalCommand
 
 class ImuPowerCycleNode(Node):
-    POWER_CYCLE_PIN = 22
-
     def __init__(self):
         super().__init__('imu_power_cycle')
+        
+        # figure out which pin to use
+        self.declare_parameter("pin_id", 0)
+        self.pwrCyclePin = self.get_parameter("pin_id").value
+        
+        self.get_logger().info(f"IMU power cycle node using pin id {self.pwrCyclePin}")
 
         # Init GPIO
         GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(self.POWER_CYCLE_PIN, GPIO.OUT, initial=GPIO.HIGH)
+        GPIO.setup(self.pwrCyclePin, GPIO.OUT, initial=GPIO.HIGH)
 
         # Setup subscription and timer
         self.sub = self.create_subscription(ElectricalCommand, "command/electrical", self.commandCb, qos_profile_system_default)
@@ -26,9 +30,9 @@ class ImuPowerCycleNode(Node):
 
     def resetTimerPoll(self):
         if time.time() < self.nextPowerupTime:
-            GPIO.output(self.POWER_CYCLE_PIN, GPIO.LOW)
+            GPIO.output(self.pwrCyclePin, GPIO.LOW)
         else:
-            GPIO.output(self.POWER_CYCLE_PIN, GPIO.HIGH)
+            GPIO.output(self.pwrCyclePin, GPIO.HIGH)
 
     def commandCb(self, msg: 'ElectricalCommand'):
         if msg.command == ElectricalCommand.CYCLE_IMU:
