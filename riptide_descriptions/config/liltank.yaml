@@ -11,12 +11,14 @@ inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 hull_volume: .022772 #make this real
 
 active_ballast:
-  # used by depth controller and rviz
-  water_in_solenoid: 1
-  pressure_in_solenoid: 2
-  ballast_out_solenoid: 3
+  # FW IDs of ballast control solenoids. Used by depth controller and rviz
+  exaust_solenoid: 1
+  pressure_solenoid: 2
+  water_solenoid: 3
 
-  
+  volume: 0.002 # Volume of space which can be filled with water
+  in_flow_rate: 0.000125 # Volume of water (m^3) entering ballast per second while intaking water
+  out_flow_rate: 0.00025 # Volume of water (m^3) exiting ballast per second while expelling water
 
 depth:
   rate: 20 # Hz
