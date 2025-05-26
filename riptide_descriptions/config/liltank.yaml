@@ -11,11 +11,6 @@ inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 hull_volume: .022772 #make this real
 
 active_ballast:
-  # FW IDs of ballast control solenoids. Used by depth controller and rviz
-  exaust_solenoid: 1
-  pressure_solenoid: 2
-  water_solenoid: 3
-
   volume: 0.002 # Volume of space which can be filled with water
   in_flow_rate: 0.000125 # Volume of water (m^3) entering ballast per second while intaking water
   out_flow_rate: 0.00025 # Volume of water (m^3) exiting ballast per second while expelling water
@@ -44,18 +39,16 @@ cameras: [
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:
-#  - first letter:  direction         (Heave/Vector)
-#  - second letter: vertical position (Upper/Lower)
-#  - third letter:  lateral position  (Port/Starboard)
+#  - first letter: P/S (port/starboard)
 thrusters: [
   {
-    name: "VUS", #thruster 0
+    name: "S", #thruster 0
     type: 1,
-    pose: [-0.134, -0.369, 0.242, 0.0, 0.0, 0.0]
+    pose: [0.1, -0.15, 0.0, 0.0, 0.0, 0.0]
   },
   {
-    name: "VUP", #thruster 1
+    name: "P", #thruster 1
     type: 0,
-    pose: [-0.134, 0.438, 0.242, 0.0, 0.0, 0.0]
+    pose: [0.1, 0.15, 0.0, 0.0, 0.0, 0.0]
   }
 ]
