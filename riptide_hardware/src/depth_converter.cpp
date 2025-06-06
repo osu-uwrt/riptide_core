@@ -10,7 +10,6 @@
 #include <chrono>
 
 using std::placeholders::_1;
-
 using namespace std::chrono_literals;
 
 class DepthConverter : public rclcpp::Node {
@@ -18,22 +17,23 @@ public:
     DepthConverter() : Node("depth_converter") {
         auto qos = rclcpp::SensorDataQoS();
 
-        //depth sensor plug
+        // Depth sensor plug
         sub_plug = this->create_subscription<riptide_msgs2::msg::Depth>(
             "state/depth/raw", qos, std::bind(&DepthConverter::depth_callback, this, _1));
 
-        //dvl data sub
+        // DVL data sub
         sub_dvl = this->create_subscription<nortek_dvl_msgs::msg::Dvl>(
             "dvl", qos, std::bind(&DepthConverter::depth_callback_dvl, this, _1));
 
-        //depth pose publisher
+        // Depth pose publisher
         pub_pose = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
             "depth/pose", qos);
 
-        //depth twist pub
+        // Depth twist pub
         pub_twist = this->create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
             "depth/twist", qos);
 
+        // Create the TF buffer with a standard listener
         tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
@@ -46,12 +46,40 @@ public:
         this->declare_parameter("dvl_depth_factor", dvl_depth_factor_init);
         this->declare_parameter("dvl_varaince", .01);
         this->declare_parameter("pub_rate", false);
-
+        
+        // Wait a bit for TF to be ready before allowing callbacks to run
+        tf_ready_ = false;
+        wait_for_tf_timer_ = this->create_wall_timer(500ms, std::bind(&DepthConverter::check_tf_ready, this));
+        
         this->param_refresh_timer = this->create_wall_timer(1000ms, std::bind(&DepthConverter::refresh_parameters, this));
     }
 
 private:
+    void check_tf_ready() {
+        try {
+            // Only print "waiting" message periodically 
+            static rclcpp::Time last_log_time = this->now();
+            if ((this->now() - last_log_time).seconds() > 5.0) {
+                RCLCPP_INFO(this->get_logger(), "Waiting for TF frames to become available...");
+                last_log_time = this->now();
+            }
+            
+            // Try to get the transform without a timeout
+            if (tf_buffer_->_frameExists("odom") && tf_buffer_->_frameExists(namespace_ + "/base_link")) {
+                RCLCPP_INFO(this->get_logger(), "Required TF frames are now available");
+                tf_ready_ = true;
+                wait_for_tf_timer_->cancel(); // Stop checking once we have the frames
+            }
+        } catch (const std::exception& ex) {
+            // Silently ignore any exceptions
+        }
+    }
+
     void depth_callback(const riptide_msgs2::msg::Depth::SharedPtr msg) {
+        // Skip processing if TF isn't ready yet
+        if (!tf_ready_) {
+            return;
+        }
 
         try {
             auto b2o_transform = tf_buffer_->lookupTransform("odom", namespace_ + "/base_link", tf2::TimePointZero);
@@ -76,7 +104,7 @@ private:
                 //publish rate from depth sensor
 
                 double current_depth = msg->depth + added_depth;
-                double current_time = msg->header.stamp.sec + msg->header.stamp.nanosec * 10^-9; 
+                double current_time = msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9;  // Fixed power of 10 notation
 
                 if(preivous_time == 0){
                     //need to get previous data to fill out rate
@@ -116,16 +144,16 @@ private:
                 pub_pose->publish(out_msg);
             }
         } catch (const tf2::TransformException& ex) {
-            RCLCPP_WARN(this->get_logger(), "TF2 error: %s", ex.what());
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, 
+                "TF2 error: %s", ex.what());
         }
     }
 
     void depth_callback_dvl(const nortek_dvl_msgs::msg::Dvl::SharedPtr msg){
-        if(!this->use_dvl){
+        // Skip processing if TF isn't ready yet
+        if (!tf_ready_ || !this->use_dvl) {
             return;
         }
-
-
 
         try {
             auto b2o_transform = tf_buffer_->lookupTransform("odom", namespace_ + "/base_link", tf2::TimePointZero);
@@ -144,7 +172,7 @@ private:
                     pressure_transform.transform.translation.z);
             }
 
-            RCLCPP_WARN(this->get_logger(), "OG Depth: %f", msg->pressure / dvl_depth_factor);
+            RCLCPP_DEBUG(this->get_logger(), "OG Depth: %f", msg->pressure / dvl_depth_factor);
 
             double added_depth = b2o_matrix.col(2).dot(b2p_vector_.value());
 
@@ -156,15 +184,16 @@ private:
             out_msg.header.stamp = this->get_clock()->now();
             pub_pose->publish(out_msg);
         } catch (const tf2::TransformException& ex) {
-            RCLCPP_WARN(this->get_logger(), "TF2 error: %s", ex.what());
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000, 
+                "TF2 error: %s", ex.what());
         }
     }
+    
     void refresh_parameters(){
         this->use_dvl = this->get_parameter("use_dvl").as_bool();
         this->pub_rate = this->get_parameter("pub_rate").as_bool();
         this->dvl_depth_factor = this->get_parameter("dvl_depth_factor").as_double();
         this->dvl_variance = this->get_parameter("dvl_varaince").as_double();
-
     }
 
     rclcpp::Subscription<riptide_msgs2::msg::Depth>::SharedPtr sub_plug;
@@ -177,6 +206,8 @@ private:
     std::string namespace_;
 
     rclcpp::TimerBase::SharedPtr param_refresh_timer;
+    rclcpp::TimerBase::SharedPtr wait_for_tf_timer_;
+    bool tf_ready_ = false;
 
     bool use_dvl = false;
     bool pub_rate = false;

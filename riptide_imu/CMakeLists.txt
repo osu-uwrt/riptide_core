@@ -23,6 +23,7 @@ add_subdirectory(vnproglib-1.2.0.0/cpp)
 
 #Grab vnproglib header files
 include_directories(vnproglib-1.2.0.0/cpp/include)
+include_directories(include)
 
 #Build executable
 add_executable(imu src/main.cpp)

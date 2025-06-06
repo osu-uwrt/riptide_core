@@ -22,6 +22,7 @@ def generate_launch_description():
                 {
                     "port" : LaunchConfiguration("imu_port")
                 }
-            ]
+            ],
+            respawn=True
         )
     ])

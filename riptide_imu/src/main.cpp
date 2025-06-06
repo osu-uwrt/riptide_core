@@ -1,24 +1,27 @@
 #include <chrono>
 #include <queue>
 
-#include "vn/sensors.h"
-#include "vn/compositedata.h"
-#include "vn/exceptions.h"
+#include <vn/sensors.h>
+#include <vn/compositedata.h>
+#include <vn/exceptions.h>
 
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp_action/rclcpp_action.hpp"
-#include "sensor_msgs/msg/imu.hpp"
-#include "std_msgs/msg/float32.hpp"
+#include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <sensor_msgs/msg/imu.hpp>
+#include <std_msgs/msg/float32.hpp>
+#include <riptide_msgs2/msg/vn_dump.hpp>
+#include <riptide_msgs2/msg/vn_vpe_status.hpp>
 
 #include <fcntl.h>
 #include <linux/serial.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
-#include "riptide_msgs2/action/mag_cal.hpp"
-#include "riptide_msgs2/msg/imu_config.hpp"
+#include <riptide_msgs2/action/mag_cal.hpp>
+#include <riptide_msgs2/msg/imu_config.hpp>
+#include <riptide_msgs2/srv/query_imu_serial.hpp>
 
 using namespace vn::sensors;
 using namespace std::placeholders;
@@ -27,13 +30,14 @@ using namespace std::chrono_literals;
 class Vectornav : public rclcpp::Node {
   using MagCal = riptide_msgs2::action::MagCal;
   using MagCalGH = rclcpp_action::ServerGoalHandle<MagCal>;
+  using SerialRequest = riptide_msgs2::srv::QueryImuSerial;
 
 
   public:
   Vectornav() : Node("riptide_imu") {
     // Declare parameters used in constructor
     auto port = declare_parameter<std::string>("port", "/dev/ttyTHS0");
-    auto baud = declare_parameter<int>("baud", 230400);
+    auto baud = declare_parameter<int>("baud", 921600);
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
     // Declare parameters not used in constructor
@@ -53,6 +57,7 @@ class Vectornav : public rclcpp::Node {
     magPub = this->create_publisher<geometry_msgs::msg::Vector3>("vectornav/magnetometer", 10);
     magHeadingPub = this->create_publisher<std_msgs::msg::Float32>("vectornav/magheading", 10);
     pressurePub = this->create_publisher<std_msgs::msg::Float32>("vectornav/pressure_bar", 10);
+    dumpPub = this->create_publisher<riptide_msgs2::msg::VnDump>("vectornav/dump", 10);
 
     // Mag cal server
     magCalServer = rclcpp_action::create_server<MagCal>(
@@ -62,8 +67,9 @@ class Vectornav : public rclcpp::Node {
       std::bind(&Vectornav::handleCalAccept, this, _1)
     );
 
-    optimizeSerialConnection(port);
+    configSrv = this->create_service<SerialRequest>("vectornav/config", std::bind(&Vectornav::configSrvRequest, this, _1, _2));
 
+    optimizeSerialConnection(port);
     vnConnect(port, baud);
 
     // Setup spin to monitor connection (since packets are async)
@@ -91,20 +97,23 @@ class Vectornav : public rclcpp::Node {
 
   private:
   void optimizeSerialConnection(const std::string& port) {
-    // Assumes linux OS
-    const int portFd = open(port.c_str(), O_RDWR | O_NOCTTY);
+    // This operation will fail if the port isn't present
+    try {
+      // Assumes linux OS
+      const int portFd = open(port.c_str(), O_RDWR | O_NOCTTY);
 
-    if(portFd == -1) {
-      RCLCPP_WARN(get_logger(), "Can't open imu port for optimization");
-      return;
-    }
+      if(portFd == -1) {
+        RCLCPP_WARN(get_logger(), "Can't open imu port for optimization");
+        return;
+      }
 
-    struct serial_struct serial;
-    ioctl(portFd, TIOCGSERIAL, &serial);
-    serial.flags |= ASYNC_LOW_LATENCY;
-    ioctl(portFd, TIOCSSERIAL, &serial);
-    close(portFd);
-    RCLCPP_INFO(get_logger(), "Set IMU port to ASYNC_LOW_LATENCY");
+      struct serial_struct serial;
+      ioctl(portFd, TIOCGSERIAL, &serial);
+      serial.flags |= ASYNC_LOW_LATENCY;
+      ioctl(portFd, TIOCSSERIAL, &serial);
+      close(portFd);
+      RCLCPP_INFO(get_logger(), "Set IMU port to ASYNC_LOW_LATENCY");
+    } catch (...) {}
   }
 
   bool vnConnect(const std::string& port, const int baud) {
@@ -129,11 +138,13 @@ class Vectornav : public rclcpp::Node {
 
     // Try to connect with the given baudrate but retry all supported
     baudrates.insert(baudrates.begin(), baud);
+    bool imuConnected = false;
     for(auto b: baudrates) {
       try {
         vs->connect(port, b);
         if(vs->verifySensorConnectivity()) {
           // VN successfully connected
+          imuConnected = true;
           break;
         }
         // Connection failed; disconnect so we can try again with a different baud
@@ -144,9 +155,10 @@ class Vectornav : public rclcpp::Node {
       }
     }
 
-    // If all baudrates failed, throw a fatal and return
-    if(!vs->verifySensorConnectivity()) {
-      RCLCPP_FATAL(get_logger(), "Unable to connect to IMU over port %s", port.c_str());
+    // If all baudrates failed, throw an error and return
+    if(!imuConnected) {
+      RCLCPP_ERROR(get_logger(), "Unable to connect to IMU over port %s", port.c_str());
+      vs.reset();
       return false;
     }
 
@@ -159,6 +171,7 @@ class Vectornav : public rclcpp::Node {
 
     if(!vs->verifySensorConnectivity()) {
       RCLCPP_ERROR(get_logger(), "Lost IMU connection via %s", port.c_str());
+      return false;
     }
 
     // Query the sensor to be ABSOLUTELY SURE it's working
@@ -186,6 +199,11 @@ class Vectornav : public rclcpp::Node {
     auto magMsg = geometry_msgs::msg::Vector3();
     auto headingMsg = std_msgs::msg::Float32();
     auto pressureMsg = std_msgs::msg::Float32();
+    auto dumpMsg = riptide_msgs2::msg::VnDump();
+    auto vpeMsg = riptide_msgs2::msg::VnVpeStatus();
+
+    // Error flag to stop bad data from being published (except for dump diagnostic topic)
+    bool error = false;
 
     try {
       // Parse into compositedata
@@ -201,14 +219,65 @@ class Vectornav : public rclcpp::Node {
       q_ned2body.setRPY(M_PI, 0.0, M_PI/2.0);
       msg.orientation = tf2::toMsg(q_ned2body * q);
 
+      // Validate orientation
+      if (std::isnan(msg.orientation.x) || 
+          std::isnan(msg.orientation.y) || 
+          std::isnan(msg.orientation.z) ||
+          std::isnan(msg.orientation.w))
+      {
+        RCLCPP_ERROR(node->get_logger(), "NaN detected in orientation, not publishing IMU message");
+        error = true;
+      }
+      if(abs(msg.orientation.x) > 1
+        || abs(msg.orientation.y) > 1
+        || abs(msg.orientation.z) > 1
+        || abs(msg.orientation.w) > 1)
+      {
+        RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad orientation");
+        error = true;
+      }
+
       // Set angular velocity data
       msg.angular_velocity = toMsg(cd.angularRate());
 
+      // Validate angular velocity
+      if (std::isnan(msg.angular_velocity.x) || 
+          std::isnan(msg.angular_velocity.y) || 
+          std::isnan(msg.angular_velocity.z))
+      {
+        RCLCPP_ERROR(node->get_logger(), "NaN detected in angular velocity, not publishing IMU message");
+        error = true;
+      }
+      if(abs(msg.angular_velocity.x) > 2 * M_PI
+        || abs(msg.angular_velocity.y) > 2 * M_PI
+        || abs(msg.angular_velocity.z) > 2 * M_PI)
+      {
+        RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad angular velocity");
+        error = true;
+      }
+
       // Set linear acceleration data
       vn::math::vec3f acceleration = cd.acceleration();
+
       msg.linear_acceleration.x = acceleration.x;
       msg.linear_acceleration.y = acceleration.y;
       msg.linear_acceleration.z = acceleration.z;
+
+      // Validate linear acceleration
+      if (std::isnan(msg.linear_acceleration.x) || 
+          std::isnan(msg.linear_acceleration.y) || 
+          std::isnan(msg.linear_acceleration.z))
+      {
+        RCLCPP_ERROR(node->get_logger(), "NaN detected in angular acceleration, not publishing IMU message");
+        error = true;
+      }
+      if(abs(msg.linear_acceleration.x) > 20
+        || abs(msg.linear_acceleration.y) > 20
+        || abs(msg.linear_acceleration.z) > 20)
+      {
+        RCLCPP_ERROR(node->get_logger(), "Not publishing IMU message because of bad linear acceleration");
+        error = true;
+      }
 
       // Fill covariance data
       node->fillCovarianceFromParam("orientation_covariance", msg.orientation_covariance);
@@ -217,6 +286,30 @@ class Vectornav : public rclcpp::Node {
 
       pressureMsg.data = cd.pressure() / 100.0f;
 
+      // Dump diagnostic topic
+      dumpMsg.time_startup = cd.timeStartup();
+      dumpMsg.uncomp_mag = toMsg(cd.magneticUncompensated());
+      dumpMsg.uncomp_accel = toMsg(cd.accelerationUncompensated());
+      dumpMsg.uncomp_gyro = toMsg(cd.angularRateUncompensated());
+      dumpMsg.temperature = cd.temperature();
+      dumpMsg.pressure = cd.pressure();
+      dumpMsg.magnetic = toMsg(cd.magnetic());
+      dumpMsg.angular_rate = toMsg(cd.angularRate());
+      dumpMsg.yaw_pitch_roll = toMsg(cd.yawPitchRoll());
+      dumpMsg.linear_body_accel = toMsg(cd.accelerationLinearBody());
+
+      vn::protocol::uart::VpeStatus vpe = cd.vpeStatus();
+      vpeMsg.acc_disturbance = vpe.accDisturbance;
+      vpeMsg.acc_saturation = vpe.accSaturation;
+      vpeMsg.attitude_quality = vpe.attitudeQuality;
+      vpeMsg.gyro_saturation = vpeMsg.gyro_saturation;
+      vpeMsg.gyro_saturation_recovery = vpe.gyroSaturationRecovery;
+      vpeMsg.known_accel_disturbance = vpe.knownAccelDisturbance;
+      vpeMsg.known_mag_disturbance = vpe.knownMagDisturbance;
+      vpeMsg.mag_disturbance = vpe.magDisturbance;
+      vpeMsg.mag_saturation = vpe.magSaturation;
+      dumpMsg.vpe_status = vpeMsg;
+    
       try {
         // magMsg = toMsg(cd.magnetic());
 
@@ -237,14 +330,24 @@ class Vectornav : public rclcpp::Node {
       return;
     }
 
-    // Publish output, throw error if publish failed
+    // Publish diagnostics regardless of error state, throw error if publish failed
     try {
-      node->imuPub->publish(msg);
-      // node->magPub->publish(magMsg);
-      // node->magHeadingPub->publish(headingMsg);
-      node->pressurePub->publish(pressureMsg);
+      node->dumpPub->publish(dumpMsg);
     } catch(...) {
-      RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
+      RCLCPP_WARN(node->get_logger(), "Failed to publish diagnostic dump messages");
+    }
+
+    // Publish output if no error, throw error if publish failed
+    if (!error)
+    {
+      try {
+        node->imuPub->publish(msg);
+        // node->magPub->publish(magMsg);
+        // node->magHeadingPub->publish(headingMsg);
+        node->pressurePub->publish(pressureMsg);
+      } catch(...) {
+        RCLCPP_WARN(node->get_logger(), "IMU failed to publish a succssfully parsed packet");
+      }
     }
       
   }
@@ -282,21 +385,25 @@ class Vectornav : public rclcpp::Node {
   void monitorConnection() {
     // Don't try to reconnect during magcal
     // Doing so throws vn::timeout and crashes driver
-    if(doingMagCal) {
-      RCLCPP_WARN(get_logger(), "IMU ignored reconnect request during magcal");
+    if (!doMonitorConnection) {
+      RCLCPP_WARN(get_logger(), "IMU ignored reconnect request");
       return;
     }
     
-    // Check if VN is connected
-    if(vs && vs->verifySensorConnectivity())
-      // All good
-      return;
+    try {
+      // Check if VN is connected
+      if (vs && vs->verifySensorConnectivity())
+        // All good
+        return;
+    } catch (...) {
+      // This failing means the sensor isn't connected, so try reconnecting
+    }
 
     RCLCPP_WARN(get_logger(), "IMU disconnected");
 
     try {
       // Try reconnecting
-      if(vs->isConnected())
+      if(vs && vs->isConnected())
         vs->disconnect();
 
       std::string port = get_parameter("port").as_string();
@@ -400,7 +507,7 @@ class Vectornav : public rclcpp::Node {
 
   void executeMagCal(const std::shared_ptr<MagCalGH> goalHandle) {
     // Let other async threads know that magcal is happening
-    doingMagCal = true;
+    doMonitorConnection = false;
 
     // Setup a ros rate timer (input is hz)
     rclcpp::Rate loopRate(4.0);
@@ -557,8 +664,46 @@ class Vectornav : public rclcpp::Node {
 
     // Reconnect to IMU and let async threads know magcal is done
     vnConnect(get_parameter("port").as_string(), get_parameter("baud").as_int());
-    doingMagCal = false;
+    doMonitorConnection = true;
   }
+
+    std::string executeConfigRequest(std::string request) {
+        if(!vs->isConnected())
+            return "IMU not connected";
+
+        return vs->transaction(request);
+    }
+
+  void configSrvRequest(std::shared_ptr<SerialRequest::Request> request, std::shared_ptr<SerialRequest::Response> response) {
+      std::string responseStr;
+      if (request->request == "$VNWNV") {
+          try {
+              responseStr = executeConfigRequest(request->request);
+          }
+          catch (vn::timeout) {
+            doMonitorConnection = false;
+            RCLCPP_INFO(this->get_logger(), "Caught vn::timeout");
+            responseStr = "$VNWNV";
+
+            rclcpp::sleep_for(5s);
+            doMonitorConnection = true;
+          }
+      }
+      else {
+          responseStr = executeConfigRequest(request->request);
+      }
+      
+      response->response = responseStr;
+  }
+
+  // Commenting this out for now
+  // private:
+  // static double clamp(double x, double high, double low)
+  // {
+  //   return (x > high ? high :
+  //           x < low ? low : x);
+  //   // return x;
+  // }
   
 
   //
@@ -572,11 +717,14 @@ class Vectornav : public rclcpp::Node {
   rclcpp::Publisher<geometry_msgs::msg::Vector3>::SharedPtr magPub;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr magHeadingPub;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pressurePub;
+  rclcpp::Publisher<riptide_msgs2::msg::VnDump>::SharedPtr dumpPub;
 
   rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
   std::thread magCalThread;
 
-  bool doingMagCal = false;
+  bool doMonitorConnection = true;
+
+  rclcpp::Service<SerialRequest>::SharedPtr configSrv;
 };
 
 int main(int argc, char* argv[]) {
