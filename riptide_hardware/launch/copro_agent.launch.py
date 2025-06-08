@@ -13,7 +13,7 @@ def generate_launch_description():
             executable='micro_ros_agent',
             name='copro_agent',
             output='screen',
-            arguments=['can', '-D', 'can0', '-v4'], ## change to -v4 for actual logs
+            arguments=['can', '-D', 'can0', '-v4', '-m', 'rmw'], ## change to -v4 for actual logs
             respawn=True
         ),
 
