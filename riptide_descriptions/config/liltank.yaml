@@ -15,6 +15,20 @@ active_ballast:
   in_flow_rate: 0.000125 # Volume of water (m^3) entering ballast per second while intaking water
   out_flow_rate: 0.00025 # Volume of water (m^3) exiting ballast per second while expelling water
 
+controller:
+  params_scale_factor: 1 #scaled in overseer
+  heading:
+    kp: 1
+    ki: 0
+    kd: 0
+  yawrate:
+    kp: 0.5
+    ki: 0.4
+    kd: 0
+  
+  depth:
+    enabled: 1
+
 depth:
   rate: 20 # Hz
   sigma: 0.010 # Stdev in m. Used by sim
