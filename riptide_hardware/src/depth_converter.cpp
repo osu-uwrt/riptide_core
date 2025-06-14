@@ -139,7 +139,7 @@ private:
                 out_msg.header = msg->header;
                 out_msg.header.frame_id = "odom";
                 out_msg.pose.pose.position.z = msg->depth + added_depth;
-                out_msg.pose.covariance[14] = msg->variance;
+                out_msg.pose.covariance[14] = 0.0001;
                 out_msg.header.stamp = this->get_clock()->now();
                 pub_pose->publish(out_msg);
             }
