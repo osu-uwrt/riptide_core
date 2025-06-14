@@ -40,10 +40,10 @@ apriltag_launch_file = os.path.join(
     "launch", "apriltag.launch.py"
 )
 
-opbox_launch_file = os.path.join(
-    get_package_share_directory('opbox_ros_client'),
-    "launch", "opbox_ros_client.launch.py"
-)
+# opbox_launch_file = os.path.join(
+#     get_package_share_directory('opbox_ros_client'),
+#     "launch", "opbox_ros_client.launch.py"
+# )
 
 def generate_launch_description():
     return LaunchDescription([
@@ -93,12 +93,12 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(opbox_launch_file),
-                launch_arguments=[
-                    ('robot', LC('robot')),
-                ]
-            ),
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(opbox_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # ),
             Node(
                 package='riptide_hardware2',
                 executable='simple_actuator_interface.py',
