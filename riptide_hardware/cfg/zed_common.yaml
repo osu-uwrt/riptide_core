@@ -25,7 +25,7 @@
       serial_number: 0 # usually overwritten by launch file
       pub_resolution: "NATIVE" # The resolution used for image and depth map publishing. 'NATIVE' to use the same `general.grab_resolution` - `CUSTOM` to apply the `general.pub_downscale_factor` downscale factory to reduce bandwidth in transmission
       pub_downscale_factor: 2.0 # rescale factor used to rescale image before publishing when 'pub_resolution' is 'CUSTOM'
-      pub_frame_rate: 30.0 # frequency of publishing of visual images and depth images
+      # pub_frame_rate: 30.0 # frequency of publishing of visual images and depth images
       enable_image_validity_check: 1 # [SDK5 required] Sets the image validity check. If set to 1, the SDK will check if the frames are valid before processing.
       gpu_id: -1
       optional_opencv_calibration_file: "" # Optional path where the ZED SDK can find a file containing the calibration information of the camera computed by OpenCV. Read the ZED SDK documentation for more information: https://www.stereolabs.com/docs/api/structsl_1_1InitParameters.html#a9eab2753374ef3baec1d31960859ba19
@@ -130,19 +130,20 @@
       max_range: 20.0 # [m] Defines a upper depth range for detections
       confidence_threshold: 75.0 # [DYNAMIC] - Minimum value of the detection confidence of an object [0,99]
       prediction_timeout: 0.5 # During this time [sec], the object will have OK state even if it is not detected. Set this parameter to 0 to disable SDK predictions
-      enable_tracking: true # Defines if the object detection will track objects across images flow
-      filtering_mode: 1 # '0': NONE - '1': NMS3D - '2': NMS3D_PER_CLASS
-      mc_people: true # [DYNAMIC] - Enable/disable the detection of persons for 'MULTI_CLASS_X' models
-      mc_vehicle: true # [DYNAMIC] - Enable/disable the detection of vehicles for 'MULTI_CLASS_X' models
-      mc_bag: true # [DYNAMIC] - Enable/disable the detection of bags for 'MULTI_CLASS_X' models
-      mc_animal: true # [DYNAMIC] - Enable/disable the detection of animals for 'MULTI_CLASS_X' models
-      mc_electronics: true # [DYNAMIC] - Enable/disable the detection of electronic devices for 'MULTI_CLASS_X' models
-      mc_fruit_vegetable: true # [DYNAMIC] - Enable/disable the detection of fruits and vegetables for 'MULTI_CLASS_X' models
-      mc_sport: true # [DYNAMIC] - Enable/disable the detection of sport-related objects for 'MULTI_CLASS_X' models
+      enable_tracking: false # Defines if the object detection will track objects across images flow
+      # filtering_mode: 1 # '0': NONE - '1': NMS3D - '2': NMS3D_PER_CLASS
+      filtering_mode: NMS3D
+      mc_people: false # [DYNAMIC] - Enable/disable the detection of persons for 'MULTI_CLASS_X' models
+      mc_vehicle: false # [DYNAMIC] - Enable/disable the detection of vehicles for 'MULTI_CLASS_X' models
+      mc_bag: false # [DYNAMIC] - Enable/disable the detection of bags for 'MULTI_CLASS_X' models
+      mc_animal: false # [DYNAMIC] - Enable/disable the detection of animals for 'MULTI_CLASS_X' models
+      mc_electronics: false # [DYNAMIC] - Enable/disable the detection of electronic devices for 'MULTI_CLASS_X' models
+      mc_fruit_vegetable: false # [DYNAMIC] - Enable/disable the detection of fruits and vegetables for 'MULTI_CLASS_X' models
+      mc_sport: false # [DYNAMIC] - Enable/disable the detection of sport-related objects for 'MULTI_CLASS_X' models
 
     body_tracking:
       bt_enabled: false # True to enable Body Tracking
-      model: "HUMAN_BODY_MEDIUM" # 'HUMAN_BODY_FAST', 'HUMAN_BODY_MEDIUM', 'HUMAN_BODY_ACCURATE'
+      # model: "HUMAN_BODY_MEDIUM" # 'HUMAN_BODY_FAST', 'HUMAN_BODY_MEDIUM', 'HUMAN_BODY_ACCURATE'
       body_format: "BODY_38" # 'BODY_18','BODY_34','BODY_38','BODY_70'
       allow_reduced_precision_inference: false # Allow inference to run at a lower precision to improve runtime and memory usage
       max_range: 20.0 # [m] Defines a upper depth range for detections
