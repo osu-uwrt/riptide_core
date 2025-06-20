@@ -18,16 +18,16 @@ active_ballast:
 controller:
   params_scale_factor: 1 #scaled in overseer
   heading:
-    kp: 0.3
-    ki: 0.02
-    kd: 0
+    kp: 0.77
+    ki: 0.01
+    kd: 0.05
   yawrate:
     kp: 0.5
     ki: 0.4
     kd: 0
   
   depth:
-    enabled: 1
+    enabled: 0
 
 depth:
   rate: 20 # Hz
@@ -47,7 +47,7 @@ cameras: [
     type: zed, 
     name: ffc,
     baseline: 0.045, # m. Distance between cameras (manually measured) 
-    pose: [-0.0195, -0.0889, 0, 0, 0, 0]
+    pose: [0.0, -0.0, 0, 1.5707, 0, 0]
   }
 ]
 
