@@ -83,6 +83,7 @@ private:
 
         try {
             auto b2o_transform = tf_buffer_->lookupTransform("odom", namespace_ + "/base_link", tf2::TimePointZero);
+            // auto b2o_transform = tf_buffer_->lookupTransform(namespace_ + "/base_link", "odom", tf2::TimePointZero);
             Eigen::Quaterniond b2o_orientation(
                 b2o_transform.transform.rotation.w,
                 b2o_transform.transform.rotation.x,
@@ -91,7 +92,8 @@ private:
             Eigen::Matrix3d b2o_matrix = b2o_orientation.toRotationMatrix();
 
             if (!b2p_vector_.has_value()) {
-                auto pressure_transform = tf_buffer_->lookupTransform(namespace_ + "/pressure_link", namespace_ + "/base_link", tf2::TimePointZero);
+                // auto pressure_transform = tf_buffer_->lookupTransform(namespace_ + "/pressure_link", namespace_ + "/base_link", tf2::TimePointZero);
+                auto pressure_transform = tf_buffer_->lookupTransform(namespace_ + "/base_link", namespace_ + "/pressure_link", tf2::TimePointZero);
                 b2p_vector_ = Eigen::Vector3d(
                     pressure_transform.transform.translation.x,
                     pressure_transform.transform.translation.y,
@@ -122,7 +124,7 @@ private:
                 out_msg.header = msg->header;
                 out_msg.header.frame_id = "odom";
                 out_msg.twist.twist.linear.z = depth_roc;
-                out_msg.twist.covariance[14] = 1;
+                out_msg.twist.covariance[14] = 0.000001;
                 out_msg.header.stamp = this->get_clock()->now();
 
                 if(this->pub_rate){

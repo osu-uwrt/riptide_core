@@ -286,7 +286,7 @@ class Vectornav : public rclcpp::Node {
 
       pressureMsg.data = cd.pressure() / 100.0f;
 
-      // Dump diagnostic topic
+      // // Dump diagnostic topic
       // dumpMsg.time_startup = cd.timeStartup();
       // dumpMsg.uncomp_mag = toMsg(cd.magneticUncompensated());
       // dumpMsg.uncomp_accel = toMsg(cd.accelerationUncompensated());

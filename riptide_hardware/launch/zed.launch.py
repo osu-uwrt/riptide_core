@@ -21,6 +21,12 @@ def generate_launch_description():
         'zed2i.yaml'
     )
     
+    zedx_camera_path = os.path.join(
+        get_package_share_directory('zed_wrapper'),
+        'config',
+        'zed2i.yaml'
+    )
+    
     zedxm_camera_path = os.path.join(
         get_package_share_directory('zed_wrapper'),
         'config',
@@ -70,11 +76,12 @@ def generate_launch_description():
                         namespace="ffc",
                         name="zed_node",
                         parameters=[
-                            zed2i_camera_path,
+                            # zedx,
                             zed_config_path,
                             ffc_config_path,
-                            zed_compression_path,
+                            # zed_compression_path,
                             {"general.camera_name": "talos/ffc"},
+                            {"mapping.clicked_point_topic": "/clicked_point"},
                         ]
                     ),                
                 ]
@@ -95,11 +102,12 @@ def generate_launch_description():
                         namespace="dfc",
                         name="zed_node",
                         parameters=[
-                            zedxm_camera_path,
+                            # zedxm_camera_path,
                             zed_config_path,
                             dfc_config_path,
-                            zed_compression_path,
+                            # zed_compression_path,
                             {"general.camera_name": "talos/dfc"},
+                            {"mapping.clicked_point_topic": "/clicked_point"},
                         ]
                     ),
                 ]

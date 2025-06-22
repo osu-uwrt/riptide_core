@@ -1,13 +1,12 @@
 /**:
   ros__parameters:
     general:
-      camera_model: "zedxm"
-      serial_number: 51491740
-      grab_resolution: 'HD1200' # For zedx/zedxm use HD1200, for zed2i use HD2K
+      # camera_model: "zedxm"
+      serial_number: 55348591
       optional_opencv_calibration_file: "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
       pub_resolution: "CUSTOM" # The resolution used for image and depth map publishing. 'NATIVE' to use the same `general.grab_resolution` - `CUSTOM` to apply the `general.pub_downscale_factor` downscale factory to reduce bandwidth in transmission
       pub_downscale_factor: 2.0 # rescale factor used to rescale image before publishing when 'pub_resolution' is 'CUSTOM'
-      pub_frame_rate: 30.0
+      # pub_frame_rate: 30.0
     # svo:
     #   svo_path: "" # Must be absolute path
     debug:

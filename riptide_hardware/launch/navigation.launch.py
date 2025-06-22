@@ -199,7 +199,7 @@ def generate_launch_description():
 
             Node(
                 package='riptide_hardware2',
-                executable='depth_converter',
+                executable='depth_converter.py',
                 name='depth_converter',
             ),
             
