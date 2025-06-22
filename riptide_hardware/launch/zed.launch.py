@@ -8,9 +8,9 @@ import os
 
 # Define common configuration file paths
 zed_config_path = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "cfg",
-    "zed_common.yaml"
+    get_package_share_directory('zed_wrapper'),
+    "config",
+    "common_stereo.yaml"
 )
 
 def generate_launch_description():
@@ -24,7 +24,7 @@ def generate_launch_description():
     zedx_camera_path = os.path.join(
         get_package_share_directory('zed_wrapper'),
         'config',
-        'zed2i.yaml'
+        'zedx.yaml'
     )
     
     zedxm_camera_path = os.path.join(
@@ -43,12 +43,6 @@ def generate_launch_description():
         get_package_share_directory('riptide_hardware2'),
         'cfg',
         'dfc_config.yaml'
-    )
-    
-    zed_compression_path = os.path.join(
-        get_package_share_directory('riptide_hardware2'),
-        'cfg',
-        'zed_compression.yaml'
     )
     
     return LaunchDescription([
@@ -76,10 +70,9 @@ def generate_launch_description():
                         namespace="ffc",
                         name="zed_node",
                         parameters=[
-                            # zedx,
                             zed_config_path,
+                            zedx_camera_path,
                             ffc_config_path,
-                            # zed_compression_path,
                             {"general.camera_name": "talos/ffc"},
                             {"mapping.clicked_point_topic": "/clicked_point"},
                         ]
@@ -102,10 +95,9 @@ def generate_launch_description():
                         namespace="dfc",
                         name="zed_node",
                         parameters=[
-                            # zedxm_camera_path,
                             zed_config_path,
+                            zedxm_camera_path,
                             dfc_config_path,
-                            # zed_compression_path,
                             {"general.camera_name": "talos/dfc"},
                             {"mapping.clicked_point_topic": "/clicked_point"},
                         ]

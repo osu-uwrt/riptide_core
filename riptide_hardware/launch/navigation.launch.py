@@ -88,6 +88,7 @@ def evaluate_xacro(context, *args, **kwargs):
         try:
             nodes.append(get_zed_description("ffc", "zed2i", robot, context, debug))
             nodes.append(get_zed_description("dfc", "zedxm", robot, context, debug))
+            # pass
         except PackageNotFoundError:
             print("zed_wrapper not found. Launching without zed TF")
         
