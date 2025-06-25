@@ -29,7 +29,7 @@
     imu0_config: [false, false, false,
                   true,  true,  false,
                   false, false, false,
-                  true,  true,  true,
+                  true,  true,  false, # Taking out yaw from imu since fog rate is lower now
                   true,  true,  true]
 
     # Imu comes in faster than the ekf runs so we need a queue
@@ -59,7 +59,7 @@
                     false, false, false,
                     false, false, true,
                     false, false, false]
-    twist1_queue_size: 267
+    twist1_queue_size: 16 # fog throttled to 500hz 
 
     # pose2: depth/twist
     # pose2_config: [false, false, true,
