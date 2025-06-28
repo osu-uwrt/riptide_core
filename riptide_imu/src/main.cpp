@@ -37,7 +37,7 @@ class Vectornav : public rclcpp::Node {
   Vectornav() : Node("riptide_imu") {
     // Declare parameters used in constructor
     auto port = declare_parameter<std::string>("port", "/dev/ttyTHS0");
-    auto baud = declare_parameter<int>("baud", 921600);
+    auto baud = declare_parameter<int>("baud", 115200);
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
     // Declare parameters not used in constructor
@@ -199,8 +199,8 @@ class Vectornav : public rclcpp::Node {
     auto magMsg = geometry_msgs::msg::Vector3();
     auto headingMsg = std_msgs::msg::Float32();
     auto pressureMsg = std_msgs::msg::Float32();
-    auto dumpMsg = riptide_msgs2::msg::VnDump();
-    auto vpeMsg = riptide_msgs2::msg::VnVpeStatus();
+    // auto dumpMsg = riptide_msgs2::msg::VnDump();
+    // auto vpeMsg = riptide_msgs2::msg::VnVpeStatus();
 
     // Error flag to stop bad data from being published (except for dump diagnostic topic)
     bool error = false;
@@ -286,29 +286,29 @@ class Vectornav : public rclcpp::Node {
 
       pressureMsg.data = cd.pressure() / 100.0f;
 
-      // Dump diagnostic topic
-      dumpMsg.time_startup = cd.timeStartup();
-      dumpMsg.uncomp_mag = toMsg(cd.magneticUncompensated());
-      dumpMsg.uncomp_accel = toMsg(cd.accelerationUncompensated());
-      dumpMsg.uncomp_gyro = toMsg(cd.angularRateUncompensated());
-      dumpMsg.temperature = cd.temperature();
-      dumpMsg.pressure = cd.pressure();
-      dumpMsg.magnetic = toMsg(cd.magnetic());
-      dumpMsg.angular_rate = toMsg(cd.angularRate());
-      dumpMsg.yaw_pitch_roll = toMsg(cd.yawPitchRoll());
-      dumpMsg.linear_body_accel = toMsg(cd.accelerationLinearBody());
+      // // Dump diagnostic topic
+      // dumpMsg.time_startup = cd.timeStartup();
+      // dumpMsg.uncomp_mag = toMsg(cd.magneticUncompensated());
+      // dumpMsg.uncomp_accel = toMsg(cd.accelerationUncompensated());
+      // dumpMsg.uncomp_gyro = toMsg(cd.angularRateUncompensated());
+      // dumpMsg.temperature = cd.temperature();
+      // dumpMsg.pressure = cd.pressure();
+      // dumpMsg.magnetic = toMsg(cd.magnetic());
+      // dumpMsg.angular_rate = toMsg(cd.angularRate());
+      // dumpMsg.yaw_pitch_roll = toMsg(cd.yawPitchRoll());
+      // dumpMsg.linear_body_accel = toMsg(cd.accelerationLinearBody());
 
-      vn::protocol::uart::VpeStatus vpe = cd.vpeStatus();
-      vpeMsg.acc_disturbance = vpe.accDisturbance;
-      vpeMsg.acc_saturation = vpe.accSaturation;
-      vpeMsg.attitude_quality = vpe.attitudeQuality;
-      vpeMsg.gyro_saturation = vpeMsg.gyro_saturation;
-      vpeMsg.gyro_saturation_recovery = vpe.gyroSaturationRecovery;
-      vpeMsg.known_accel_disturbance = vpe.knownAccelDisturbance;
-      vpeMsg.known_mag_disturbance = vpe.knownMagDisturbance;
-      vpeMsg.mag_disturbance = vpe.magDisturbance;
-      vpeMsg.mag_saturation = vpe.magSaturation;
-      dumpMsg.vpe_status = vpeMsg;
+      // vn::protocol::uart::VpeStatus vpe = cd.vpeStatus();
+      // vpeMsg.acc_disturbance = vpe.accDisturbance;
+      // vpeMsg.acc_saturation = vpe.accSaturation;
+      // vpeMsg.attitude_quality = vpe.attitudeQuality;
+      // vpeMsg.gyro_saturation = vpeMsg.gyro_saturation;
+      // vpeMsg.gyro_saturation_recovery = vpe.gyroSaturationRecovery;
+      // vpeMsg.known_accel_disturbance = vpe.knownAccelDisturbance;
+      // vpeMsg.known_mag_disturbance = vpe.knownMagDisturbance;
+      // vpeMsg.mag_disturbance = vpe.magDisturbance;
+      // vpeMsg.mag_saturation = vpe.magSaturation;
+      // dumpMsg.vpe_status = vpeMsg;
     
       try {
         // magMsg = toMsg(cd.magnetic());
@@ -331,11 +331,11 @@ class Vectornav : public rclcpp::Node {
     }
 
     // Publish diagnostics regardless of error state, throw error if publish failed
-    try {
-      node->dumpPub->publish(dumpMsg);
-    } catch(...) {
-      RCLCPP_WARN(node->get_logger(), "Failed to publish diagnostic dump messages");
-    }
+    // try {
+    //   node->dumpPub->publish(dumpMsg);
+    // } catch(...) {
+    //   RCLCPP_WARN(node->get_logger(), "Failed to publish diagnostic dump messages");
+    // }
 
     // Publish output if no error, throw error if publish failed
     if (!error)
@@ -695,16 +695,6 @@ class Vectornav : public rclcpp::Node {
       
       response->response = responseStr;
   }
-
-  // Commenting this out for now
-  // private:
-  // static double clamp(double x, double high, double low)
-  // {
-  //   return (x > high ? high :
-  //           x < low ? low : x);
-  //   // return x;
-  // }
-  
 
   //
   // Member variables

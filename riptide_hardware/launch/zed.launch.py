@@ -7,33 +7,49 @@ from launch.substitutions import PythonExpression, LaunchConfiguration as LC
 from ament_index_python import get_package_share_directory
 import os
 
-# Define common configuration file paths
-zed_config_path = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "cfg",
-    "zed_common.yaml"
-)
+
 
 def generate_launch_description():
+
+    # Define common configuration path
+    zed_config_path = os.path.join(
+        get_package_share_directory('zed_wrapper'),
+        "config",
+        "common_stereo.yaml"
+    )
+
+
     # Paths for individual camera configurations
+
+    # FFC Zed 2i
     zed2i_camera_path = os.path.join(
         get_package_share_directory('zed_wrapper'),
         'config',
         'zed2i.yaml'
     )
     
+    # FFC Zed X
+    zedx_camera_path = os.path.join(
+        get_package_share_directory('zed_wrapper'),
+        'config',
+        'zedx.yaml'
+    )
+    
+    # DFC Zed X Mini
     zedxm_camera_path = os.path.join(
         get_package_share_directory('zed_wrapper'),
         'config',
         'zedxm.yaml'
     )
     
+    # FFC Overrides
     ffc_config_path = os.path.join(
         get_package_share_directory('riptide_hardware2'),
         'cfg',
         'ffc_config.yaml'
     )
-    
+
+    # DFC Overrides
     dfc_config_path = os.path.join(
         get_package_share_directory('riptide_hardware2'),
         'cfg',
@@ -77,11 +93,9 @@ def generate_launch_description():
                         namespace="ffc",
                         name="zed_node",
                         parameters=[
-                            zed2i_camera_path,
                             zed_config_path,
+                            zedx_camera_path,
                             ffc_config_path,
-                            zed_compression_path,
-                            {"general.camera_name": "talos/ffc"},
                         ]
                     ),                
                 ],
@@ -104,11 +118,9 @@ def generate_launch_description():
                         namespace="dfc",
                         name="zed_node",
                         parameters=[
-                            zedxm_camera_path,
                             zed_config_path,
+                            zedxm_camera_path,
                             dfc_config_path,
-                            zed_compression_path,
-                            {"general.camera_name": "talos/dfc"},
                         ]
                     ),
                 ],

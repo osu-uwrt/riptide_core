@@ -35,7 +35,7 @@
     # Imu comes in faster than the ekf runs so we need a queue
     imu0_queue_size: 13
     imu0_remove_gravitational_acceleration: true
-    gravitational_acceleration: 9.79604
+    gravitational_acceleration: 9.755455
 
     twist0: dvl_twist
     twist0_config: [false, false, false,

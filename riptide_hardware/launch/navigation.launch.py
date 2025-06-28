@@ -92,7 +92,6 @@ def evaluate_xacro(context, *args, **kwargs):
 
             if robot == "liltank":
                 nodes.append(get_zed_description("ffc", "zedxm", robot, context, debug))
-                
         except PackageNotFoundError:
             print("zed_wrapper not found. Launching without zed TF")
         
@@ -205,7 +204,7 @@ def generate_launch_description():
 
             Node(
                 package='riptide_hardware2',
-                executable='depth_converter',
+                executable='depth_converter.py',
                 name='depth_converter',
             ),
             

@@ -1,7 +1,3 @@
-/talos/imu_power_cycle:
+/**:
   ros__parameters:
     pin_id: 22
-
-/liltank/imu_power_cycle:
-  ros__parameters:
-    pin_id: 33
