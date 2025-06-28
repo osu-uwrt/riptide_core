@@ -696,16 +696,6 @@ class Vectornav : public rclcpp::Node {
       response->response = responseStr;
   }
 
-  // Commenting this out for now
-  // private:
-  // static double clamp(double x, double high, double low)
-  // {
-  //   return (x > high ? high :
-  //           x < low ? low : x);
-  //   // return x;
-  // }
-  
-
   //
   // Member variables
   //
