@@ -164,6 +164,12 @@ def generate_launch_description():
             #     name='ZedManager',
             #     output='screen'
             # )
+            Node(
+                package='riptide_hardware2',
+                executable='picture_taker.py',
+                name='picture_taker',
+                output='screen'
+            )
             
         ], scoped=True),
 
