@@ -15,7 +15,7 @@ class ImageCaptureNode(Node):
         super().__init__('image_capture_node')
         
         # Parameters
-        self.declare_parameter('image_topic', '/talos/ffc/zed_node/rgb/image_raw_color')
+        self.declare_parameter('image_topic', '/liltank/ffc/zed_node/stereo_raw/image_raw_color')
         self.declare_parameter('save_directory', '~/cal_images')
         
         self.image_topic = self.get_parameter('image_topic').get_parameter_value().string_value
