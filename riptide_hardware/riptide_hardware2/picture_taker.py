@@ -16,7 +16,7 @@ class ImageCaptureNode(Node):
         
         # Parameters
         self.declare_parameter('image_topic', '/liltank/ffc/zed_node/stereo_raw/image_raw_color')
-        self.declare_parameter('save_directory', '~/cal_images')
+        self.declare_parameter('save_directory', '/home/ros/cal_images')
         
         self.image_topic = self.get_parameter('image_topic').get_parameter_value().string_value
         self.save_directory = self.get_parameter('save_directory').get_parameter_value().string_value
