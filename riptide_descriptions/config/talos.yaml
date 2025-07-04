@@ -6,7 +6,7 @@ base_link: [-0.14, 0.03, -0.09]
 
 # Vehicle mass properties
 mass: 31.998
-com: [-0.148, 0.040, -0.071]
+com: [-0.159, 0.042, -0.056]
 inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 
 hull_volume: .11 #make this real
@@ -25,7 +25,7 @@ controller:
 
   feed_forward:
     #base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
-    base_wrench: [0.0, 0.0, -4.9, -0.95, 2.1, 0.0]
+    base_wrench: [0.0, 0.0, 0.0, -0.95, 2.1, 0.0]
 
     auto_tune:
       #positional error threshold to begin autotuning 
@@ -35,7 +35,7 @@ controller:
       velocity_threshold: 0.2
 
       #axis to perform autotune on (either zero or one)
-      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0]
+      auto_tune_mask: [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
 
       #decay factor for FF difference
       decay_factor: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
