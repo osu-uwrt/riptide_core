@@ -168,7 +168,10 @@ def generate_launch_description():
                 package='riptide_hardware2',
                 executable='picture_taker.py',
                 name='picture_taker',
-                output='screen'
+                output='screen',
+                parameters=[
+                    {"image_topic" : '/ffc/zed_node/stereo_raw/image_raw_color' }
+                ]
             )
             
         ], scoped=True),
