@@ -29,7 +29,7 @@ class ImageCaptureNode(Node):
         self.save_split = self.get_parameter('save_split').get_parameter_value().bool_value
         
         # Build the full image topic path
-        self.image_topic = f"{robot_namespace}/{camera_name}/zed_node/stereo_raw/image_raw_color"
+        self.image_topic = f"/{robot_namespace}/{camera_name}/zed_node/stereo_raw/image_raw_color"
         
         # Create save directory if it doesn't exist
         os.makedirs(self.save_directory, exist_ok=True)
