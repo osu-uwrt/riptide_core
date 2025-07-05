@@ -164,13 +164,15 @@ def generate_launch_description():
             #     name='ZedManager',
             #     output='screen'
             # )
+            
             Node(
                 package='riptide_hardware2',
                 executable='picture_taker.py',
                 name='picture_taker',
                 output='screen',
                 parameters=[
-                    {"image_topic" : '/ffc/zed_node/stereo_raw/image_raw_color' }
+                    {"robot_namespace": LC("robot")},
+                    {"camera_name": "ffc"}
                 ]
             )
             
