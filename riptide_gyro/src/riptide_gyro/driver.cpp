@@ -1,5 +1,6 @@
 #include <fstream>
 #include <filesystem>
+#include <chrono>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <riptide_msgs2/msg/int32_stamped.hpp>
@@ -146,6 +147,8 @@ namespace uwrt_gyro {
         std::vector<double> tempLimits; //format: lower, upper
         
         double variance;
+        double max_publish_rate;
+        bool use_rate_limiting;
     };
 
     struct TareStatus {
@@ -218,8 +221,14 @@ namespace uwrt_gyro {
             declare_parameter<double>("temp_norm_std", 0);
             declare_parameter<double>("variance", 0);
             declare_parameter<std::vector<double>>("cal_temp_limits", std::vector<double>());
+            declare_parameter<double>("max_publish_rate", 1000.0); // In Hz
+            declare_parameter<bool>("use_rate_limiting", true);
             add_on_set_parameters_callback(std::bind(&GyroDriver::setParamsCb, this, _1));
             reloadParams();
+
+            // Rate limiting (sorry brach, fog too stronk)
+            last_publish_time_ = std::chrono::steady_clock::now();
+            updateRateLimiting();
 
             //load tare offset
             if(std::filesystem::exists(tareFileName))
@@ -291,6 +300,19 @@ namespace uwrt_gyro {
 
         private:
 
+        void updateRateLimiting()
+        {
+            NodeParameters *params = nodeParamsResource.lockResource();
+            if (params->use_rate_limiting && params->max_publish_rate > 0) {
+                min_publish_interval_ = std::chrono::nanoseconds(
+                    static_cast<int64_t>(1e9 / params->max_publish_rate) // Convert Hz to nanosecs
+                );
+            } else {
+                min_publish_interval_ = std::chrono::nanoseconds(0);
+            }
+            nodeParamsResource.unlockResource();
+        }
+
         void reloadParams()
         {
             //regular parameters
@@ -309,7 +331,11 @@ namespace uwrt_gyro {
             params->tempNormStd = get_parameter("temp_norm_std").as_double();
             params->variance = get_parameter("variance").as_double();
             params->tempLimits = get_parameter("cal_temp_limits").as_double_array();
+            params->max_publish_rate = get_parameter("max_publish_rate").as_double();
+            params->use_rate_limiting = get_parameter("use_rate_limiting").as_bool();
             nodeParamsResource.unlockResource();
+            
+            updateRateLimiting(); // for dynamic rate limiting params
         }
 
 
@@ -397,7 +423,18 @@ namespace uwrt_gyro {
             if(!processor->hasDataForField(UwrtGyroField::VRATE))
             {
                 RCLCPP_WARN_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 1000, "Waiting for gyro reading");
+                return;
             }
+
+            // Skip if not enough time has passed since last publish
+            auto current_time = std::chrono::steady_clock::now();
+            if (min_publish_interval_.count() > 0) {
+                auto time_since_last_publish = current_time - last_publish_time_;
+                if (time_since_last_publish < min_publish_interval_) {
+                    return;
+                }
+            }
+            last_publish_time_ = current_time;
 
             SerialDataStamped data = processor->getField(UwrtGyroField::VRATE);
             uint32_t 
@@ -622,6 +659,10 @@ namespace uwrt_gyro {
         rclcpp::Publisher<riptide_msgs2::msg::GyroStatus>::SharedPtr statusPub;
         rclcpp_action::Server<TareGyro>::SharedPtr tareServer;
         std::unique_ptr<std::thread> procThread;
+        
+        // rate throttling
+        std::chrono::steady_clock::time_point last_publish_time_;
+        std::chrono::nanoseconds min_publish_interval_;
     };
 }
 
