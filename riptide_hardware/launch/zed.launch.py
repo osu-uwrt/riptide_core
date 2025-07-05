@@ -2,7 +2,8 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, Shutdown
 from launch_ros.actions import PushRosNamespace, ComposableNodeContainer, Node
 from launch_ros.descriptions import ComposableNode
-from launch.substitutions import LaunchConfiguration as LC
+from launch.conditions import IfCondition
+from launch.substitutions import PythonExpression, LaunchConfiguration as LC
 from ament_index_python import get_package_share_directory
 import os
 
@@ -55,6 +56,18 @@ def generate_launch_description():
         'dfc_config.yaml'
     )
     
+    tank_config_path = os.path.join(
+        get_package_share_directory('riptide_hardware2'),
+        'cfg',
+        'tank_ffc_config.yaml'
+    )
+    
+    zed_compression_path = os.path.join(
+        get_package_share_directory('riptide_hardware2'),
+        'cfg',
+        'zed_compression.yaml'
+    )
+    
     return LaunchDescription([
         DeclareLaunchArgument(
             name="robot",
@@ -85,7 +98,9 @@ def generate_launch_description():
                             ffc_config_path,
                         ]
                     ),                
-                ]
+                ],
+                condition=IfCondition(
+                    PythonExpression(["'", LC("robot"), "' == 'talos'"]))
             ),
             
             ComposableNodeContainer(
@@ -108,7 +123,37 @@ def generate_launch_description():
                             dfc_config_path,
                         ]
                     ),
-                ]
+                ],
+                condition=IfCondition(
+                    PythonExpression(["'", LC("robot"), "' == 'talos'"]))
+            ),
+            
+            ComposableNodeContainer(
+                name="ffc_container",
+                namespace="/",
+                package="rclcpp_components",
+                executable="component_container",
+                output="screen",
+                respawn=True,
+                composable_node_descriptions=[
+                    # The tank camera
+                    ComposableNode(
+                        package="zed_components",
+                        plugin="stereolabs::ZedCamera",
+                        namespace="ffc",
+                        name="zed_node",
+                        parameters=[
+                            # zedxm_camera_path,
+                            zed_config_path,
+                            tank_config_path,
+                            # zed_compression_path,
+                            {"general.camera_name": "liltank/ffc"},
+                            {"mapping.clicked_point_topic": "/clicked_point"},
+                        ]
+                    ),
+                ],
+                condition=IfCondition(
+                    PythonExpression(["'", LC("robot"), "' == 'liltank'"]))
             ),
             
             # Disabled for now as both are on by default
@@ -119,6 +164,12 @@ def generate_launch_description():
             #     name='ZedManager',
             #     output='screen'
             # )
+            Node(
+                package='riptide_hardware2',
+                executable='picture_taker.py',
+                name='picture_taker',
+                output='screen'
+            )
             
         ], scoped=True),
 

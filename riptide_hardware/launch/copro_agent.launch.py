@@ -14,10 +14,7 @@ def generate_launch_description():
             name='copro_agent',
             output='screen',
             arguments=['can', '-D', 'can0', '-v4', '-m', 'rmw'], ## change to -v4 for actual logs
-            respawn=True,
-            condition=IfCondition(
-                PythonExpression(["'", LC("robot"), "' == 'talos'"])
-            ),
+            respawn=True
         ),
 
         Node(
@@ -38,6 +35,9 @@ def generate_launch_description():
             name='external_agent',
             output='screen',
             arguments=['can', '-D', 'can1', '-v4', '-m', 'rmw'], ## change to -v4 for actual logs
-            respawn=True
+            respawn=True,
+            condition=IfCondition(
+                PythonExpression(["'", LC("robot"), "' == 'talos'"]) # this launch is only for talos external network
+            ),
         )
     ])

@@ -40,11 +40,6 @@ apriltag_launch_file = os.path.join(
     "launch", "apriltag.launch.py"
 )
 
-# opbox_launch_file = os.path.join(
-#     get_package_share_directory('opbox_ros_client'),
-#     "launch", "opbox_ros_client.launch.py"
-# )
-
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('robot', default_value="tempest",
@@ -92,7 +87,10 @@ def generate_launch_description():
                 AnyLaunchDescriptionSource(gyro_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot'))
-                ]
+                ],
+                condition=IfCondition(
+                    PythonExpression(["'", LC("robot"), "' == 'talos'"])
+                )
             ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(apriltag_launch_file),
@@ -100,23 +98,25 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(opbox_launch_file),
-            #     launch_arguments=[
-            #         ('robot', LC('robot')),
-            #     ]
-            # ),
             Node(
                 package='riptide_hardware2',
                 executable='simple_actuator_interface.py',
                 name='simple_actuator_interface',
                 output='screen',
             ),
+            # launched here instead of in imu launch because this launch can reasonably assume it is running on jetson HW
             Node(
                 package='riptide_hardware2',
                 executable='imu_power_cycle.py',
                 name='imu_power_cycle',
                 output='screen',
+                parameters=[
+                    os.path.join(
+                        get_package_share_directory("riptide_hardware2"),
+                        "cfg",
+                        "imu_pwr_cycle.yaml"
+                    )
+                ]
             ),
             Node(
                 package='riptide_hardware2',

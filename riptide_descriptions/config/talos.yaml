@@ -1,4 +1,4 @@
-# Positions are in meters from back left foot. ENU convention
+# Positions are in meters from farthest-port screw on front of camera cage. ENU convention
 # Pose is xyzrpy with rpy in radians
 
 # Point which represents robot position. Must be near center
@@ -12,7 +12,7 @@ inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 hull_volume: .11 #make this real
 
 # Controller parameters
-#params for the newly developed overseer
+#params for the controller overseer
 controller_overseer:
   #the height above water at which to kill the thrusters (m)
   thruster_kill_plane: 1.0
@@ -116,11 +116,9 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      # eta_order_0: [0.8, 0.8, 10.0, 0.2, 0.2, 0.3]
       eta_order_0: [0.8, 1.0, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
-      # eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
       eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
@@ -208,8 +206,6 @@ pressure_monitoring:
   pressurization_tolerance: .01
 
   #time constant for full return to pressure - modelling leak as linear
-  #leak_decay: 14400 # - (1/s) works in lab
-  #leak_decay: 7200 # 12 C
   leak_decay: 3600 # lake validated
 
   #tolerance in leak detection for pulling the pump -> valve emits some error
@@ -258,25 +254,21 @@ acoustics:
   speed_of_sound: 1500 # m/s
 
 dvl:
-  # topic: dvl
   rate: 8 # Hz
   sigma: 0.005 # Stdev in m/s. Used by gazebo
   pose: [-0.119, 0.034, -0.250, 0.0, 0.0, -0.7853981]
 
 depth:
-  # topic: depth/pressure
   rate: 20 # Hz
   sigma: 0.010 # Stdev in m. Used by gazebo
   pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
 
 imu:
-  # topic: /imu/imu/data
   rate: 100 #Hz
   sigma_accel: 0.016 # Stdev in m/s^2. Used by sim
   sigma_omega: 0.01 # Stdev in deg/s. Used by sim
   sigma_angle: 0.5 # Std dev in deg. Used by sim
   yaw_drift:   1.5 # deg/min 
-  # pose: [-0.1722, -0.13072, 0.02537, 3.141, 0.0, -1.5707]
   pose: [-0.25, -0.1492, 0.0222, 3.141, 0.0, -1.5707]
 
 fog:
@@ -285,7 +277,7 @@ fog:
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
-torpedos: 
+torpedoes: 
   pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
   baseline: 0.0333375 #1 5/16 in
 

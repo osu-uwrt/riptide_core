@@ -1,0 +1,68 @@
+# Positions are in meters from TBD. ENU convention
+# Pose is xyzrpy with rpy in radians
+
+# Point which represents robot position. Must be near center
+base_link: [-0.14, 0.03, -0.09]
+
+# Vehicle mass properties
+mass: 22.67
+com: [0.0, 0.0, -0.071]
+inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
+hull_volume: .022772 #make this real
+
+active_ballast:
+  volume: 0.002 # Volume of space which can be filled with water
+  in_flow_rate: 0.000125 # Volume of water (m^3) entering ballast per second while intaking water
+  out_flow_rate: 0.00025 # Volume of water (m^3) exiting ballast per second while expelling water
+
+controller:
+  params_scale_factor: 1 #scaled in overseer
+  heading:
+    kp: 0.77
+    ki: 0.01
+    kd: 0.05
+  yawrate:
+    kp: 0.5
+    ki: 0.4
+    kd: 0
+  
+  depth:
+    enabled: 0
+
+depth:
+  rate: 20 # Hz
+  sigma: 0.010 # Stdev in m. Used by sim
+  pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
+
+imu:
+  rate: 100 #Hz
+  sigma_accel: 0.016 # Stdev in m/s^2. Used by sim
+  sigma_omega: 0.01 # Stdev in deg/s. Used by sim
+  sigma_angle: 0.5 # Std dev in deg. Used by sim
+  yaw_drift:   1.5 # deg/min 
+  pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+cameras: [
+  {
+    type: zed, 
+    name: ffc,
+    baseline: 0.045, # m. Distance between cameras (manually measured) 
+    pose: [0.0, -0.0, 0, 1.5707, 0, 0]
+  }
+]
+
+# Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
+# Thruster naming convention:
+#  - first letter: P/S (port/starboard)
+thrusters: [
+  {
+    name: "S", #thruster 0
+    type: 1,
+    pose: [0.1, -0.15, 0.0, 0.0, 0.0, 0.0]
+  },
+  {
+    name: "P", #thruster 1
+    type: 0,
+    pose: [0.1, 0.15, 0.0, 0.0, 0.0, 0.0]
+  }
+]

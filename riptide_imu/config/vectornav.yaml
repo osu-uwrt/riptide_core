@@ -3,7 +3,7 @@
     port: "/dev/ttyTHS1"
     baud: 115200
     reconnect_ms: 500
-    frame_id: "talos/imu_link"
+    frame_id: "liltank/imu_link"
     # declination of current location (degrees) https://www.magnetic-declination.com/
     magneticDeclination: -4.96
     # Error handler
