@@ -172,7 +172,9 @@ def generate_launch_description():
                 output='screen',
                 parameters=[
                     {"robot_namespace": LC("robot")},
-                    {"camera_name": "ffc"}
+                    {"camera_name": "ffc"},
+                    {"save_stereo": True},
+                    {"save_split": True}
                 ]
             )
             

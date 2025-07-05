@@ -18,17 +18,26 @@ class ImageCaptureNode(Node):
         self.declare_parameter('robot_namespace', 'talos')
         self.declare_parameter('camera_name', 'ffc')
         self.declare_parameter('save_directory', '/home/ros/cal_images')
+        self.declare_parameter('save_stereo', False)
+        self.declare_parameter('save_split', True)
         
         # Get parameter values
         robot_namespace = self.get_parameter('robot_namespace').get_parameter_value().string_value
         camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
         self.save_directory = self.get_parameter('save_directory').get_parameter_value().string_value
+        self.save_stereo = self.get_parameter('save_stereo').get_parameter_value().bool_value
+        self.save_split = self.get_parameter('save_split').get_parameter_value().bool_value
         
         # Build the full image topic path
         self.image_topic = f"{robot_namespace}/{camera_name}/zed_node/stereo_raw/image_raw_color"
         
         # Create save directory if it doesn't exist
         os.makedirs(self.save_directory, exist_ok=True)
+        
+        # Create subdirectories for split images if needed
+        if self.save_split:
+            os.makedirs(os.path.join(self.save_directory, 'left'), exist_ok=True)
+            os.makedirs(os.path.join(self.save_directory, 'right'), exist_ok=True)
         
         # Initialize CV bridge for image conversion
         self.bridge = CvBridge()
@@ -52,9 +61,9 @@ class ImageCaptureNode(Node):
         )
         
         # Create service for enabling/disabling subscription
-        self.enable_capture_subscription_service = self.create_service(
+        self.enable_subscription_service = self.create_service(
             SetBool,
-            'enable_capture_subscription',
+            'enable_subscription',
             self.enable_subscription_callback
         )
         
@@ -92,23 +101,59 @@ class ImageCaptureNode(Node):
         try:
             # Generate filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-            
-            # Include camera info in filename
             camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
-            filename = f"captured_image_{camera_name}_{timestamp}.png"
-            filepath = os.path.join(self.save_directory, filename)
             
-            # Save the image as PNG with no compression
-            success = cv2.imwrite(filepath, self.latest_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+            saved_files = []
             
-            if success:
+            # Save stereo image if enabled
+            if self.save_stereo:
+                stereo_filename = f"captured_image_{camera_name}_{timestamp}.png"
+                stereo_filepath = os.path.join(self.save_directory, stereo_filename)
+                success = cv2.imwrite(stereo_filepath, self.latest_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+                
+                if success:
+                    saved_files.append(f"stereo: {stereo_filename}")
+                    self.get_logger().info(f"Stereo image saved: {stereo_filepath}")
+                else:
+                    self.get_logger().error("Failed to save stereo image")
+            
+            # Save split left/right images if enabled
+            if self.save_split:
+                height, width = self.latest_image.shape[:2]
+                mid_width = width // 2
+                
+                # Split the image
+                left_image = self.latest_image[:, :mid_width]
+                right_image = self.latest_image[:, mid_width:]
+                
+                # Save left image
+                left_filename = f"captured_image_{camera_name}_{timestamp}.png"
+                left_filepath = os.path.join(self.save_directory, 'left', left_filename)
+                left_success = cv2.imwrite(left_filepath, left_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+                
+                # Save right image
+                right_filename = f"captured_image_{camera_name}_{timestamp}.png"
+                right_filepath = os.path.join(self.save_directory, 'right', right_filename)
+                right_success = cv2.imwrite(right_filepath, right_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+                
+                if left_success:
+                    saved_files.append(f"left: {left_filename}")
+                    self.get_logger().info(f"Left image saved: {left_filepath}")
+                else:
+                    self.get_logger().error("Failed to save left image")
+                    
+                if right_success:
+                    saved_files.append(f"right: {right_filename}")
+                    self.get_logger().info(f"Right image saved: {right_filepath}")
+                else:
+                    self.get_logger().error("Failed to save right image")
+            
+            if saved_files:
                 response.success = True
-                response.message = f"Image saved as {filename}"
-                self.get_logger().info(f"Image saved: {filepath}")
+                response.message = f"Images saved - {', '.join(saved_files)}"
             else:
                 response.success = False
-                response.message = "Failed to save image"
-                self.get_logger().error("Failed to save image")
+                response.message = "No images were saved (check save_stereo and save_split parameters)"
                 
         except Exception as e:
             response.success = False
