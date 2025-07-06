@@ -25,11 +25,11 @@ controller:
 
   feed_forward:
     #base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
-    base_wrench: [0.0, 0.0, 0.0, -0.95, 2.1, 0.0]
+    base_wrench: [-1.0, -1.0, 0.0, -0.95, 2.1, 0.0]
 
     auto_tune:
       #positional error threshold to begin autotuning 
-      positional_error_threshold: 0.07
+      positional_error_threshold: 0.15
 
       #max velocity threshold for ff autotune #
       velocity_threshold: 0.2
@@ -44,13 +44,13 @@ controller:
       trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
 
       #variation_threshold for FF changes (max standard variation)
-      variation_threshold: [5.0, 5.0, 10.0, 20.0, 20.0, 10.0]
+      variation_threshold: [10.0, 10.0, 10.0, 20.0, 20.0, 10.0]
       
       #variation_threshold for FF changes (max standard variation)
-      variation_der_threshold: [0.25, 0.25, 1.0, 1.0, 1.0, 0.25]
+      variation_der_threshold: [1.0, 1.0, 1.0, 1.0, 1.0, 0.25]
 
       #axis weights for auto FF convergence
-      axis_weights: [1.0, 1.0, 1.0, 10.0, 10.0, 10.0]
+      axis_weights: [0.5, 0.5, 1.0, 10.0, 10.0, 10.0]
 
   controller_scale:
 
@@ -116,13 +116,13 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [0.8, 1.0, 10.0, 0.2, 0.2, 0.3]
+      eta_order_0: [1.8, 1.8, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
-      eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
+      eta_order_1: [0.08, 0.08, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2, 0.2, 1.0, 10.0, 10.0, 0.35]
+      lambda: [0.25, 0.25, 1.0, 10.0, 10.0, 0.35]
 
       #format: 'a, m' for each degree of freedom
       #where:
@@ -206,7 +206,7 @@ pressure_monitoring:
   pressurization_tolerance: .01
 
   #time constant for full return to pressure - modelling leak as linear
-  leak_decay: 14400 # lake validated
+  leak_decay: 3600 # lake validated
 
   #tolerance in leak detection for pulling the pump -> valve emits some error
   #initial_leak: .0025 # - (factor of initial depressurization delta) lab
