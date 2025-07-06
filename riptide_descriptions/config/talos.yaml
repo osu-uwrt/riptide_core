@@ -206,7 +206,7 @@ pressure_monitoring:
   pressurization_tolerance: .01
 
   #time constant for full return to pressure - modelling leak as linear
-  leak_decay: 3600 # lake validated
+  leak_decay: 14400 # lake validated
 
   #tolerance in leak detection for pulling the pump -> valve emits some error
   #initial_leak: .0025 # - (factor of initial depressurization delta) lab
