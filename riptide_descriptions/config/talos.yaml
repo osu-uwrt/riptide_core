@@ -35,7 +35,7 @@ controller:
       velocity_threshold: 0.2
 
       #axis to perform autotune on (either zero or one)
-      auto_tune_mask: [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
+      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0]
 
       #decay factor for FF difference
       decay_factor: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
@@ -71,6 +71,12 @@ controller:
 
     #nominal time
     nominal_time: .6 #seconds
+
+    #positional threshhold for generating autonomy trust
+    autonomy_positional_threshold: 0.05
+
+    #velocity threshold for generating autonomy trust
+    autonomy_velocity_threshold: .1
 
   #params for auto drag compensations
   drag_compensator:
