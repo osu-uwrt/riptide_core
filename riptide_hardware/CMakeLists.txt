@@ -22,9 +22,13 @@ find_package(sensor_msgs REQUIRED)
 find_package(nortek_dvl REQUIRED)
 find_package(nortek_dvl_msgs REQUIRED)
 find_package(robot_localization REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # Include directories
 include_directories(include ${EIGEN3_INCLUDE_DIRS})
+
+include_directories(${YAML_CPP_INCLUDEDIR})
+
 
 # Add executable for the DepthConverter
 add_executable(depth_converter src/depth_converter.cpp)
@@ -40,9 +44,26 @@ ament_target_dependencies(depth_converter
   nortek_dvl_msgs
 )
 
+# add_executable(ekf src/ekf.cpp)
+# ament_target_dependencies(ekf PUBLIC
+#   rclcpp
+#   geometry_msgs
+#   tf2_ros
+#   tf2_geometry_msgs
+#   riptide_msgs2
+#   Eigen3
+#   robot_localization
+#   nortek_dvl
+#   nortek_dvl_msgs
+#   yaml-cpp
+# )
+# target_link_libraries(ekf PUBLIC ${YAML_CPP_LIBRARIES})
+
+
 # Install the C++ executable
 install(TARGETS
   depth_converter
+  #ekf
   DESTINATION lib/${PROJECT_NAME}
 )
 
