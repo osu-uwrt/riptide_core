@@ -24,12 +24,12 @@ controller:
   drag_enable: [1, 1, 0, 0, 0, 0]
 
   feed_forward:
-    #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
-    base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
+    #base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
+    base_wrench: [0.0, 0.0, -4.9, -0.95, 2.1, 0.0]
 
     auto_tune:
       #positional error threshold to begin autotuning 
-      positional_error_threshold: 0.15
+      positional_error_threshold: 0.07
 
       #max velocity threshold for ff autotune #
       velocity_threshold: 0.2
@@ -44,10 +44,10 @@ controller:
       trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
 
       #variation_threshold for FF changes (max standard variation)
-      variation_threshold: [5.0, 5.0, 5.0, 10.0, 10.0, 10.0]
+      variation_threshold: [5.0, 5.0, 10.0, 20.0, 20.0, 10.0]
       
       #variation_threshold for FF changes (max standard variation)
-      variation_der_threshold: [0.25, 0.25, 0.5, 0.5, 0.5, 0.25]
+      variation_der_threshold: [0.25, 0.25, 1.0, 1.0, 1.0, 0.25]
 
       #axis weights for auto FF convergence
       axis_weights: [1.0, 1.0, 1.0, 10.0, 10.0, 10.0]
@@ -82,7 +82,7 @@ controller:
                 0.0,0.0,0.0,0.0,0.0,0.0,
                 0.0,1.0,0.0,0.0,0.0,0.0,
                 1.0,0.0,0.0,0.0,0.0,0.0,
-                1.0,1.0,0.0,0.0,0.0,0.0]
+                0.0,0.0,0.0,0.0,0.0,0.0]
 
     #minimum samples of motion to use for compensation cycle
     minimum_samples: 60.0
@@ -147,7 +147,7 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 1.0]
+    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 2.5]
     i_gains: [0.0, 0.0, 0.0, 0.01, 1.0, 0.0]
     d_gains: [5.0, 5.0, 90.0, 1.0, 0.05, 0.9]
 
@@ -308,7 +308,7 @@ cameras: [
     baseline: 0.12, # m. Distance between cameras (manually measured) 
     pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
- {
+  {
     type: zed,
     name: dfc,
     baseline: 0.045,

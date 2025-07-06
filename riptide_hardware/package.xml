@@ -26,6 +26,7 @@
   <depend>nortek_dvl_msgs</depend>
 
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
   <exec_depend>diagnostic_updater</exec_depend>
   <exec_depend>diagnostic_aggregator</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>

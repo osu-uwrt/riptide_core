@@ -1,0 +1,11 @@
+uint64 time_startup
+geometry_msgs/Vector3 uncomp_mag
+geometry_msgs/Vector3 uncomp_accel
+geometry_msgs/Vector3 uncomp_gyro
+float32 temperature
+float32 pressure
+geometry_msgs/Vector3 magnetic
+geometry_msgs/Vector3 angular_rate
+geometry_msgs/Vector3 yaw_pitch_roll
+geometry_msgs/Vector3 linear_body_accel
+riptide_msgs2/VnVpeStatus vpe_status
