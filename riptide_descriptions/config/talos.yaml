@@ -159,6 +159,10 @@ controller:
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
     reset_threshold: 0.5
 
+    #scaling gains to prevent talos go sideways
+    gain_scaling_threshold: [1000.0, 1000.0, 1000.0, 0.222, 0.222, 100.0] #meters... radians
+    gain_scaling_per_unit: [0.0, 0.0, 0.0, 3.0, 3.0, 0.0] # set to zero for off
+
   teleop:
     #parameters for teleop mode
     #deadzone on robot throttle
