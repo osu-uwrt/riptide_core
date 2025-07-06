@@ -103,30 +103,30 @@ def generate_launch_description():
                     PythonExpression(["'", LC("robot"), "' == 'talos'"]))
             ),
             
-            ComposableNodeContainer(
-                name="dfc_container",
-                namespace="",
-                package="rclcpp_components",
-                executable="component_container",
-                output="screen",
-                respawn=True,
-                composable_node_descriptions=[
-                    # Second ZED Node (DFC)
-                    ComposableNode(
-                        package="zed_components",
-                        plugin="stereolabs::ZedCamera",
-                        namespace="dfc",
-                        name="zed_node",
-                        parameters=[
-                            zed_config_path,
-                            zedxm_camera_path,
-                            dfc_config_path,
-                        ]
-                    ),
-                ],
-                condition=IfCondition(
-                    PythonExpression(["'", LC("robot"), "' == 'talos'"]))
-            ),
+            # ComposableNodeContainer(
+            #     name="dfc_container",
+            #     namespace="",
+            #     package="rclcpp_components",
+            #     executable="component_container",
+            #     output="screen",
+            #     respawn=True,
+            #     composable_node_descriptions=[
+            #         # Second ZED Node (DFC)
+            #         ComposableNode(
+            #             package="zed_components",
+            #             plugin="stereolabs::ZedCamera",
+            #             namespace="dfc",
+            #             name="zed_node",
+            #             parameters=[
+            #                 zed_config_path,
+            #                 zedxm_camera_path,
+            #                 dfc_config_path,
+            #             ]
+            #         ),
+            #     ],
+            #     condition=IfCondition(
+            #         PythonExpression(["'", LC("robot"), "' == 'talos'"]))
+            # ),
             
             ComposableNodeContainer(
                 name="ffc_container",
@@ -165,18 +165,18 @@ def generate_launch_description():
             #     output='screen'
             # )
             
-            Node(
-                package='riptide_hardware2',
-                executable='picture_taker.py',
-                name='picture_taker',
-                output='screen',
-                parameters=[
-                    {"robot_namespace": LC("robot")},
-                    {"camera_name": "ffc"},
-                    {"save_stereo": True},
-                    {"save_split": True}
-                ]
-            )
+        #     Node(
+        #         package='riptide_hardware2',
+        #         executable='picture_taker.py',
+        #         name='picture_taker',
+        #         output='screen',
+        #         parameters=[
+        #             {"robot_namespace": LC("robot")},
+        #             {"camera_name": "ffc"},
+        #             {"save_stereo": True},
+        #             {"save_split": True}
+        #         ]
+        #     )
             
         ], scoped=True),
 
