@@ -78,7 +78,7 @@ def generate_launch_description():
             #fake hardware
             Node(
                 package='riptide_hardware2',
-                executable='fake_dvl',
+                executable='fake_dvl.py',
                 name='fake_dvl'
             ),
             
