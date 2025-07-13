@@ -5,8 +5,7 @@
   <xacro:property name="dvl" value="${config['dvl']}"/>
 
   <!-- DVL  -->
-  <!-- TODO: restore below if when xacro releases 1.14.4 -->
-  <!-- <xacro:if value="${'dvl' in config}"> -->
+  <xacro:if value="${'dvl' in config}">
     <xacro:property name="dvl" value="${config['dvl']}"/>
     <xacro:dvl_plugin_macro
       namespace="${namespace}" 
@@ -15,11 +14,11 @@
       <origin xyz="${dvl['pose'][0]} ${dvl['pose'][1]} ${dvl['pose'][2]}" 
               rpy="${dvl['pose'][3]} ${dvl['pose'][4]} ${dvl['pose'][5]}"/>
     </xacro:dvl_plugin_macro>
-  <!-- </xacro:if> -->
+  </xacro:if>
 
   <!-- Pressure  -->
   <!-- TODO: restore below if when xacro releases 1.14.4 -->
-  <!-- <xacro:if value="${'depth' in config}"> -->
+  <xacro:if value="${'depth' in config}">
     <xacro:property name="depth" value="${config['depth']}"/>
     <xacro:pressure_plugin_macro
       namespace="${namespace}"
@@ -28,12 +27,44 @@
       <origin xyz="${depth['pose'][0]} ${depth['pose'][1]} ${depth['pose'][2]}" 
               rpy="${depth['pose'][3]} ${depth['pose'][4]} ${depth['pose'][5]}"/>
     </xacro:pressure_plugin_macro>
-  <!-- </xacro:if> -->
+  </xacro:if>
+
+  <xacro:if value="${'acoustics' in config}">
+    <!-- port acoustic pod -->
+    <xacro:property name="acoustics_port" value="${config['acoustics']['port']}"/>
+    <xacro:acoustics_plugin_macro
+      namespace="${namespace}"
+      suffix="_port"
+      parent_link="${namespace}/origin">
+      <origin xyz="${acoustics_port['pose'][0]} ${acoustics_port['pose'][1]} ${acoustics_port['pose'][2]}" 
+              rpy="${acoustics_port['pose'][3]} ${acoustics_port['pose'][4]} ${acoustics_port['pose'][5]}"/>
+    </xacro:acoustics_plugin_macro>
+
+    <!--starboard acoustic pod-->
+    <xacro:property name="acoustics_starboard" value="${config['acoustics']['starboard']}"/>
+    <xacro:acoustics_plugin_macro
+    namespace="${namespace}"
+    suffix="_starboard"
+    parent_link="${namespace}/origin">
+    <origin xyz="${acoustics_starboard['pose'][0]} ${acoustics_starboard['pose'][1]} ${acoustics_starboard['pose'][2]}" 
+            rpy="${acoustics_starboard['pose'][3]} ${acoustics_starboard['pose'][4]} ${acoustics_starboard['pose'][5]}"/>
+    </xacro:acoustics_plugin_macro>
+  </xacro:if>
+
+  <!-- Fiber Optic Gyro -->
+  <xacro:if value="${'fog' in config}">
+    <xacro:property name="fog" value="${config['fog']}"/>
+    <xacro:fog_plugin_macro
+    namespace="${namespace}"
+    parent_link="${namespace}/origin">
+    <origin xyz="${fog['pose'][0]} ${fog['pose'][1]} ${fog['pose'][2]}" 
+            rpy="${fog['pose'][3]} ${fog['pose'][4]} ${fog['pose'][5]}"/>
+    </xacro:fog_plugin_macro>
+  </xacro:if>
 
   <!-- IMU  -->
   <!-- TODO: Get imu model from config -->
-  <!-- TODO: restore below if when xacro releases 1.14.4 -->
-  <!-- <xacro:if value="${'imu' in config}"> -->
+  <xacro:if value="${'imu' in config}">
     <xacro:property name="imu" value="${config['imu']}"/>
     <xacro:imu_plugin_macro
       namespace="${namespace}"
@@ -42,7 +73,7 @@
       <origin xyz="${imu['pose'][0]} ${imu['pose'][1]} ${imu['pose'][2]}" 
               rpy="${imu['pose'][3]} ${imu['pose'][4]} ${imu['pose'][5]}"/>
     </xacro:imu_plugin_macro>
-  <!-- </xacro:if> -->
+  </xacro:if>
 
   <!-- Pose sensor as ground truth for state estimation -->
   <xacro:default_pose_3d_macro
@@ -97,7 +128,7 @@
           <xacro:if value="${camera['type'] == 'zed'}">
             <xacro:zed_macro
              namespace="${namespace}"
-             name="talos/${camera['name']}_link"
+             name="${namespace}/${camera['name']}"
              parent_link="${camera_base_link}" />
           </xacro:if>
         </xacro:unless>

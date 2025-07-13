@@ -2,7 +2,6 @@
 <!-- All coordinates in file must follow ROS conventions: x forward, z up -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
   <xacro:include filename="$(find riptide_descriptions2)/urdf/snippets.xacro" />
-  <xacro:include filename="$(find riptide_descriptions2)/urdf/robot.gazebo.xacro" />
 
   <xacro:macro name="robot_base"
     params="namespace config inertial_reference_frame">

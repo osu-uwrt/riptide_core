@@ -66,14 +66,14 @@
     </xacro:macro>
 
     <xacro:macro name="zed_macro" params="namespace name parent_link">
-        <link name="${name}">
-            <xacro:dummy_inertia/>
-            <xacro:no_collision/>
+        <link name="${name}_camera_link">
+            <xacro:dummy_inertia />
+            <xacro:no_collision />
         </link>
 
-        <joint name="${namespace}/zed_camera_link_origin_joint" type="fixed">
+        <joint name="${namespace}/${name}_origin_joint" type="fixed">
             <parent link="${parent_link}" />
-            <child link="${name}" />
+            <child link="${name}_camera_link" />
             <origin xyz="0 0 0" rpy="0 0 0"/>
         </joint>
     </xacro:macro>
@@ -107,6 +107,39 @@
             <limit upper="0" lower="0" effort="0" velocity="0" />
             <axis xyz="1 0 0" />
         </joint>
+    </xacro:macro>
+
+    <xacro:macro name="acoustics_plugin_macro" params="namespace suffix parent_link *origin">
+
+    <link name="${namespace}/acoustics${suffix}_link">
+        <xacro:dummy_inertia />
+        <xacro:no_collision />
+    </link>
+
+    <joint name="${namespace}/acoustics${suffix}_joint" type="revolute">
+        <xacro:insert_block name="origin" />
+        <parent link="${parent_link}" />
+        <child link="${namespace}/acoustics${suffix}_link" />
+        <limit upper="0" lower="0" effort="0" velocity="0" />
+        <axis xyz="1 0 0" />
+    </joint>
+    </xacro:macro>
+
+
+    <xacro:macro name="fog_plugin_macro" params="namespace parent_link *origin">
+
+    <link name="${namespace}/fog_link">
+        <xacro:dummy_inertia />
+        <xacro:no_collision />
+    </link>
+
+    <joint name="${namespace}/fog_joint" type="revolute">
+        <xacro:insert_block name="origin" />
+        <parent link="${parent_link}" />
+        <child link="${namespace}/fog_link" />
+        <limit upper="0" lower="0" effort="0" velocity="0" />
+        <axis xyz="1 0 0" />
+    </joint>
     </xacro:macro>
 
     <xacro:macro name="imu_plugin_macro" params="namespace imu_suffix parent_link *origin">

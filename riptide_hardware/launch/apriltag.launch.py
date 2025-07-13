@@ -25,13 +25,14 @@ def generate_launch_description():
         namespace="apriltag",
         package='rclcpp_components',
         executable='component_container',
+        arguments=['--ros-args', '--log-level', 'error'],
         composable_node_descriptions=[
             ComposableNode(
                 name='apriltag_36h11',
                 package='apriltag_ros', plugin='AprilTagNode',
                 remappings=[
-                    ("image_rect", "zed/zed_node/left/image_rect_color"),
-                    ("camera_info", "zed/zed_node/left/camera_info"),
+                    ("image_rect", "ffc/zed_node/left/image_rect_color"),
+                    ("camera_info", "ffc/zed_node/left/camera_info"),
                 ],
                 parameters=[cfg_36h11],
                 extra_arguments=[{'use_intra_process_comms': True}],

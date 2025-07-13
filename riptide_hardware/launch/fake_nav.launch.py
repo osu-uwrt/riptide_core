@@ -95,7 +95,7 @@ def generate_launch_description():
             Node(
                 name="fake_ekf_node",
                 package="riptide_hardware2",
-                executable="fake_ekf",
+                executable="fake_ekf.py",
                 output='screen',
             ),
             

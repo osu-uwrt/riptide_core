@@ -1,4 +1,4 @@
-# Positions are in meters from back left foot. ENU convention
+# Positions are in meters from farthest-port screw on front of camera cage. ENU convention
 # Pose is xyzrpy with rpy in radians
 
 # Point which represents robot position. Must be near center
@@ -6,15 +6,13 @@ base_link: [-0.14, 0.03, -0.09]
 
 # Vehicle mass properties
 mass: 31.998
-com: [-0.148, 0.040, -0.071]
-cod: [-0.148, 0.040, -0.055]
-inertia: [1.493, 0.549, 1.399] # kg*m^2
-inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
-             -0.0599, 0.7341, 0.0427,  # Iyx Iyy Iyz
-             -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^2
+com: [-0.159, 0.042, -0.056]
+inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
+
+hull_volume: .11 #make this real
 
 # Controller parameters
-#params for the newly developed overseer
+#params for the controller overseer
 controller_overseer:
   #the height above water at which to kill the thrusters (m)
   thruster_kill_plane: 1.0
@@ -23,33 +21,114 @@ controller:
   scaling_factor: 1000000
   active_force_mask: [2, 2, 2, 1, 1, 1]
 
+  drag_enable: [1, 1, 0, 0, 0, 0]
+
   feed_forward:
-    #base_wrench: [0.3, 0.0, -6.0, 0.275, 0.050, -0.085]
-    base_wrench: [0.03, 0.01, -3.08, -0.02, 0.075, -0.020]
+    #base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
+    base_wrench: [-1.0, -1.0, 0.0, -0.95, 2.1, 0.0]
+
+    auto_tune:
+      #positional error threshold to begin autotuning 
+      positional_error_threshold: 0.15
+
+      #max velocity threshold for ff autotune #
+      velocity_threshold: 0.2
+
+      #axis to perform autotune on (either zero or one)
+      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0]
+
+      #decay factor for FF difference
+      decay_factor: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
+
+      #trust threshold for FF changes - minimum trust
+      trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
+
+      #variation_threshold for FF changes (max standard variation)
+      variation_threshold: [10.0, 10.0, 10.0, 20.0, 20.0, 10.0]
+      
+      #variation_threshold for FF changes (max standard variation)
+      variation_der_threshold: [1.0, 1.0, 1.0, 1.0, 1.0, 0.25]
+
+      #axis weights for auto FF convergence
+      axis_weights: [0.5, 0.5, 1.0, 10.0, 10.0, 10.0]
+
+  controller_scale:
+
+    #time constant for out of spec measurement trust decay
+    trust_decay_tau: 2 #seconds
+
+    #time constant for out of spec measurement trust growth
+    trust_growth_tau: 2 #seconds
+
+    #reset trust threshold
+    reset_trust_threshold: .2 
+
+    #minimum weight for reset:
+    reset_weight_minimum: 3
+
+    #nominal variance 
+    nominal_variance: [0.25, 0.25, 0.25, 0.2, 0.2, 0.2] #N / N/m
+
+    #nominal time
+    nominal_time: .6 #seconds
+
+    #positional threshhold for generating autonomy trust
+    autonomy_positional_threshold: 0.05
+
+    #velocity threshold for generating autonomy trust
+    autonomy_velocity_threshold: .1
+
+  #params for auto drag compensations
+  drag_compensator:
+
+    #which axis to apply correction to based on which velocities
+    #columns are the axes to base the drag compensation off of -- rows are the axes with compensation
+    apply_mask: [0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,1.0,0.0,0.0,0.0,0.0,
+                1.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0]
+
+    #minimum samples of motion to use for compensation cycle
+    minimum_samples: 60.0
+
+    #minimum velocity to count as motion for the sampler
+    minimum_absolute_velocity: 0.2
+
+    #minimum positional_error to count as motion for the sampler
+    minimum_absolute_positional_error: 0.2
+
+    #minimum average compensation velocity to update the drag compensation
+    minimum_average_sampled_velocity: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+
+    #minimum correspondance coeffiecent to update compensation
+    minimum_R2_coeffiecent: 0.9
+
+    #learning rate for drag compensation
+    learning_rate: 0.5
 
   SMC:
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
-                -7.4651,   17.7641,    7.0013,    0.3067, #y
-                -7.0964,   27.6349,    6.9723,    0.3827, #z
-                -4.6881,    5.2662,    6.2630,    1.2739, #r
-               -18.1269,   -3.1893,   17.3711,    2.0801, #p
-               -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
+              -7.4651,   17.7641,    7.0013,    0.3067, #y
+              -7.0964,   27.6349,    6.9723,    0.3827, #z
+              -4.6881,    5.2662,    6.2630,    1.2739, #r
+              -18.1269,   -3.1893,   17.3711,    2.0801, #p
+              -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
 
     #tunable paramters for controller
     SMC_params:
       #[x,y,z,r,p,y]
 
       #first order eta
-      # eta_order_0: [0.8, 0.8, 10.0, 0.2, 0.2, 0.3]
-      eta_order_0: [0.8, 1.0, 10.0, 0.2, 0.2, 0.3]
+      eta_order_0: [1.8, 1.8, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
-      # eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
-      eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
+      eta_order_1: [0.08, 0.08, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2, 0.2, 1.0, 10.0, 10.0, 0.35]
+      lambda: [0.25, 0.25, 1.0, 10.0, 10.0, 0.35]
 
       #format: 'a, m' for each degree of freedom
       #where:
@@ -72,13 +151,17 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 1.0]
+    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 2.5]
     i_gains: [0.0, 0.0, 0.0, 0.01, 1.0, 0.0]
     d_gains: [5.0, 5.0, 90.0, 1.0, 0.05, 0.9]
 
     # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
     reset_threshold: 0.5
+
+    #scaling gains to prevent talos go sideways
+    gain_scaling_threshold: [1000.0, 1000.0, 1000.0, 0.222, 0.222, 100.0] #meters... radians
+    gain_scaling_per_unit: [0.0, 0.0, 0.0, 3.0, 3.0, 0.0] # set to zero for off
 
   teleop:
     #parameters for teleop mode
@@ -124,6 +207,20 @@ controller:
     #time required for a barrel roll
     barrel_roll_duration: 1.9
 
+pressure_monitoring:
+  #pressurization parameters
+
+  #pressurizating parameters
+  temperature_standard_dev: 2
+  pressure_standard_dev: .001
+  pressurization_tolerance: .01
+
+  #time constant for full return to pressure - modelling leak as linear
+  leak_decay: 3600 # lake validated
+
+  #tolerance in leak detection for pulling the pump -> valve emits some error
+  #initial_leak: .0025 # - (factor of initial depressurization delta) lab
+  initial_leak: .005 #lake validated
 
 #this is for the newly developed solver
 thruster_solver:
@@ -145,6 +242,9 @@ thruster_solver:
   #the limit for an individual thruster
   individual_thrust_limit: 24
 
+  #the feedback decay constant
+  feedback_decay: 1.25
+
   #Format: 4 times positive curve then 4 times negative curve
   # 1 * 1
   # 2 * x
@@ -153,70 +253,61 @@ thruster_solver:
   force_to_rpm_coefficents: [-475.886186, 32.327429, -324.744664, 1443.832105,
                              257.460623,  42.948545, -24.402056,  -986.338071]
 
+#acoustics system parameters
+acoustics:
+  #hydrophone locations
+  port:
+    pose: [ -0.305, 0.325, -0.075, 0.0, 0.0, 0.0]
+  starboard:
+    pose: [ -0.315, -0.325, -0.075, 0.0, 0.0, 0.0]
+
+  speed_of_sound: 1500 # m/s
 
 dvl:
-  # topic: dvl
   rate: 8 # Hz
   sigma: 0.005 # Stdev in m/s. Used by gazebo
   pose: [-0.119, 0.034, -0.250, 0.0, 0.0, -0.7853981]
 
 depth:
-  # topic: depth/pressure
   rate: 20 # Hz
   sigma: 0.010 # Stdev in m. Used by gazebo
   pose: [ -0.305, -0.125, 0.045, 0.0, 0.0, 0.0]
 
 imu:
-  # topic: /imu/imu/data
   rate: 100 #Hz
   sigma_accel: 0.016 # Stdev in m/s^2. Used by sim
   sigma_omega: 0.01 # Stdev in deg/s. Used by sim
   sigma_angle: 0.5 # Std dev in deg. Used by sim
   yaw_drift:   1.5 # deg/min 
-  pose: [-0.0343, -0.0898, 0.0406, 3.141, 0.0, -1.5707]
+  pose: [-0.25, -0.1492, 0.0222, 3.141, 0.0, -1.5707]
+
+fog:
+  pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
-torpedos: 
-  pose: [0.048, -0.1143, -0.1501, 0.0, 0.0, 0.0]
+torpedoes: 
+  pose: [0.048, 0.1651, -0.1501, 0.0, 0.0, 0.0]
   baseline: 0.0333375 #1 5/16 in
 
 droppers:
-  pose: [-0.35, 0.0, 0.05, 0.0, 0.0, 0.0]
+  pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
 
 cameras: [
   {
     type: zed, 
-    name: zed_camera,
-    model: zed2,
+    name: ffc,
     baseline: 0.12, # m. Distance between cameras (manually measured) 
-    pose: [-0.036, -0.0874, 0, 0, 0, 0]
+    pose: [-0.0195, -0.0889, 0, 0, 0, 0]
   },
-  { #TODO: FILL IN WITH REAL VALUES
-    type: stereo,
-    name: downwards_camera,
-    baseline: 0.12,
-    pose: [0.06, 0, -0.01, 0, 1.5707, 0]
+  {
+    type: zed,
+    name: dfc,
+    baseline: 0.045,
+    pose: [-0.145, -0.080, -0.08, 1.5707, 1.5707, 0]
   }
 ]
-
-# TODO: sim uses some of this stuff. Figure out what we can delete
-thruster: 
-  rotor_constant: 0.01 # Not sure units. If too low bot shakes in sim
-  max_force: 22 # Newtons. Thrusters draw about 8A here
-  MIN_THRUST: 0.2
-  STARTUP_THRUST: 1.5
-  SU_THRUST: #Start Up Thrust
-    POS_SLOPE: 71.538
-    POS_YINT: -14.307
-    NEG_SLOPE: 80.0
-    NEG_YINT: 7.0
-  THRUST:
-    POS_SLOPE: 17.951
-    POS_YINT: 66.073
-    NEG_SLOPE: 22.920
-    NEG_YINT: -78.609
 
 # Note: thruster type means the attack direction of the thruster. This means that the type of the thruster should match which way the thruster is expected to spin for the thruster test
 # Thruster naming convention:

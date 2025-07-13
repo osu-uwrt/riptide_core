@@ -12,6 +12,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(name="imu_port", default_value="/dev/ttyTHS0",
                               description="Port to connect over"),
+        DeclareLaunchArgument(name="imu_frame_id", default_value="talos/imu_link", 
+                              description="Frame to publish IMU data from"),
 
         Node(
             package='riptide_imu',
@@ -20,8 +22,10 @@ def generate_launch_description():
             parameters=[
                 os.path.join(this_dir, 'config', 'vectornav.yaml'),
                 {
-                    "port" : LaunchConfiguration("imu_port")
+                    "port" : LaunchConfiguration("imu_port"),
+                    "frame_id" : LaunchConfiguration("imu_frame_id")
                 }
-            ]
+            ],
+            respawn=True
         )
     ])

@@ -1,0 +1,40 @@
+pose_1 = [0,0,0,.9061,-.0747,.1802,.3753];
+pose_2 = [2,0,0,1,0,0,0];
+hydrophone_base_vector = [1;0;0];
+
+disp("Point 1")
+x1_1 = pose_1(1)
+y1_1 = pose_1(2)
+z1_1 = pose_1(3)
+
+
+%calculate position of second hydrophone
+%order [Z,Y,X]
+eul_1 = quat2eul([pose_1(4), pose_1(5), pose_1(6), pose_1(7)]);
+norm_matrix = eul2rotm([-eul_1(1), 0, 0]);
+rot_1 = norm_matrix * quat2rotm([pose_1(4), pose_1(5), pose_1(6), pose_1(7)]);
+pos2_1 = rot_1 * hydrophone_base_vector;
+
+disp("Disp")
+x1_2 = pose_2(1) - x1_1;
+y1_2 = pose_2(2) - y1_1;
+z1_2 = pose_2(3) - z1_1;
+
+%calculate position of second hydrophone in second pulse
+rot_2 = norm_matrix * quat2rotm([pose_2(4), pose_2(5), pose_2(6), pose_2(7)]);
+pos2_2 = rot_2 * hydrophone_base_vector + [x1_2;y1_2;z1_2];
+
+%base widths in x,y plane
+h1 = pos2_1(1);
+h2 = norm([pos2_2(1) - x1_2 , pos2_2(2) - y1_2]);
+
+%calculate delta positions
+x1 = x1_2 - x1_1;
+x2 = pos2_2(1) - pos2_1(1);
+
+y1 = y1_2 - y1_1;
+y2 = pos2_2(2) - pos2_1(2);
+
+%calculate heading change
+eul_2 = rotm2eul(rot_2);
+heading_change = eul_2(1);

@@ -30,15 +30,15 @@ gyro_launch_file = os.path.join(
     "launch", "gyro.launch.py"
 )
 
-zed_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "launch", "zed.launch.py"
-)
-
 apriltag_launch_file = os.path.join(
     get_package_share_directory('riptide_hardware2'),
     "launch", "apriltag.launch.py"
 )
+
+# opbox_launch_file = os.path.join(
+#     get_package_share_directory('opbox_ros_client'),
+#     "launch", "opbox_ros_client.launch.py"
+# )
 
 def generate_launch_description():
     return LaunchDescription([
@@ -48,6 +48,13 @@ def generate_launch_description():
         GroupAction([
             PushRosNamespace(
                 LC("robot")
+            ),
+            # Zenoh router launch goes first to allow discovery
+            Node(
+               package='rmw_zenoh_cpp',
+               executable='rmw_zenohd',
+               name='zenoh_router',
+               output='screen', 
             ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(copro_agent_launch_file),
@@ -63,7 +70,7 @@ def generate_launch_description():
             ),
             Node(
                 package='riptide_hardware2',
-                executable='fake_dvl',
+                executable='fake_dvl.py',
                 name='fake_dvl',
                 condition=IfCondition(
                     PythonExpression(["'", LC("robot"), "' == 'talos'"])
@@ -83,28 +90,35 @@ def generate_launch_description():
             ),
             
             IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(zed_launch_file),
-                launch_arguments=[
-                    ('robot', LC('robot')),
-                ]
-            ),
-            IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(apriltag_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
             ),
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(opbox_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # ),
             Node(
                 package='riptide_hardware2',
-                executable='simple_actuator_interface',
+                executable='simple_actuator_interface.py',
                 name='simple_actuator_interface',
                 output='screen',
             ),
             Node(
                 package='riptide_hardware2',
-                executable='imu_power_cycle',
+                executable='imu_power_cycle.py',
                 name='imu_power_cycle',
                 output='screen',
             ),
+            Node(
+                package='riptide_hardware2',
+                executable='pressure_monitor.py',
+                name='pressure_monitor',
+                output='screen',
+                parameters=[{"robot":LC('robot')}]
+            )        
         ], scoped=True)
     ])

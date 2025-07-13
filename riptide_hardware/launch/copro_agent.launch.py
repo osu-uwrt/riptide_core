@@ -13,11 +13,8 @@ def generate_launch_description():
             executable='micro_ros_agent',
             name='copro_agent',
             output='screen',
-            arguments=['can', '-D', 'can0', '-v4'], ## change to -v4 for actual logs
-            respawn=True,
-            condition=IfCondition(
-                PythonExpression(["'", LC("robot"), "' == 'talos'"])
-            ),
+            arguments=['can', '-D', 'can0', '-v4', '-m', 'rmw'], ## change to -v4 for actual logs
+            respawn=True
         ),
 
         Node(
@@ -37,7 +34,10 @@ def generate_launch_description():
             executable='micro_ros_agent',
             name='external_agent',
             output='screen',
-            arguments=['can', '-D', 'can1', '-v4'], ## change to -v4 for actual logs
-            respawn=True
+            arguments=['can', '-D', 'can1', '-v4', '-m', 'rmw'], ## change to -v4 for actual logs
+            respawn=True,
+            condition=IfCondition(
+                PythonExpression(["'", LC("robot"), "' == 'talos'"]) # this launch is only for talos external network
+            ),
         )
     ])
