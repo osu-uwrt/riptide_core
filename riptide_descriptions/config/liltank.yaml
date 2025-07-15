@@ -25,9 +25,13 @@ controller:
     kp: 0.5
     ki: 0.4
     kd: 0
+  surge:
+    kp: 0.5
+    ki: 0.0
+    kd: 0.0
   
   depth:
-    enabled: 0
+    enabled: 1
 
 depth:
   rate: 20 # Hz
