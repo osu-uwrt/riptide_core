@@ -26,9 +26,11 @@ controller:
     ki: 0.4
     kd: 0
   surge:
-    kp: 0.5
+    kp: 0.1
     ki: 0.0
     kd: 0.0
+    upper_control_limit: 0.1
+    lower_control_limit: -0.1
   
   depth:
     enabled: 1
