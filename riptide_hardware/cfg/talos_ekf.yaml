@@ -33,7 +33,7 @@
                   true,  true,  true]
 
     # Imu comes in faster than the ekf runs so we need a queue
-    imu0_queue_size: 13
+    imu0_queue_size: 14
     imu0_remove_gravitational_acceleration: true
     gravitational_acceleration: 9.755455
 
