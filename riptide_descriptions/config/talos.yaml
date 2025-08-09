@@ -294,6 +294,9 @@ torpedoes:
 droppers:
   pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
 
+hitch:
+  pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
 cameras: [
   {
     type: zed, 
