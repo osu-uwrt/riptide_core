@@ -5,8 +5,9 @@
       pub_resolution: "NATIVE" # The resolution used for image and depth map publishing. 'NATIVE' to use the same `general.grab_resolution` - `CUSTOM` to apply the `general.pub_downscale_factor` downscale factory to reduce bandwidth in transmission
       pub_downscale_factor: 2.0 # rescale factor used to rescale image before publishing when 'pub_resolution' is 'CUSTOM'
       pub_frame_rate: 30.0
-      optional_opencv_calibration_file: "/home/ros/zed_cals/ffc_calibration3.yaml"
+      optional_opencv_calibration_file: "/home/ros/zed_cals/taloszedxffc_cal5.yaml"
       grab_resolution: 'HD1200'
+      self_calib: false
     pos_tracking:
       publish_tf: false
     debug:

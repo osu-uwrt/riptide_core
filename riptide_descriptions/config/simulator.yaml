@@ -12,7 +12,10 @@ vehicle_properties:
     cod: [-0.148, 0.040, -0.055]
     inertia3x3: [1.6315, -0.0599, -0.0330, # Ixx Ixy Ixz
                 -0.0599, 0.7341, 0.0427,  # Iyx Iyy Iyz
-                -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^2
+                -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^
+
+    #center of mass discrepancy      
+    dcom: [0.01, 0.0, 0.0]
                 
     # drag = (k1 + k2 * abs(v) + k3 * exp(abs(v) / k4) )* sign(v)
     damping: [-38.7588,  -28.1146,   37.3211,    0.5034, #x
@@ -23,6 +26,11 @@ vehicle_properties:
               -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
 
     thruster_max_force: 28.0
+
+    #sim discrepency - allows to test control when feed forward is not perfect
+    sim_discrepancy: [0.0, 1.0, -0.5, 0.1, -0.05, 0.0]
+
+    env_force: [0.0, 0.7, 0.0]
 
   liltank: #TODO: measure or estimate all liltank parameters
     cob: [0.0, 0.0, 0.15]
@@ -41,9 +49,9 @@ vehicle_properties:
 
     thruster_max_force: 28.0
 
-controller:
-  #sim discrepency - allows to test control when feed forward is not perfect
-  sim_discrepancy: [0.0, 0.0, -0.5, 0.1, -0.05, 0.0]
+    #sim discrepency - allows to test control when feed forward is not perfect
+    sim_discrepancy: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
 
 claw:
   fake_objects: #I've arbilitrarilly set these properties - measure at some point

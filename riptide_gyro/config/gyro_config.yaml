@@ -21,3 +21,7 @@
 
     #calibration limits
     cal_temp_limits: [37.57019, 51.303101]
+
+    #rate limiting
+    max_publish_rate: 500.0
+    use_rate_limiting: true

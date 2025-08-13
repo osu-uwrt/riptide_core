@@ -35,72 +35,41 @@
     </xacro:if>
   </xacro:macro>
 
-  <xacro:macro name="poker_macro" params="namespace config">
-    <xacro:property name="poker" value="${config['poker']}"/>
-    <joint name="${namespace}/poker_joint" type="fixed">
-      <origin xyz="${poker['pose'][0]} ${poker['pose'][1]} ${poker['pose'][2]}"
-              rpy="${poker['pose'][3]} ${poker['pose'][4]} ${poker['pose'][5]}"/>
-      <parent link="${namespace}/origin"/>
-      <child link="${namespace}/poker_link"/>
-    </joint>
-
-    <link name="${namespace}/poker_link">
-      <xacro:dummy_inertia />
-      <xacro:no_collision />
-    </link>
+  <xacro:macro name="origin_from_pose_macro" params="pose">
+    <origin xyz="${pose[0]} ${pose[1]} ${pose[2]}"
+            rpy="${pose[3]} ${pose[4]} ${pose[5]}" />
   </xacro:macro>
 
-  <xacro:macro name="launcher_macro" params="namespace name parent *origin">
+  <xacro:macro name="generic_link_macro_with_origin" params="namespace name parent *origin">
     <link name="${namespace}/${name}_link">
       <xacro:dummy_inertia/>
       <xacro:no_collision/>
     </link>
 
     <joint name="${namespace}/${name}_joint" type="fixed">
-      <xacro:insert_block name="origin"/>
+      <xacro:insert_block name="origin" />
       <parent link="${parent}"/>
       <child link="${namespace}/${name}_link"/>
     </joint>
   </xacro:macro>
 
-  <xacro:macro name="torpedo_macro" params="namespace config">
-    <xacro:property name="torpedo" value="${config['torpedoes']}"/>
-    <joint name="${namespace}/torpedo_joint" type="fixed">
-      <origin xyz="${torpedo['pose'][0]} ${torpedo['pose'][1]} ${torpedo['pose'][2]}"
-              rpy="${torpedo['pose'][3]} ${torpedo['pose'][4]} ${torpedo['pose'][5]}" />
-      <parent link="${namespace}/origin"/>
-      <child link="${namespace}/torpedo_link"/>
-    </joint>
-
-    <link name="${namespace}/torpedo_link">
-      <xacro:dummy_inertia />
-      <xacro:no_collision />
-    </link>
-
-    <xacro:launcher_macro namespace="${namespace}" name="torpedo_0" parent="${namespace}/torpedo_link">
-      <origin xyz="0 ${-torpedo['baseline'] / 2} 0"
-              rpy="0 0 0"/>
-    </xacro:launcher_macro>
-
-    <xacro:launcher_macro namespace="${namespace}" name="torpedo_1" parent="${namespace}/torpedo_link">
-      <origin xyz="0 ${torpedo['baseline'] / 2} 0"
-              rpy="0 0 0"/>
-    </xacro:launcher_macro>
+  <xacro:macro name="generic_link_macro" params="namespace name parent pose">
+    <xacro:generic_link_macro_with_origin namespace="${namespace}" name="${name}" parent="${parent}">
+      <xacro:origin_from_pose_macro pose="${pose}" />
+    </xacro:generic_link_macro_with_origin>
   </xacro:macro>
 
-  <xacro:macro name="dropper_macro" params="namespace config">
-    <xacro:property name="dropper" value="${config['droppers']}"/>
-    <joint name="${namespace}/dropper_joint" type="fixed">
-      <origin xyz="${dropper['pose'][0]} ${dropper['pose'][1]} ${dropper['pose'][2]}"
-              rpy="${dropper['pose'][3]} ${dropper['pose'][4]} ${dropper['pose'][5]}" />
-      <parent link="${namespace}/origin"/>
-      <child link="${namespace}/droppers_link"/>
-    </joint>
-
-    <link name="${namespace}/droppers_link">
-      <xacro:dummy_inertia />
-      <xacro:no_collision />
-    </link>
+  <xacro:macro name="torpedo_macro" params="namespace config">
+    <xacro:property name="torpedo" value="${config['torpedoes']}"/>
+    <xacro:generic_link_macro namespace="${namespace}" name="torpedo" parent="${namespace}/origin" pose="${torpedo['pose']}" />
+    <xacro:generic_link_macro_with_origin namespace="${namespace}" name="torpedo_0" parent="${namespace}/torpedo_link">
+      <origin xyz="0 ${-torpedo['baseline'] / 2} 0"
+              rpy="0 0 0"/>
+    </xacro:generic_link_macro_with_origin>
+    <xacro:generic_link_macro_with_origin namespace="${namespace}" name="torpedo_1" parent="${namespace}/torpedo_link">
+      <origin xyz="0 ${torpedo['baseline'] / 2} 0"
+              rpy="0 0 0"/>
+    </xacro:generic_link_macro_with_origin>
   </xacro:macro>
   
   <xacro:thrusters_macro 
@@ -109,9 +78,11 @@
         index="0"/>
   
   <xacro:if value="${'poker' in config}">
-    <xacro:poker_macro
+    <xacro:generic_link_macro
           namespace="${namespace}"
-          config="${config}"/>
+          name="poker"
+          parent="${namespace}/origin"
+          pose="${config['poker']['pose']}" />
   </xacro:if>
 
   <xacro:if value="${'torpedoes' in config}">
@@ -121,8 +92,18 @@
   </xacro:if>
 
   <xacro:if value="${'droppers' in config}">
-    <xacro:dropper_macro
+    <xacro:generic_link_macro
           namespace="${namespace}"
-          config="${config}"/>
+          name="droppers"
+          parent="${namespace}/origin"
+          pose="${config['droppers']['pose']}" />
+  </xacro:if>
+
+  <xacro:if value="${'hitch' in config}">
+    <xacro:generic_link_macro
+          namespace="${namespace}"
+          name="hitch"
+          parent="${namespace}/origin"
+          pose="${config['hitch']['pose']}" />
   </xacro:if>
 </robot>

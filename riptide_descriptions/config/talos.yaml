@@ -6,7 +6,7 @@ base_link: [-0.14, 0.03, -0.09]
 
 # Vehicle mass properties
 mass: 31.998
-com: [-0.148, 0.040, -0.071]
+com: [-0.159, 0.042, -0.056]
 inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 
 hull_volume: .11 #make this real
@@ -25,11 +25,11 @@ controller:
 
   feed_forward:
     #base_wrench: [0.03, 0.01, -5.28, 0.57, 1.77, -0.020]
-    base_wrench: [0.0, 0.0, -4.9, -0.95, 2.1, 0.0]
+    base_wrench: [-1.0, -1.0, 0.0, -0.95, 2.1, 0.0]
 
     auto_tune:
       #positional error threshold to begin autotuning 
-      positional_error_threshold: 0.07
+      positional_error_threshold: 0.15
 
       #max velocity threshold for ff autotune #
       velocity_threshold: 0.2
@@ -44,13 +44,13 @@ controller:
       trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
 
       #variation_threshold for FF changes (max standard variation)
-      variation_threshold: [5.0, 5.0, 10.0, 20.0, 20.0, 10.0]
+      variation_threshold: [10.0, 10.0, 10.0, 20.0, 20.0, 10.0]
       
       #variation_threshold for FF changes (max standard variation)
-      variation_der_threshold: [0.25, 0.25, 1.0, 1.0, 1.0, 0.25]
+      variation_der_threshold: [1.0, 1.0, 1.0, 1.0, 1.0, 0.25]
 
       #axis weights for auto FF convergence
-      axis_weights: [1.0, 1.0, 1.0, 10.0, 10.0, 10.0]
+      axis_weights: [0.5, 0.5, 1.0, 10.0, 10.0, 10.0]
 
   controller_scale:
 
@@ -71,6 +71,12 @@ controller:
 
     #nominal time
     nominal_time: .6 #seconds
+
+    #positional threshhold for generating autonomy trust
+    autonomy_positional_threshold: 0.05
+
+    #velocity threshold for generating autonomy trust
+    autonomy_velocity_threshold: .1
 
   #params for auto drag compensations
   drag_compensator:
@@ -116,13 +122,13 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [0.8, 1.0, 10.0, 0.2, 0.2, 0.3]
+      eta_order_0: [1.8, 1.8, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
-      eta_order_1: [0.04, 0.04, 0.3, 0.0, 0.0, 0.0]
+      eta_order_1: [0.08, 0.08, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
-      lambda: [0.2, 0.2, 1.0, 10.0, 10.0, 0.35]
+      lambda: [0.25, 0.25, 1.0, 10.0, 10.0, 0.35]
 
       #format: 'a, m' for each degree of freedom
       #where:
@@ -152,6 +158,10 @@ controller:
     # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
     reset_threshold: 0.5
+
+    #scaling gains to prevent talos go sideways
+    gain_scaling_threshold: [1000.0, 1000.0, 1000.0, 0.222, 0.222, 100.0] #meters... radians
+    gain_scaling_per_unit: [0.0, 0.0, 0.0, 3.0, 3.0, 0.0] # set to zero for off
 
   teleop:
     #parameters for teleop mode
@@ -278,11 +288,14 @@ poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedoes: 
-  pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
+  pose: [0.048, 0.1651, -0.1501, 0.0, 0.0, 0.0]
   baseline: 0.0333375 #1 5/16 in
 
 droppers:
   pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
+
+hitch:
+  pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 cameras: [
   {

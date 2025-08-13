@@ -1,9 +1,9 @@
 /**/riptide_imu:
   ros__parameters:
     port: "/dev/ttyTHS1"
-    baud: 115200
+    baud: 460800
     reconnect_ms: 500
-    frame_id: "liltank/imu_link"
+    frame_id: "talos/imu_link"
     # declination of current location (degrees) https://www.magnetic-declination.com/
     magneticDeclination: -4.96
     # Error handler
@@ -21,8 +21,8 @@
       "output buffer overflow",
       "insufficient baud rate"]
     # Covariance data
-    orientation_covariance: [0.0001,  0.0,   0.0,
-                            0.0,   0.0001,  0.0,
+    orientation_covariance: [0.00005,  0.0,   0.0,
+                            0.0,   0.00001,  0.0,
                             0.0,   0.0,   0.01]
     angular_velocity_covariance: [0.01,  0.0,   0.0,
                          0.0,   0.01,  0.0,

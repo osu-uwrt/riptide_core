@@ -37,7 +37,7 @@ class Vectornav : public rclcpp::Node {
   Vectornav() : Node("riptide_imu") {
     // Declare parameters used in constructor
     auto port = declare_parameter<std::string>("port", "/dev/ttyTHS0");
-    auto baud = declare_parameter<int>("baud", 115200);
+    auto baud = declare_parameter<int>("baud", 460800);
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
     // Declare parameters not used in constructor
