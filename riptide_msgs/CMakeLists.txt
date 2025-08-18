@@ -12,10 +12,10 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-# Grab all message files 
-file(GLOB msg_sources RELATIVE ${PROJECT_SOURCE_DIR} msg/*.msg)
-file(GLOB srv_sources RELATIVE ${PROJECT_SOURCE_DIR} srv/*.srv)
-file(GLOB act_sources RELATIVE ${PROJECT_SOURCE_DIR} action/*.action)
+# Grab all message files
+file(GLOB msg_sources RELATIVE ${PROJECT_SOURCE_DIR} CONFIGURE_DEPENDS msg/*.msg)
+file(GLOB srv_sources RELATIVE ${PROJECT_SOURCE_DIR} CONFIGURE_DEPENDS srv/*.srv)
+file(GLOB act_sources RELATIVE ${PROJECT_SOURCE_DIR} CONFIGURE_DEPENDS action/*.action)
 
 #generate messages
 rosidl_generate_interfaces(${PROJECT_NAME}
