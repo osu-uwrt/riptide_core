@@ -58,8 +58,8 @@
       attitudeField: 0x0000          # ATTITUDEGROUP_NONE
       insField: 0x0000               # INSGROUP_NONE
       gps2Field: 0x0000              # GPSGROUP_NONE
-    orientation_covariance: [0.01,  0.0,   0.0,
-                            0.0,   0.01,  0.0,
+    orientation_covariance: [0.0001,  0.0,   0.0,
+                            0.0,   0.0001,  0.0,
                             0.0,   0.0,   0.01]
     angular_velocity_covariance: [0.01,  0.0,   0.0,
                          0.0,   0.01,  0.0,

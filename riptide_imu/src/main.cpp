@@ -439,6 +439,9 @@ class Vectornav : public rclcpp::Node {
   // Process vn math (3) into geometry message
   static inline geometry_msgs::msg::Vector3 toMsg(const vn::math::vec3f& rhs) {
     geometry_msgs::msg::Vector3 lhs;
+    // lhs.x = -rhs[1];
+    // lhs.y = -rhs[0];
+    // lhs.z = -rhs[2];
     lhs.x = rhs[0];
     lhs.y = rhs[1];
     lhs.z = rhs[2];

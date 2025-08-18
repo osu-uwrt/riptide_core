@@ -87,7 +87,7 @@ def evaluate_xacro(context, *args, **kwargs):
         #
         try:
             if robot == "talos":
-                nodes.append(get_zed_description("ffc", "zed2i", robot, context, debug))
+                nodes.append(get_zed_description("ffc", "zedx", robot, context, debug))
                 nodes.append(get_zed_description("dfc", "zedxm", robot, context, debug))
 
             if robot == "liltank":

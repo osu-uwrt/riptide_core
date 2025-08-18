@@ -56,12 +56,12 @@ def generate_launch_description():
             #    name='zenoh_router',
             #    output='screen', 
             # ),
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(copro_agent_launch_file),
-                launch_arguments=[
-                    ('robot', LC('robot')),
-                ]
-            ),
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(copro_agent_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(diagnostics_launch_file),
                 launch_arguments=[

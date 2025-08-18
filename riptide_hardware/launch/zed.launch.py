@@ -103,58 +103,58 @@ def generate_launch_description():
                     PythonExpression(["'", LC("robot"), "' == 'talos'"]))
             ),
             
-            # ComposableNodeContainer(
-            #     name="dfc_container",
-            #     namespace="",
-            #     package="rclcpp_components",
-            #     executable="component_container",
-            #     output="screen",
-            #     respawn=True,
-            #     composable_node_descriptions=[
-            #         # Second ZED Node (DFC)
-            #         ComposableNode(
-            #             package="zed_components",
-            #             plugin="stereolabs::ZedCamera",
-            #             namespace="dfc",
-            #             name="zed_node",
-            #             parameters=[
-            #                 zed_config_path,
-            #                 zedxm_camera_path,
-            #                 dfc_config_path,
-            #             ]
-            #         ),
-            #     ],
-            #     condition=IfCondition(
-            #         PythonExpression(["'", LC("robot"), "' == 'talos'"]))
-            # ),
-            
             ComposableNodeContainer(
-                name="ffc_container",
-                namespace="/",
+                name="dfc_container",
+                namespace="",
                 package="rclcpp_components",
                 executable="component_container",
                 output="screen",
                 respawn=True,
                 composable_node_descriptions=[
-                    # The tank camera
+                    # Second ZED Node (DFC)
                     ComposableNode(
                         package="zed_components",
                         plugin="stereolabs::ZedCamera",
-                        namespace="ffc",
+                        namespace="dfc",
                         name="zed_node",
                         parameters=[
-                            # zedxm_camera_path,
                             zed_config_path,
-                            tank_config_path,
-                            # zed_compression_path,
-                            {"general.camera_name": "liltank/ffc"},
-                            {"mapping.clicked_point_topic": "/clicked_point"},
+                            zedxm_camera_path,
+                            dfc_config_path,
                         ]
                     ),
                 ],
                 condition=IfCondition(
-                    PythonExpression(["'", LC("robot"), "' == 'liltank'"]))
+                    PythonExpression(["'", LC("robot"), "' == 'talos'"]))
             ),
+            
+            # ComposableNodeContainer(
+            #     name="ffc_container",
+            #     namespace="/",
+            #     package="rclcpp_components",
+            #     executable="component_container",
+            #     output="screen",
+            #     respawn=True,
+            #     composable_node_descriptions=[
+            #         # The tank camera
+            #         ComposableNode(
+            #             package="zed_components",
+            #             plugin="stereolabs::ZedCamera",
+            #             namespace="ffc",
+            #             name="zed_node",
+            #             parameters=[
+            #                 # zedxm_camera_path,
+            #                 zed_config_path,
+            #                 tank_config_path,
+            #                 # zed_compression_path,
+            #                 {"general.camera_name": "liltank/ffc"},
+            #                 {"mapping.clicked_point_topic": "/clicked_point"},
+            #             ]
+            #         ),
+            #     ],
+            #     condition=IfCondition(
+            #         PythonExpression(["'", LC("robot"), "' == 'liltank'"]))
+            # ),
             
             # Disabled for now as both are on by default
             # # Launch the ZedManager node
