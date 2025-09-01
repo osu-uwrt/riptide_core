@@ -7,6 +7,11 @@
 
     #used for learning drag
     publish_acceleration: true
+
+    #make camera happy
+    # predict_to_current_time: true
+    # transform_time_offset: -0.1
+
     
     # The frequency, in Hz, at which the filter will output a position estimate. Note that the filter will not begin
     # computation until it receives at least one message from one of the inputs. It will then run continuously at the
@@ -26,6 +31,7 @@
     # aX aY aZ
 
     imu0: vectornav/imu
+    # imu0: ffc/zed_node/imu/data
     imu0_config: [false, false, false,
                   true,  true,  false,
                   false, false, false,
@@ -33,9 +39,21 @@
                   true,  true,  true]
 
     # Imu comes in faster than the ekf runs so we need a queue
-    imu0_queue_size: 13
+    imu0_queue_size: 14
     imu0_remove_gravitational_acceleration: true
     gravitational_acceleration: 9.755455
+
+    # imu1: ffc/zed_node/imu/data
+    # imu1_config: [false, false, false,
+    #               true,  true,  false,
+    #               false, false, false,
+    #               true,  true,  false, # Taking out yaw from imu since fog rate is lower now
+    #               true,  true,  true]
+
+    # # Imu comes in faster than the ekf runs so we need a queue
+    # imu1_queue_size: 14
+    # imu1_remove_gravitational_acceleration: true
+    # gravitational_acceleration: 9.755455
 
     twist0: dvl_twist
     twist0_config: [false, false, false,

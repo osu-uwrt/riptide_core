@@ -35,13 +35,14 @@ controller:
       velocity_threshold: 0.2
 
       #axis to perform autotune on (either zero or one)
-      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0]
+      auto_tune_mask: [0.0, 0.0, 1.0, 1.0, 1.0, 0.0] # set allto zero to disable; make sure float
 
       #decay factor for FF difference
       decay_factor: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8]
 
       #trust threshold for FF changes - minimum trust
       trust_threshold: [0.97, 0.97, 0.97, 0.99, 0.99, 0.99]
+      # trust_threshold: [1.01, 1.01, 1.01, 1.01, 1.01, 1.01]
 
       #variation_threshold for FF changes (max standard variation)
       variation_threshold: [10.0, 10.0, 10.0, 20.0, 20.0, 10.0]
@@ -86,8 +87,8 @@ controller:
     apply_mask: [0.0,0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,0.0,
-                0.0,1.0,0.0,0.0,0.0,0.0,
-                1.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
+                0.0,0.0,0.0,0.0,0.0,0.0,
                 0.0,0.0,0.0,0.0,0.0,0.0]
 
     #minimum samples of motion to use for compensation cycle
@@ -122,7 +123,7 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [1.8, 1.8, 10.0, 0.2, 0.2, 0.3]
+      eta_order_0: [1.8, 0.5, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
       eta_order_1: [0.08, 0.08, 0.3, 0.0, 0.0, 0.0]
@@ -151,7 +152,7 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [3.0, 18.0, 200.0, 2.0, 2.0, 2.5]
+    p_gains: [3.0, 18.0, 200.0, 3.5, 2.0, 2.5]
     i_gains: [0.0, 0.0, 0.0, 0.01, 1.0, 0.0]
     d_gains: [5.0, 5.0, 90.0, 1.0, 0.05, 0.9]
 
@@ -288,11 +289,14 @@ poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedoes: 
-  pose: [0.048, 0.1651, -0.1501, 0.0, 0.0, 0.0]
-  baseline: 0.0333375 #1 5/16 in
+  pose: [0.048, 0.17200625, -0.0954, 0.0, 0.0, 0.0] #real z: -0.1524, real y: 0.17700625
+  baseline: 0.0365125
 
 droppers:
-  pose: [0.048, 0.1397, -0.1501, 0.0, 0.0, 0.0]
+  pose: [0.048, 0.17200625, -0.1501, 0.0, 0.0, 0.0]
+
+hitch:
+  pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 cameras: [
   {

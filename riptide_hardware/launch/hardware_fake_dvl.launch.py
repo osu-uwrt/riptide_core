@@ -50,18 +50,18 @@ def generate_launch_description():
                 LC("robot")
             ),
             # Zenoh router launch goes first to allow discovery
-            Node(
-               package='rmw_zenoh_cpp',
-               executable='rmw_zenohd',
-               name='zenoh_router',
-               output='screen', 
-            ),
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(copro_agent_launch_file),
-                launch_arguments=[
-                    ('robot', LC('robot')),
-                ]
-            ),
+            # Node(
+            #    package='rmw_zenoh_cpp',
+            #    executable='rmw_zenohd',
+            #    name='zenoh_router',
+            #    output='screen', 
+            # ),
+            # IncludeLaunchDescription(
+            #     AnyLaunchDescriptionSource(copro_agent_launch_file),
+            #     launch_arguments=[
+            #         ('robot', LC('robot')),
+            #     ]
+            # ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(diagnostics_launch_file),
                 launch_arguments=[
