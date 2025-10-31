@@ -123,10 +123,10 @@ controller:
       #[x,y,z,r,p,y]
 
       #first order eta
-      eta_order_0: [1.8, 0.5, 10.0, 0.2, 0.2, 0.3]
+      eta_order_0: [1.8, 0.2, 10.0, 0.2, 0.2, 0.3]
 
       #second order eta
-      eta_order_1: [0.08, 0.08, 0.3, 0.0, 0.0, 0.0]
+      eta_order_1: [0.08, 0.04, 0.3, 0.0, 0.0, 0.0]
 
       #lambda
       lambda: [0.25, 0.25, 1.0, 10.0, 10.0, 0.35]
@@ -152,9 +152,9 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [3.0, 18.0, 200.0, 3.5, 2.0, 2.5]
+    p_gains: [3.0, 18.0, 200.0, 3.0, 2.0, 1.0]
     i_gains: [0.0, 0.0, 0.0, 0.01, 1.0, 0.0]
-    d_gains: [5.0, 5.0, 90.0, 1.0, 0.05, 0.9]
+    d_gains: [5.0, 5.0, 90.0, 1.5, 0.05, 0.9]
 
     # the control value thresholds for each DOF -- body frame
     max_control_thresholds: [30, 30, 30, 15, 15, 15]
