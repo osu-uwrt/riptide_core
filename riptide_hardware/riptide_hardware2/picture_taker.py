@@ -18,6 +18,7 @@ class ImageCaptureNode(Node):
         self.declare_parameter('robot_namespace', 'talos')
         self.declare_parameter('camera_name', 'ffc')
         self.declare_parameter('save_directory', '/home/ros/cal_images')
+        self.declare_parameter('subscription_enabled', True)
         self.declare_parameter('save_stereo', False)
         self.declare_parameter('save_split', True)
         
@@ -25,6 +26,7 @@ class ImageCaptureNode(Node):
         robot_namespace = self.get_parameter('robot_namespace').get_parameter_value().string_value
         camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
         self.save_directory = self.get_parameter('save_directory').get_parameter_value().string_value
+        self.subscription_enabled = self.get_parameter('subscription_enabled').get_parameter_value().bool_value
         self.save_stereo = self.get_parameter('save_stereo').get_parameter_value().bool_value
         self.save_split = self.get_parameter('save_split').get_parameter_value().bool_value
         
@@ -44,7 +46,6 @@ class ImageCaptureNode(Node):
         
         # Store the latest image and subscription state
         self.latest_image = None
-        self.subscription_enabled = True
         self.image_subscriber = None
         
         # Log the topic we're subscribing to
@@ -100,7 +101,7 @@ class ImageCaptureNode(Node):
         
         try:
             # Generate filename with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
+            timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]
             camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
             
             saved_files = []

@@ -165,18 +165,20 @@ def generate_launch_description():
             #     output='screen'
             # )
             
-        #     Node(
-        #         package='riptide_hardware2',
-        #         executable='picture_taker.py',
-        #         name='picture_taker',
-        #         output='screen',
-        #         parameters=[
-        #             {"robot_namespace": LC("robot")},
-        #             {"camera_name": "ffc"},
-        #             {"save_stereo": True},
-        #             {"save_split": True}
-        #         ]
-        #     )
+            # Used for taking pictures, good for camera calibration
+            Node(
+                package='riptide_hardware2',
+                executable='picture_taker.py',
+                name='picture_taker',
+                output='screen',
+                parameters=[
+                    {"robot_namespace": LC("robot")},
+                    {"camera_name": "ffc"},
+                    {"subscription_enabled": True},
+                    {"save_stereo": True},
+                    {"save_split": True}
+                ]
+            )
             
         ], scoped=True),
 
