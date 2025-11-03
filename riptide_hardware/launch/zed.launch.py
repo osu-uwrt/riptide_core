@@ -175,7 +175,7 @@ def generate_launch_description():
                     {"robot_namespace": LC("robot")},
                     {"camera_name": "ffc"},
                     {"subscription_enabled": True},
-                    {"save_stereo": True},
+                    {"save_stereo": False},
                     {"save_split": True}
                 ]
             )

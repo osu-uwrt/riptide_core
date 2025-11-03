@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from std_srvs.srv import Trigger, SetBool
+from rcl_interfaces.msg import SetParametersResult
 from cv_bridge import CvBridge
 import cv2
 import os
@@ -21,25 +22,20 @@ class ImageCaptureNode(Node):
         self.declare_parameter('subscription_enabled', True)
         self.declare_parameter('save_stereo', False)
         self.declare_parameter('save_split', True)
+        self.add_on_set_parameters_callback(self.on_param_change)
         
         # Get parameter values
-        robot_namespace = self.get_parameter('robot_namespace').get_parameter_value().string_value
-        camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
+        self.robot_namespace = self.get_parameter('robot_namespace').get_parameter_value().string_value
+        self.camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
         self.save_directory = self.get_parameter('save_directory').get_parameter_value().string_value
         self.subscription_enabled = self.get_parameter('subscription_enabled').get_parameter_value().bool_value
         self.save_stereo = self.get_parameter('save_stereo').get_parameter_value().bool_value
         self.save_split = self.get_parameter('save_split').get_parameter_value().bool_value
         
         # Build the full image topic path
-        self.image_topic = f"/{robot_namespace}/{camera_name}/zed_node/stereo_raw/image_raw_color"
+        self.image_topic = f"/{self.robot_namespace}/{self.camera_name}/zed_node/stereo_raw/image_raw_color"
         
-        # Create save directory if it doesn't exist
-        os.makedirs(self.save_directory, exist_ok=True)
-        
-        # Create subdirectories for split images if needed
-        if self.save_split:
-            os.makedirs(os.path.join(self.save_directory, 'left'), exist_ok=True)
-            os.makedirs(os.path.join(self.save_directory, 'right'), exist_ok=True)
+        self.create_save_dir()
         
         # Initialize CV bridge for image conversion
         self.bridge = CvBridge()
@@ -52,7 +48,8 @@ class ImageCaptureNode(Node):
         self.get_logger().info(f"Image topic: {self.image_topic}")
         
         # Create initial subscriber for image topic
-        self.create_image_subscriber()
+        if self.subscription_enabled:
+            self.create_image_subscriber()
         
         # Create service for capturing images
         self.capture_service = self.create_service(
@@ -67,6 +64,60 @@ class ImageCaptureNode(Node):
             'enable_subscription',
             self.enable_subscription_callback
         )
+        
+    def create_save_dir(self):
+        # Create save directory if it doesn't exist
+        os.makedirs(self.save_directory, exist_ok=True)
+        
+        # Create subdirectories for split images if needed
+        if self.save_split:
+            os.makedirs(os.path.join(self.save_directory, 'left'), exist_ok=True)
+            os.makedirs(os.path.join(self.save_directory, 'right'), exist_ok=True)
+            
+    def on_param_change(self, params):
+        changed = []
+        for p in params:
+            if hasattr(self, p.name):
+                current = getattr(self, p.name)
+                if current != p.value:
+                    setattr(self, p.name, p.value)
+                    self.get_logger().info(f"Parameter '{p.name}' changed: {current} -> {p.value}")
+                    changed.append(p)
+                    
+                    
+        self.handle_param_update(changed)
+        return SetParametersResult(successful=True)
+
+    def handle_param_update(self, params):
+        topic_changed = update_save = update_sub = False
+        for p in params:
+            if p.name in ['camera_name', 'robot_namespace']:
+                topic_changed = True
+            elif p.name in ['save_directory', 'save_split']:
+                update_save = True
+            elif p.name == 'subscription_enabled':
+                update_sub = True
+
+        if update_save:
+            self.create_save_dir()
+
+        if topic_changed:
+            self.image_topic = f"/{self.robot_namespace}/{self.camera_name}/zed_node/stereo_raw/image_raw_color"
+
+        if update_sub:
+            if self.subscription_enabled:
+                if self.image_subscriber is None:
+                    self.create_image_subscriber()
+                else:
+                    if topic_changed:
+                        self.destroy_image_subscriber()
+                        self.create_image_subscriber()
+            else:
+                self.destroy_image_subscriber()
+        else:
+            if topic_changed:
+                self.destroy_image_subscriber()
+                self.create_image_subscriber()
         
     def create_image_subscriber(self):
         """Create the image subscriber"""
@@ -101,7 +152,7 @@ class ImageCaptureNode(Node):
         
         try:
             # Generate filename with timestamp
-            timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")[:-3]
+            timestamp = datetime.now().strftime("%Y_%m_%d__%H_%M_%S_%f")[:-3]
             camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
             
             saved_files = []
@@ -113,7 +164,7 @@ class ImageCaptureNode(Node):
                 success = cv2.imwrite(stereo_filepath, self.latest_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
                 
                 if success:
-                    saved_files.append(f"stereo: {stereo_filename}")
+                    saved_files.append(f"\nStereo: {stereo_filepath}")
                     self.get_logger().info(f"Stereo image saved: {stereo_filepath}")
                 else:
                     self.get_logger().error("Failed to save stereo image")
@@ -138,13 +189,13 @@ class ImageCaptureNode(Node):
                 right_success = cv2.imwrite(right_filepath, right_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
                 
                 if left_success:
-                    saved_files.append(f"left: {left_filename}")
+                    saved_files.append(f"\nLeft: {left_filepath}")
                     self.get_logger().info(f"Left image saved: {left_filepath}")
                 else:
                     self.get_logger().error("Failed to save left image")
                     
                 if right_success:
-                    saved_files.append(f"right: {right_filename}")
+                    saved_files.append(f"\nRight: {right_filepath}")
                     self.get_logger().info(f"Right image saved: {right_filepath}")
                 else:
                     self.get_logger().error("Failed to save right image")
