@@ -151,11 +151,17 @@ class ImageCaptureNode(Node):
             return response
         
         try:
+            
+            # if not self.save_stereo or self.save_split:
+            #     return
+            
             # Generate filename with timestamp
             timestamp = datetime.now().strftime("%Y_%m_%d__%H_%M_%S_%f")[:-3]
             camera_name = self.get_parameter('camera_name').get_parameter_value().string_value
             
             saved_files = []
+            
+            self.create_save_dir()
             
             # Save stereo image if enabled
             if self.save_stereo:

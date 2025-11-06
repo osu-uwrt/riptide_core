@@ -94,8 +94,9 @@ def generate_launch_description():
                         name="zed_node",
                         parameters=[
                             zed_config_path,
-                            zedx_camera_path,
+                            zedxm_camera_path,
                             ffc_config_path,
+                            {'general.serial_number': 55348591}
                         ]
                     ),                
                 ],
@@ -121,6 +122,7 @@ def generate_launch_description():
                             zed_config_path,
                             zedxm_camera_path,
                             dfc_config_path,
+                            {'general.serial_number': 51491740}
                         ]
                     ),
                 ],
