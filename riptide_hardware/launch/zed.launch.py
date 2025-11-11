@@ -104,31 +104,31 @@ def generate_launch_description():
                     PythonExpression(["'", LC("robot"), "' == 'talos'"]))
             ),
             
-            ComposableNodeContainer(
-                name="dfc_container",
-                namespace="",
-                package="rclcpp_components",
-                executable="component_container",
-                output="screen",
-                respawn=True,
-                composable_node_descriptions=[
-                    # Second ZED Node (DFC)
-                    ComposableNode(
-                        package="zed_components",
-                        plugin="stereolabs::ZedCamera",
-                        namespace="dfc",
-                        name="zed_node",
-                        parameters=[
-                            zed_config_path,
-                            zedxm_camera_path,
-                            dfc_config_path,
-                            {'general.serial_number': 51491740}
-                        ]
-                    ),
-                ],
-                condition=IfCondition(
-                    PythonExpression(["'", LC("robot"), "' == 'talos'"]))
-            ),
+            # ComposableNodeContainer(
+            #     name="dfc_container",
+            #     namespace="",
+            #     package="rclcpp_components",
+            #     executable="component_container",
+            #     output="screen",
+            #     respawn=True,
+            #     composable_node_descriptions=[
+            #         # Second ZED Node (DFC)
+            #         ComposableNode(
+            #             package="zed_components",
+            #             plugin="stereolabs::ZedCamera",
+            #             namespace="dfc",
+            #             name="zed_node",
+            #             parameters=[
+            #                 zed_config_path,
+            #                 zedxm_camera_path,
+            #                 dfc_config_path,
+            #                 {'general.serial_number': 51491740}
+            #             ]
+            #         ),
+            #     ],
+            #     condition=IfCondition(
+            #         PythonExpression(["'", LC("robot"), "' == 'talos'"]))
+            # ),
             
             # ComposableNodeContainer(
             #     name="ffc_container",
