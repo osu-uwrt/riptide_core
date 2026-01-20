@@ -6,7 +6,11 @@ base_link: [-0.14, 0.03, -0.09]
 
 # Vehicle mass properties
 mass: 31.998
-com: [-0.151, 0.041, -0.044]
+# COM no IVC
+# com: [-0.151, 0.041, -0.044]
+
+# COM w/ IVC
+com: [-0.157, 0.040, -0.048]
 inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
 
 hull_volume: .11 #make this real
@@ -24,7 +28,7 @@ controller:
   drag_enable: [1, 1, 0, 0, 0, 0]
 
   feed_forward:
-    base_wrench: [-1.5, -0.4, -8.41, 0.45, 2.1, 0.0]
+    base_wrench: [-1.5, -0.4, -4.01, 0.45, 2.4, 0.0]
     # base_wrench: [-1.0, -1.0, 0.0, 0.0, 0.0, 0.0]
 
     auto_tune:
@@ -129,7 +133,7 @@ controller:
       eta_order_1: [0.1, 0.04, 0.3, 0.0, 0.0, 0.2]
 
       #lambda
-      lambda: [0.6, 0.2, 1.0, 10.0, 10.0, 0.35]
+      lambda: [0.8, 0.2, 1.0, 10.0, 10.0, 0.35]
 
 
       #format: 'a, m' for each degree of freedom
@@ -153,9 +157,9 @@ controller:
     #linear unit are newtons per meter, angular are newton meter per radian
 
     #the default gains for normal operation
-    p_gains: [3.0, 18.0, 200.0, 6.0, 0.5, 10.0]
-    i_gains: [0.0, 0.0, 0.0, 0.01, 0.01, 1.0]
-    d_gains: [5.0, 5.0, 90.0, 1.2, 0.01, 0.03]
+    p_gains: [3.0, 18.0, 200.0, 10.0, 8.0, 15.0]
+    i_gains: [0.0, 0.0, 0.0, 0.01, 0.005, 0.5]
+    d_gains: [5.0, 5.0, 90.0, 0.02, 0.1, 0.02]
 
     #     #the default gains for normal operation
     # p_gains: [3.0, 18.0, 200.0, 2.0, 3.5, 8.0]
