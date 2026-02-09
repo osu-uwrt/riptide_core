@@ -25,7 +25,7 @@ def generate_launch_description():
         namespace="apriltag",
         package='rclcpp_components',
         executable='component_container',
-        arguments=['--ros-args', '--log-level', 'error'],
+        arguments=['--ros-args', '--log-level', 'info'],
         composable_node_descriptions=[
             ComposableNode(
                 name='apriltag_36h11',
