@@ -3,6 +3,7 @@
     general:
       camera_model: zedxm
       serial_number: 51491740
+      camera_id: 1
       camera_name: "talos/dfc"
       grab_resolution: 'HD1200' # For zedx/zedxm use HD1200, for zed2i use HD2K
       optional_opencv_calibration_file: "/home/ros/zed_cals/zed_dfc_calibration2.yaml"
