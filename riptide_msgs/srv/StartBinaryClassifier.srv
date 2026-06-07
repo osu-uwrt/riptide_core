@@ -1,0 +1,6 @@
+string class_name
+string frame1_name
+string frame2_name
+---
+bool success
+string message
