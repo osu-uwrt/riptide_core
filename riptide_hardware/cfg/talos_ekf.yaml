@@ -9,7 +9,7 @@
     publish_acceleration: true
 
     #make camera happy
-    # predict_to_current_time: true
+    predict_to_current_time: true
     # transform_time_offset: -0.1
 
     
@@ -36,7 +36,7 @@
                   true,  true,  false,
                   false, false, false,
                   true,  true,  false, # Taking out yaw from imu since fog rate is lower now
-                  true,  true,  true]
+                  true,  true,  false]
 
     # Imu comes in faster than the ekf runs so we need a queue
     imu0_queue_size: 14
