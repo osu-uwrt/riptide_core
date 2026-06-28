@@ -15,11 +15,6 @@ copro_agent_launch_file = os.path.join(
     "launch", "copro_agent.launch.py",
 )
 
-diagnostics_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "launch", "diagnostics.launch.py"
-)
-
 imu_launch_file = os.path.join(
     get_package_share_directory('riptide_imu'),
     "launch", "imu.launch.py"
@@ -58,12 +53,6 @@ def generate_launch_description():
             # ),
             IncludeLaunchDescription(
                 AnyLaunchDescriptionSource(copro_agent_launch_file),
-                launch_arguments=[
-                    ('robot', LC('robot')),
-                ]
-            ),
-            IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(diagnostics_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
@@ -112,13 +101,6 @@ def generate_launch_description():
                 executable='imu_power_cycle.py',
                 name='imu_power_cycle',
                 output='screen',
-            ),
-            Node(
-                package='riptide_hardware2',
-                executable='pressure_monitor.py',
-                name='pressure_monitor',
-                output='screen',
-                parameters=[{"robot":LC('robot')}]
-            )        
+            )    
         ], scoped=True)
     ])
