@@ -298,7 +298,7 @@ poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedoes: 
-  pose: [0.048, 0.17200625, -0.1524, 0.0, 0.0, 0.0] #real z: -0.1524, real y: 0.17700625
+  pose: [0.048, 0.18200625, -0.1524, 0.0, 0.0, 0.0] #real z: -0.1524, real y: 0.17700625
   baseline: 0.0365125
 
 droppers:
@@ -314,14 +314,15 @@ cameras: [
   {
     type: zed, 
     name: ffc,
-    baseline: 0.045, # m. Distance between cameras (manually measured) 
-    pose: [-0.0195, -0.0889, 0, 0, 0, 0]
+    baseline: 0.050, # m. Distance between cameras (manually measured) 
+    pose: [-0.0195, -0.0889, 0.02, -0.01, 0.05, 0]
   },
   {
     type: zed,
     name: dfc,
     baseline: 0.045,
-    pose: [-0.145, -0.080, -0.08, 1.5707, 1.5707, 0]
+    # pose: [-0.145, -0.080, -0.08, 1.5707, 1.5707, 0]
+    pose: [-0.24347, -0.065568, -0.15943, 1.5507, 1.5107, 0]
   }
 ]
 
