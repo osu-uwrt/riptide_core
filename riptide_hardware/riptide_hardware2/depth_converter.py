@@ -51,7 +51,7 @@ class depthConverter(Node):
         outMsg.header.frame_id = "odom"
         outMsg.pose.pose.position.z = msg.depth + addedDepth
         outMsg.pose.covariance[14] = msg.variance
-        outMsg.header.stamp = self.get_clock().now().to_msg()
+        outMsg.header.stamp = msg.header.stamp
         self.pub.publish(outMsg)
 
 

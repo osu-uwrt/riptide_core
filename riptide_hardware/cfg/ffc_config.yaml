@@ -3,13 +3,22 @@
     general:
       camera_model: zedxm
       serial_number: 55348591
+      camera_id: 0
       camera_name: "talos/ffc"
       pub_resolution: "NATIVE" # The resolution used for image and depth map publishing. 'NATIVE' to use the same `general.grab_resolution` - `CUSTOM` to apply the `general.pub_downscale_factor` downscale factory to reduce bandwidth in transmission
-      # pub_downscale_factor: 2.0 # rescale factor used to rescale image before publishing when 'pub_resolution' is 'CUSTOM'
-      pub_frame_rate: 30.0
-      optional_opencv_calibration_file: "/home/ros/zed_cals/zedxmffc_calibration.yaml"
+      pub_downscale_factor: 2.0 # rescale factor used to rescale image before publishing when 'pub_resolution' is 'CUSTOM'
+      # pub_frame_rate: 30.0
+      optional_opencv_calibration_file: "/home/ros/zed_cals/tirpak_ffc_charuco_2_tan.yaml"
       grab_resolution: 'HD1200'
+      grab_frame_rate: 15
       self_calib: false
+    sensors:
+      sensors_image_sync: true
+    # svo:
+    #   svo_path: "/home/ros/svos/prequal/prequal1.svo2"
+    depth:
+      depth_mode: "NEURAL_LIGHT" 
+      max_depth: 4.0
     pos_tracking:
       publish_tf: false
     debug:

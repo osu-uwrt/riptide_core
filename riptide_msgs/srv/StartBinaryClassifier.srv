@@ -1,0 +1,6 @@
+string class_name
+string object1_name
+string object2_name
+---
+bool success
+string message

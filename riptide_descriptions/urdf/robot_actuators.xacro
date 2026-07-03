@@ -106,4 +106,12 @@
           parent="${namespace}/origin"
           pose="${config['hitch']['pose']}" />
   </xacro:if>
+
+  <xacro:if value="${'claw' in config}">
+    <xacro:generic_link_macro
+          namespace="${namespace}"
+          name="claw"
+          parent="${namespace}/origin"
+          pose="${config['claw']['pose']}" />
+  </xacro:if>
 </robot>

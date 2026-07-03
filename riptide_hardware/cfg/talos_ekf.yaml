@@ -9,7 +9,7 @@
     publish_acceleration: true
 
     #make camera happy
-    # predict_to_current_time: true
+    predict_to_current_time: true
     # transform_time_offset: -0.1
 
     
