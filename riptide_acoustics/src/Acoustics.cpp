@@ -26,7 +26,7 @@ class Acoustics : public rclcpp::Node
       this->declare_parameter("percentile", 95.0);
 
       ampSubscription = this->create_subscription<std_msgs::msg::Float32>(
-        "ivc/pinger/selected_amp", 10, std::bind(&Acoustics::ampCallback, this, _1));
+        "ivc/pinger/selected_freq_amp_stream", 10, std::bind(&Acoustics::ampCallback, this, _1));
 
       resultPublisher = this->create_publisher<std_msgs::msg::Bool>(
         "acoustics/buffer_0_closer", 10);
