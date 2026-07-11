@@ -60,6 +60,7 @@ class Acoustics : public rclcpp::Node
 
       buffers[activeBuffer].clear();
       sampling = true;
+      haveResult = false;
 
       response->success = true;
       response->message = "Sampling into buffer " + std::to_string(activeBuffer);
