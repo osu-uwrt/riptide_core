@@ -113,6 +113,12 @@ def generate_launch_description():
                 executable='imu_power_cycle.py',
                 name='imu_power_cycle',
                 output='screen',
-            )    
+            ),
+            Node(
+                package='riptide_hardware2',
+                executable='pinger_broker',
+                name='pinger_broker',
+                output='screen'
+            )
         ], scoped=True)
     ])

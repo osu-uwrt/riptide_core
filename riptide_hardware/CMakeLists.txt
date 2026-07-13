@@ -30,7 +30,9 @@ include_directories(include ${EIGEN3_INCLUDE_DIRS})
 
 # Add executable for the DepthConverter
 add_executable(depth_converter src/depth_converter.cpp)
-ament_target_dependencies(depth_converter
+add_executable(pinger_broker src/pinger_broker.cpp)
+
+set(deps
   rclcpp
   geometry_msgs
   tf2_ros
@@ -42,9 +44,13 @@ ament_target_dependencies(depth_converter
   nortek_dvl_msgs
 )
 
+ament_target_dependencies(depth_converter ${deps})
+ament_target_dependencies(pinger_broker ${deps})
+
 # Install the C++ executable
 install(TARGETS
   depth_converter
+  pinger_broker
   DESTINATION lib/${PROJECT_NAME}
 )
 

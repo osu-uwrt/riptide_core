@@ -110,6 +110,12 @@ def generate_launch_description():
                         "imu_pwr_cycle.yaml"
                     )
                 ]
+            ),
+            Node(
+                package='riptide_hardware2',
+                executable='pinger_broker',
+                name='pinger_broker',
+                output='screen'
             )
         ], scoped=True)
     ])
