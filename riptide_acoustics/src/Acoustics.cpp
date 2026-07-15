@@ -19,7 +19,6 @@ using namespace std::placeholders;
 // 3) start_sample -> collect ampltudes for buffer 1
 // 4) stop_sample -> close buffer 1, then compare and publish once to buffer_0_closer
 
-// Using p95 atm, but could be changed pretty easily
 class Acoustics : public rclcpp::Node
 {
   public:
@@ -96,6 +95,29 @@ class Acoustics : public rclcpp::Node
       activeBuffer = 0;
     }
 
+    std::string make_comparison_response(const std::string &mode) {
+      auto summary = [&](const std::string &mode_label) {
+        return "mode => [" + mode_label + "], result => buffer "
+             + std::to_string(buffer0Closer ? 0 : 1)
+             + " closer [buffer 0: " + std::to_string(result_0)
+             + " buffer 1: " + std::to_string(result_1) + "]";
+      };
+
+      std::string resp = "";
+      if (mode == "avg") {
+        resp = summary("avg");
+      } else if (mode == "max") {
+        if (did_fallback_on_max) {
+          resp += "INFO: [FELLBACK TO AVG ON MAX MODE] ";
+        }
+        resp += summary("max");
+      } else if (mode == "p95") {
+        resp = summary("p95");
+        resp = "UNRECOGNIZED MODE, CHECK LAUNCH FILE OR SOMETHING ";
+      }
+      return resp;
+    }
+
     void compareBuffers(std_srvs::srv::Trigger::Response::SharedPtr response)
     {
       if (buffers[0].empty() || buffers[1].empty()) {
@@ -111,9 +133,10 @@ class Acoustics : public rclcpp::Node
       publishResult();
 
       response->success = true;
-      response->message = "mode[" + this->get_parameter("mode").as_string() + "]buffer " + std::to_string(buffer0Closer ? 0 : 1) +
-                          " closer (buffer 0: " + std::to_string(result_0) +
-                          ", buffer 1: " + std::to_string(result_1) + ")";
+      response->message = make_comparison_response(this->get_parameter("mode").as_string());
+      // response->message = "mode[" + this->get_parameter("mode").as_string() + "]buffer " + std::to_string(buffer0Closer ? 0 : 1) +
+      //                     " closer (buffer 0: " + std::to_string(result_0) +
+      //                     ", buffer 1: " + std::to_string(result_1) + ")";
       RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
     }
 
@@ -151,6 +174,7 @@ class Acoustics : public rclcpp::Node
       result_0 = *std::max_element(buffer0.begin(), buffer0.end());
       result_1 = *std::max_element(buffer1.begin(), buffer1.end());
       if (std::abs(result_0 - result_1) < MODE_MAX_FALLBACK_DIFF) {
+        did_fallback_on_max = true;
         compare_avg_buffers(buffer0, buffer1);
       }
     }
@@ -161,11 +185,7 @@ class Acoustics : public rclcpp::Node
       }
 
       if (mode == "max") {
-        result_0 = *std::max_element(buffer0.begin(), buffer0.end());
-        result_1 = *std::max_element(buffer1.begin(), buffer1.end());
-        if (std::abs(result_0 - result_1) < MODE_MAX_FALLBACK_DIFF) {
-          compare_avg_buffers(buffer0, buffer1);
-        }
+        compare_max_buffers(buffer0, buffer1);
       }
 
       if (mode == "p95") {
@@ -187,9 +207,11 @@ class Acoustics : public rclcpp::Node
     // last comparison result, invalid until the first compare completes
     bool buffer0Closer = false;
     bool haveResult = false;
+    bool did_fallback_on_max = false;
     // the results of the comparison run on the buffers
     float result_0 = 0.0f;
     float result_1 = 0.0f;
+
 };
 
 
