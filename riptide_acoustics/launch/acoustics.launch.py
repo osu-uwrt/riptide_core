@@ -5,8 +5,8 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument(name="percentile", default_value="95.0",
-                              description="Percentile of each buffer used for the amplitude comparison"),
+        DeclareLaunchArgument(name="mode", default_value="max",
+                              description="Mode of comparing buffer 0 and buffer 1 to find nearest pinger"),
 
         Node(
             package='riptide_acoustics',
@@ -15,7 +15,7 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 {
-                    "percentile": LaunchConfiguration("percentile")
+                    "mode": LaunchConfiguration("mode")
                 }
             ],
             respawn=True

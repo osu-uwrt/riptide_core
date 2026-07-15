@@ -9,6 +9,9 @@
 #include "std_msgs/msg/bool.hpp"
 #include "std_srvs/srv/trigger.hpp"
 
+#define MODE_MAX_FALLBACK_DIFF 1000.0f
+#define P_VALUE 95.0f
+
 using namespace std::placeholders;
 
 // 1) start_sample -> collect amplitudes for buffer 0
@@ -23,13 +26,13 @@ class Acoustics : public rclcpp::Node
     Acoustics()
     : Node("riptide_acoustics")
     {
-      this->declare_parameter("percentile", 95.0);
+      this->declare_parameter("mode", "avg");
 
       ampSubscription = this->create_subscription<std_msgs::msg::Float32>(
-        "ivc/pinger/selected_freq_amp_stream", 10, std::bind(&Acoustics::ampCallback, this, _1));
+        "/talos/ivc/pinger/selected_freq_amp_stream", 10, std::bind(&Acoustics::ampCallback, this, _1));
 
       resultPublisher = this->create_publisher<std_msgs::msg::Bool>(
-        "acoustics/buffer_0_closer", 10);
+        "/talos/acoustics/buffer_0_closer", 10);
 
       resultTimer = this->create_wall_timer(
         std::chrono::seconds(1), std::bind(&Acoustics::publishResult, this));
@@ -84,7 +87,7 @@ class Acoustics : public rclcpp::Node
       if (activeBuffer == 0) {
         activeBuffer = 1;
         response->success = true;
-        response->message = "Buffer 0 closed with " + std::to_string(buffers[0].size()) + " samples";
+        response->message = "With mode [" + this->get_parameter("mode").as_string() + "] Buffer 0 closed with " + std::to_string(buffers[0].size()) + " samples";
         return;
       }
 
@@ -103,17 +106,14 @@ class Acoustics : public rclcpp::Node
         return;
       }
 
-      float value0 = reduceBuffer(buffers[0]);
-      float value1 = reduceBuffer(buffers[1]);
-
-      buffer0Closer = value0 >= value1;
+      reduceBuffers(buffers[0], buffers[1], this->get_parameter("mode").as_string());
       haveResult = true;
       publishResult();
 
       response->success = true;
-      response->message = "buffer " + std::to_string(buffer0Closer ? 0 : 1) +
-                          " closer (buffer 0: " + std::to_string(value0) +
-                          ", buffer 1: " + std::to_string(value1) + ")";
+      response->message = "mode[" + this->get_parameter("mode").as_string() + "]buffer " + std::to_string(buffer0Closer ? 0 : 1) +
+                          " closer (buffer 0: " + std::to_string(result_0) +
+                          ", buffer 1: " + std::to_string(result_1) + ")";
       RCLCPP_INFO(this->get_logger(), "%s", response->message.c_str());
     }
 
@@ -128,15 +128,49 @@ class Acoustics : public rclcpp::Node
       resultPublisher->publish(msg);
     }
 
-    float reduceBuffer(const std::vector<float> & buffer)
-    {
-      double p = this->get_parameter("percentile").as_double();
+    void compare_avg_buffers(const std::vector<float> &buffer0, const std::vector<float> &buffer1) {
+      result_0 = std::accumulate(buffer0.begin(), buffer0.end(), 0.0) / buffer0.size();
+      result_1 = std::accumulate(buffer1.begin(), buffer1.end(), 0.0) / buffer1.size();
+      buffer0Closer = result_0 >= result_1;
+    }
 
-      // it's c++ so sorting is O(n) right?
-      std::vector<float> sorted = buffer;
-      size_t idx = static_cast<size_t>(std::clamp(p, 0.0, 100.0) / 100.0 * (sorted.size() - 1));
-      std::nth_element(sorted.begin(), sorted.begin() + idx, sorted.end());
-      return sorted[idx];
+    void compare_p95_buffers(const std::vector<float> &buffer0, const std::vector<float> &buffer1) {
+      // it's c++ so sorting is O(n) right? (fire bar - balke)
+      std::vector<float> sorted0 = buffer0;
+      std::vector<float> sorted1 = buffer1;
+      size_t idx_0 = static_cast<size_t>(std::clamp((double)P_VALUE, 0.0, 100.0) / 100.0 * (sorted0.size() - 1));
+      size_t idx_1 = static_cast<size_t>(std::clamp((double)P_VALUE, 0.0, 100.0) / 100.0 * (sorted1.size() - 1));
+      std::nth_element(sorted0.begin(), sorted0.begin() + idx_0, sorted0.end());
+      std::nth_element(sorted1.begin(), sorted1.begin() + idx_1, sorted1.end());
+      result_0 = sorted0[idx_0];
+      result_1 = sorted1[idx_1];
+      buffer0Closer = result_0 >= result_1;
+    }
+
+    void compare_max_buffers(const std::vector<float> &buffer0, const std::vector<float> &buffer1) {
+      result_0 = *std::max_element(buffer0.begin(), buffer0.end());
+      result_1 = *std::max_element(buffer1.begin(), buffer1.end());
+      if (std::abs(result_0 - result_1) < MODE_MAX_FALLBACK_DIFF) {
+        compare_avg_buffers(buffer0, buffer1);
+      }
+    }
+
+    void reduceBuffers(const std::vector<float> &buffer0, const std::vector<float> &buffer1, std::string mode) {
+      if (mode == "avg") {
+        compare_avg_buffers(buffer0, buffer1);
+      }
+
+      if (mode == "max") {
+        result_0 = *std::max_element(buffer0.begin(), buffer0.end());
+        result_1 = *std::max_element(buffer1.begin(), buffer1.end());
+        if (std::abs(result_0 - result_1) < MODE_MAX_FALLBACK_DIFF) {
+          compare_avg_buffers(buffer0, buffer1);
+        }
+      }
+
+      if (mode == "p95") {
+        compare_p95_buffers(buffer0, buffer1);
+      }
     }
 
     rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr ampSubscription;
@@ -153,6 +187,9 @@ class Acoustics : public rclcpp::Node
     // last comparison result, invalid until the first compare completes
     bool buffer0Closer = false;
     bool haveResult = false;
+    // the results of the comparison run on the buffers
+    float result_0 = 0.0f;
+    float result_1 = 0.0f;
 };
 
 
