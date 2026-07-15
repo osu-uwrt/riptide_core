@@ -114,4 +114,12 @@
           parent="${namespace}/origin"
           pose="${config['claw']['pose']}" />
   </xacro:if>
+
+  <xacro:if value="${'magnet' in config}">
+    <xacro:generic_link_macro
+          namespace="${namespace}"
+          name="magnet"
+          parent="${namespace}/origin"
+          pose="${config['magnet']['pose']}" />
+  </xacro:if>
 </robot>
