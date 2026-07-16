@@ -37,10 +37,10 @@ class Acoustics : public rclcpp::Node
         std::chrono::seconds(1), std::bind(&Acoustics::publishResult, this));
 
       startSampleService = this->create_service<std_srvs::srv::Trigger>(
-        "acoustics/start_sample", std::bind(&Acoustics::startSample, this, _1, _2));
+        "/talos/acoustics/start_sample", std::bind(&Acoustics::startSample, this, _1, _2));
 
       stopSampleService = this->create_service<std_srvs::srv::Trigger>(
-        "acoustics/stop_sample", std::bind(&Acoustics::stopSample, this, _1, _2));
+        "/talos/acoustics/stop_sample", std::bind(&Acoustics::stopSample, this, _1, _2));
     }
 
   private:
