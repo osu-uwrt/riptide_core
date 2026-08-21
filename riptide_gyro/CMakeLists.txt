@@ -13,13 +13,15 @@ find_package(riptide_msgs2 REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
 set(deps
   rclcpp
   rclcpp_action
   riptide_msgs2
   diagnostic_msgs
-  diagnostic_updater)
+  diagnostic_updater
+  ament_index_cpp)
 
 # build and install serial library
 file(GLOB serial_library_sources RELATIVE ${PROJECT_SOURCE_DIR}
