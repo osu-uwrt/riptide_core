@@ -77,7 +77,7 @@ def generate_launch_description():
         electrical_monitor_node,
         firmware_monitor_node,
         voltage_monitor_node,
-        sensor_monitor_node,
+        # sensor_monitor_node,
         computer_monitor_node,
         aggregator
     ])

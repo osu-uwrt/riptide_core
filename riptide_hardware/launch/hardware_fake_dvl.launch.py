@@ -15,11 +15,6 @@ copro_agent_launch_file = os.path.join(
     "launch", "copro_agent.launch.py",
 )
 
-diagnostics_launch_file = os.path.join(
-    get_package_share_directory('riptide_hardware2'),
-    "launch", "diagnostics.launch.py"
-)
-
 imu_launch_file = os.path.join(
     get_package_share_directory('riptide_imu'),
     "launch", "imu.launch.py"
@@ -33,6 +28,11 @@ gyro_launch_file = os.path.join(
 apriltag_launch_file = os.path.join(
     get_package_share_directory('riptide_hardware2'),
     "launch", "apriltag.launch.py"
+)
+
+acoustics_launch_file = os.path.join(
+    get_package_share_directory('riptide_acoustics'),
+    "launch", "acoustics.launch.py"
 )
 
 # opbox_launch_file = os.path.join(
@@ -56,14 +56,8 @@ def generate_launch_description():
             #    name='zenoh_router',
             #    output='screen', 
             # ),
-            # IncludeLaunchDescription(
-            #     AnyLaunchDescriptionSource(copro_agent_launch_file),
-            #     launch_arguments=[
-            #         ('robot', LC('robot')),
-            #     ]
-            # ),
             IncludeLaunchDescription(
-                AnyLaunchDescriptionSource(diagnostics_launch_file),
+                AnyLaunchDescriptionSource(copro_agent_launch_file),
                 launch_arguments=[
                     ('robot', LC('robot')),
                 ]
@@ -95,6 +89,13 @@ def generate_launch_description():
                     ('robot', LC('robot')),
                 ]
             ),
+            
+            IncludeLaunchDescription(
+                AnyLaunchDescriptionSource(acoustics_launch_file),
+                launch_arguments=[
+                    ('robot', LC('robot')),
+                ]
+            ),
             # IncludeLaunchDescription(
             #     AnyLaunchDescriptionSource(opbox_launch_file),
             #     launch_arguments=[
@@ -115,10 +116,9 @@ def generate_launch_description():
             ),
             Node(
                 package='riptide_hardware2',
-                executable='pressure_monitor.py',
-                name='pressure_monitor',
-                output='screen',
-                parameters=[{"robot":LC('robot')}]
-            )        
+                executable='pinger_broker',
+                name='pinger_broker',
+                output='screen'
+            )
         ], scoped=True)
     ])
