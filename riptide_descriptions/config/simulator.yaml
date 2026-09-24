@@ -9,7 +9,22 @@
 vehicle_properties:
   base_wrench: [-0.35, -0.1, -3.00, 0.1, 2.4, 0.0]
   cod: [-0.148, 0.040, -0.055]
-  inertia3x3: [1.6315, -0.0599, -0.0330, -0.0599, 0.7341, 0.0427, -0.0330, 0.0427, 1.6332]  # Izx Izy Izz kg*m^
+  # Rigid inertia about COM in the body frame. Talos is long in body Y, so Iyy is the
+  # smallest axis. The legacy `inertia` diagonal in talos.yaml is known to be axis-swapped.
+  rigid_body_inertia3x3: [1.6315, -0.0599, -0.0330,
+                          -0.0599, 0.7341, 0.0427,
+                          -0.0330, 0.0427, 1.6332]
+
+  # Fossen 6-DOF hydrodynamic added-mass matrix, body axes [u,v,w,p,q,r], row-major.
+  # It is explicitly zero until identified from pool tests or a hydrodynamics model.
+  # SolidWorks supplies rigid inertia above; it cannot determine added mass.
+  added_mass6x6: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                  0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  cob_relative: [0.00775, 0.0, 0.005] # COB relative to COM, body frame [m]
 
   #center of mass discrepancy      
   dcom: [0.01, 0.0, 0.0]
@@ -23,6 +38,16 @@ vehicle_properties:
             -20.4148,   -8.2547,   20.2604,    1.6177] #yaw
 
   thruster_max_force: 28.0
+  thruster_dynamics:
+    # Initial estimates preserve the old 100 ms delay and unity force calibration.
+    # Replace them with pulse/bollard-pull measurements before trusting gain transfer.
+    delay: 0.100                # command/ESC transport delay [s]
+    rise_time_constant: 0.080   # first-order spin-up constant [s]
+    fall_time_constant: 0.060   # first-order spin-down constant [s]
+    slew_rate: 300.0            # maximum force change [N/s]; <= 0 disables
+    force_deadband: 0.0         # requested force below this is treated as zero [N]
+    forward_scale: 1.0          # fit from bollard-pull data
+    reverse_scale: 1.0          # fit independently from forward thrust
 
   
   #sim discrepency - allows to test control when feed forward is not perfect
@@ -30,6 +55,19 @@ controller:
   sim_discrepancy: [0.0, 1.0, -0.5, 0.1, -0.05, 0.0]
 
   env_force: [0.0, 0.0, 0.0]
+
+environment:
+  # Constant water-current velocity in the world/map frame [m/s]. Hydrodynamic
+  # damping and added-mass Coriolis terms use velocity relative to this current.
+  water_current_world: [0.0, 0.0, 0.0]
+
+# Match the actual riptide_imu and robot_localization input path. Sampling noise and
+# reported covariance are deliberately separate: covariance controls EKF trust.
+sensor_properties:
+  imu_rate: 50.0
+  imu_orientation_variance: [0.00005, 0.00001, 0.01]
+  imu_angular_velocity_variance: [0.01, 0.01, 0.01]
+  imu_linear_acceleration_variance: [0.01, 0.01, 0.01]
 
 claw:
   fake_objects: #I've arbilitrarilly set these properties - measure at some point
@@ -50,4 +88,4 @@ acoustics:
     pose: [3.0, 2.0, -1.0, 0.0, 0.0, 0.0]
 
 preferences:
-  sync_odom: true
+  sync_odom: false
