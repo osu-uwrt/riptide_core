@@ -426,9 +426,12 @@ namespace uwrt_gyro {
                 return;
             }
 
-            // Skip if not enough time has passed since last publish
+            bool isTaring = tareStatusResource.lockResource()->active;
+            tareStatusResource.unlockResource();
+
+            // Process and publish every gyro reading while tare is active.
             auto current_time = std::chrono::steady_clock::now();
-            if (min_publish_interval_.count() > 0) {
+            if (!isTaring && min_publish_interval_.count() > 0) {
                 auto time_since_last_publish = current_time - last_publish_time_;
                 if (time_since_last_publish < min_publish_interval_) {
                     return;
