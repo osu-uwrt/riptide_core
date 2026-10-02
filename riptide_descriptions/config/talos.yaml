@@ -4,14 +4,13 @@
 # Point which represents robot position. Must be near center
 base_link: [-0.14, 0.03, -0.09]
 
-# Vehicle mass properties
-mass: 31.998
-# COM no IVC
-# com: [-0.151, 0.041, -0.044]
-
-# COM w/ IVC
-com: [-0.157, 0.040, -0.048]
-inertia: [0.72604692, 1.59322252, 1.65134701] # kg*m^2
+# Vehicle mass properties, from the "Talos 7-11-26" SolidWorks CAD (claw, magnet poker,
+# 2x ZED X Mini; hidden ZED2i excluded). Parts without a material are at 1000 kg/m^3 and
+# wiring is not modeled, so prefer a scale weight for mass.
+mass: 32.444 # measured (CAD: 34.708)
+# Previous (pre-claw CAD): mass 31.998, com [-0.157, 0.040, -0.048]
+com: [-0.150, 0.037, -0.013] # measured, everything on
+inertia: [1.8429, 1.0051, 1.8607] # kg*m^2, diagonal about COM in body axes (full tensor in riptide_mpc models/talos.yaml)
 
 hull_volume: .11 #make this real
 
@@ -371,7 +370,9 @@ cameras: [
     name: dfc,
     baseline: 0.045,
     # pose: [-0.145, -0.080, -0.08, 1.5707, 1.5707, 0]
-    pose: [-0.24347, -0.065568, -0.15943, 1.5507, 1.5107, 0]
+    # pose: [-0.24347, -0.065568, -0.15943, 1.5507, 1.5107, 0] # tuned 2026-06-28
+    # Position from the Talos 7-11-26 CAD (ZED X Mini center, 4.5 mm inside the glass like ffc)
+    pose: [-0.1436, -0.0916, -0.0916, 1.5507, 1.5107, 0]
   }
 ]
 
