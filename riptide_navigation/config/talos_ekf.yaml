@@ -15,6 +15,33 @@
     depth_topic: depth/pose
     odometry_topic: odometry/filtered
     acceleration_topic: accel/filtered
+    # Config says whether to incorporate sensor data
+    # Array is...
+    # X  Y  Z
+    # R  P  Y
+    # vX vY vZ
+    # vR vP vY
+    # aX aY aZ
+    vectornav_imu_config: [false, false, false,
+                           true,  true,  false,
+                           false, false, false,
+                           true,  true,  false,
+                           true,  true,  true]
+    dvl_twist_config: [false, false, false,
+                       false, false, false,
+                       true,  true,  true,
+                       false, false, false,
+                       false, false, false]
+    fog_twist_config: [false, false, false,
+                       false, false, false,
+                       false, false, false,
+                       false, false, true,
+                       false, false, false]
+    depth_pose_config: [false, false, true,
+                        false, false, false,
+                        false, false, false,
+                        false, false, false,
+                        false, false, false]
     # Continuous-time covariance densities. The first three attitude entries
     # are body angular-error densities mapped through dq=0.5*G(q)*dtheta;
     # the fourth quaternion entry is retained for config compatibility only.

@@ -7,9 +7,9 @@
 //
 // Code generated for Simulink model 'talos_ekf'.
 //
-// Model version                  : 1.5
+// Model version                  : 1.6
 // Simulink Coder version         : 9.9 (R2023a) 19-Nov-2022
-// C/C++ source code generated on : Fri Oct  2 01:22:48 2026
+// C/C++ source code generated on : Fri Oct  2 19:18:09 2026
 //
 // Target selection: ert.tlc
 // Embedded hardware selection: ARM Compatible->ARM 64-bit (LP64)
@@ -38,7 +38,7 @@ int32_T div_nde_s32_floor(int32_T numerator, int32_T denominator)
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-real_T talos_ekf::xnrm2(int32_T n, const real_T x[64], int32_T ix0)
+real_T talos_ekf::xnrm2(int32_T n, const real_T x[81], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -65,8 +65,8 @@ real_T talos_ekf::xnrm2(int32_T n, const real_T x[64], int32_T ix0)
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-real_T talos_ekf::xdotc(int32_T n, const real_T x[64], int32_T ix0, const real_T
-  y[64], int32_T iy0)
+real_T talos_ekf::xdotc(int32_T n, const real_T x[81], int32_T ix0, const real_T
+  y[81], int32_T iy0)
 {
   real_T d;
   int32_T b;
@@ -80,7 +80,7 @@ real_T talos_ekf::xdotc(int32_T n, const real_T x[64], int32_T ix0, const real_T
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::xaxpy(int32_T n, real_T a, int32_T ix0, real_T y[64], int32_T
+void talos_ekf::xaxpy(int32_T n, real_T a, int32_T ix0, real_T y[81], int32_T
                       iy0)
 {
   if (!(a == 0.0)) {
@@ -93,7 +93,7 @@ void talos_ekf::xaxpy(int32_T n, real_T a, int32_T ix0, real_T y[64], int32_T
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-real_T talos_ekf::xnrm2_l(int32_T n, const real_T x[8], int32_T ix0)
+real_T talos_ekf::xnrm2_l(int32_T n, const real_T x[9], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -120,8 +120,8 @@ real_T talos_ekf::xnrm2_l(int32_T n, const real_T x[8], int32_T ix0)
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::xaxpy_n(int32_T n, real_T a, const real_T x[64], int32_T ix0,
-  real_T y[8], int32_T iy0)
+void talos_ekf::xaxpy_n(int32_T n, real_T a, const real_T x[81], int32_T ix0,
+  real_T y[9], int32_T iy0)
 {
   if (!(a == 0.0)) {
     for (int32_T k{0}; k < n; k++) {
@@ -133,8 +133,8 @@ void talos_ekf::xaxpy_n(int32_T n, real_T a, const real_T x[64], int32_T ix0,
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::xaxpy_ny(int32_T n, real_T a, const real_T x[8], int32_T ix0,
-  real_T y[64], int32_T iy0)
+void talos_ekf::xaxpy_ny(int32_T n, real_T a, const real_T x[9], int32_T ix0,
+  real_T y[81], int32_T iy0)
 {
   if (!(a == 0.0)) {
     for (int32_T k{0}; k < n; k++) {
@@ -146,9 +146,9 @@ void talos_ekf::xaxpy_ny(int32_T n, real_T a, const real_T x[8], int32_T ix0,
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::xswap(real_T x[64], int32_T ix0, int32_T iy0)
+void talos_ekf::xswap(real_T x[81], int32_T ix0, int32_T iy0)
 {
-  for (int32_T k{0}; k < 8; k++) {
+  for (int32_T k{0}; k < 9; k++) {
     real_T temp;
     int32_T temp_tmp;
     int32_T tmp;
@@ -205,9 +205,9 @@ void talos_ekf::xrotg(real_T *a, real_T *b, real_T *c, real_T *s)
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::xrot(real_T x[64], int32_T ix0, int32_T iy0, real_T c, real_T s)
+void talos_ekf::xrot(real_T x[81], int32_T ix0, int32_T iy0, real_T c, real_T s)
 {
-  for (int32_T k{0}; k < 8; k++) {
+  for (int32_T k{0}; k < 9; k++) {
     real_T temp_tmp;
     real_T temp_tmp_0;
     int32_T temp_tmp_tmp;
@@ -222,11 +222,11 @@ void talos_ekf::xrot(real_T x[64], int32_T ix0, int32_T iy0, real_T c, real_T s)
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
+void talos_ekf::svd(const real_T A[81], real_T U[81], real_T s[9], real_T V[81])
 {
-  real_T b_A[64];
-  real_T e[8];
-  real_T work[8];
+  real_T b_A[81];
+  real_T e[9];
+  real_T work[9];
   real_T emm1;
   real_T nrm;
   real_T rt;
@@ -241,22 +241,20 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
   int32_T qp1jj;
   int32_T qq;
   int32_T qq_tmp;
-  int32_T qq_tmp_tmp;
   boolean_T apply_transform;
   boolean_T exitg2;
-  std::memcpy(&b_A[0], &A[0], sizeof(real_T) << 6U);
-  std::memset(&s[0], 0, sizeof(real_T) << 3U);
-  std::memset(&e[0], 0, sizeof(real_T) << 3U);
-  std::memset(&work[0], 0, sizeof(real_T) << 3U);
-  std::memset(&U[0], 0, sizeof(real_T) << 6U);
-  std::memset(&V[0], 0, sizeof(real_T) << 6U);
-  for (i = 0; i < 7; i++) {
+  std::memcpy(&b_A[0], &A[0], 81U * sizeof(real_T));
+  std::memset(&s[0], 0, 9U * sizeof(real_T));
+  std::memset(&e[0], 0, 9U * sizeof(real_T));
+  std::memset(&work[0], 0, 9U * sizeof(real_T));
+  std::memset(&U[0], 0, 81U * sizeof(real_T));
+  std::memset(&V[0], 0, 81U * sizeof(real_T));
+  for (i = 0; i < 8; i++) {
     qp1 = i + 2;
-    qq_tmp_tmp = i << 3;
-    qq_tmp = qq_tmp_tmp + i;
+    qq_tmp = 9 * i + i;
     qq = qq_tmp + 1;
     apply_transform = false;
-    nrm = xnrm2(8 - i, b_A, qq_tmp + 1);
+    nrm = xnrm2(9 - i, b_A, qq_tmp + 1);
     if (nrm > 0.0) {
       apply_transform = true;
       if (b_A[qq_tmp] < 0.0) {
@@ -266,12 +264,12 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
       s[i] = nrm;
       if (std::abs(nrm) >= 1.0020841800044864E-292) {
         nrm = 1.0 / nrm;
-        qjj = (qq_tmp - i) + 8;
+        qjj = (qq_tmp - i) + 9;
         for (qp1jj = qq; qp1jj <= qjj; qp1jj++) {
           b_A[qp1jj - 1] *= nrm;
         }
       } else {
-        qjj = (qq_tmp - i) + 8;
+        qjj = (qq_tmp - i) + 9;
         for (qp1jj = qq; qp1jj <= qjj; qp1jj++) {
           b_A[qp1jj - 1] /= s[i];
         }
@@ -283,23 +281,23 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
       s[i] = 0.0;
     }
 
-    for (qp1jj = qp1; qp1jj < 9; qp1jj++) {
-      qjj = ((qp1jj - 1) << 3) + i;
+    for (qp1jj = qp1; qp1jj < 10; qp1jj++) {
+      qjj = (qp1jj - 1) * 9 + i;
       if (apply_transform) {
-        xaxpy(8 - i, -(xdotc(8 - i, b_A, qq_tmp + 1, b_A, qjj + 1) / b_A[qq_tmp]),
+        xaxpy(9 - i, -(xdotc(9 - i, b_A, qq_tmp + 1, b_A, qjj + 1) / b_A[qq_tmp]),
               qq_tmp + 1, b_A, qjj + 1);
       }
 
       e[qp1jj - 1] = b_A[qjj];
     }
 
-    for (qq = i + 1; qq < 9; qq++) {
-      qp1jj = (qq_tmp_tmp + qq) - 1;
+    for (qq = i + 1; qq < 10; qq++) {
+      qp1jj = (9 * i + qq) - 1;
       U[qp1jj] = b_A[qp1jj];
     }
 
-    if (i + 1 <= 6) {
-      nrm = xnrm2_l(7 - i, e, i + 2);
+    if (i + 1 <= 7) {
+      nrm = xnrm2_l(8 - i, e, i + 2);
       if (nrm == 0.0) {
         e[i] = 0.0;
       } else {
@@ -312,107 +310,106 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
         nrm = e[i];
         if (std::abs(e[i]) >= 1.0020841800044864E-292) {
           nrm = 1.0 / e[i];
-          for (qjj = qp1; qjj < 9; qjj++) {
+          for (qjj = qp1; qjj < 10; qjj++) {
             e[qjj - 1] *= nrm;
           }
         } else {
-          for (qjj = qp1; qjj < 9; qjj++) {
+          for (qjj = qp1; qjj < 10; qjj++) {
             e[qjj - 1] /= nrm;
           }
         }
 
         e[i + 1]++;
         e[i] = -e[i];
-        for (qq = qp1; qq < 9; qq++) {
+        for (qq = qp1; qq < 10; qq++) {
           work[qq - 1] = 0.0;
         }
 
-        for (qq = qp1; qq < 9; qq++) {
-          xaxpy_n(7 - i, e[qq - 1], b_A, (i + ((qq - 1) << 3)) + 2, work, i + 2);
+        for (qq = qp1; qq < 10; qq++) {
+          xaxpy_n(8 - i, e[qq - 1], b_A, (i + 9 * (qq - 1)) + 2, work, i + 2);
         }
 
-        for (qq = qp1; qq < 9; qq++) {
-          xaxpy_ny(7 - i, -e[qq - 1] / e[i + 1], work, i + 2, b_A, (i + ((qq - 1)
-                     << 3)) + 2);
+        for (qq = qp1; qq < 10; qq++) {
+          xaxpy_ny(8 - i, -e[qq - 1] / e[i + 1], work, i + 2, b_A, (i + 9 * (qq
+                     - 1)) + 2);
         }
       }
 
-      for (qq = qp1; qq < 9; qq++) {
-        V[(qq + qq_tmp_tmp) - 1] = e[qq - 1];
+      for (qq = qp1; qq < 10; qq++) {
+        V[(qq + 9 * i) - 1] = e[qq - 1];
       }
     }
   }
 
-  i = 6;
-  s[7] = b_A[63];
-  e[6] = b_A[62];
-  e[7] = 0.0;
-  std::memset(&U[56], 0, sizeof(real_T) << 3U);
-  U[63] = 1.0;
-  for (qp1 = 6; qp1 >= 0; qp1--) {
-    qq_tmp = qp1 << 3;
-    qq = qq_tmp + qp1;
+  i = 7;
+  s[8] = b_A[80];
+  e[7] = b_A[79];
+  e[8] = 0.0;
+  std::memset(&U[72], 0, 9U * sizeof(real_T));
+  U[80] = 1.0;
+  for (qp1 = 7; qp1 >= 0; qp1--) {
+    qq = 9 * qp1 + qp1;
     if (s[qp1] != 0.0) {
-      for (qp1jj = qp1 + 2; qp1jj < 9; qp1jj++) {
-        qjj = (((qp1jj - 1) << 3) + qp1) + 1;
-        xaxpy(8 - qp1, -(xdotc(8 - qp1, U, qq + 1, U, qjj) / U[qq]), qq + 1, U,
+      for (qp1jj = qp1 + 2; qp1jj < 10; qp1jj++) {
+        qjj = ((qp1jj - 1) * 9 + qp1) + 1;
+        xaxpy(9 - qp1, -(xdotc(9 - qp1, U, qq + 1, U, qjj) / U[qq]), qq + 1, U,
               qjj);
       }
 
-      for (qjj = qp1 + 1; qjj < 9; qjj++) {
-        qp1jj = (qq_tmp + qjj) - 1;
+      for (qjj = qp1 + 1; qjj < 10; qjj++) {
+        qp1jj = (9 * qp1 + qjj) - 1;
         U[qp1jj] = -U[qp1jj];
       }
 
       U[qq]++;
       for (qjj = 0; qjj < qp1; qjj++) {
-        U[qjj + qq_tmp] = 0.0;
+        U[qjj + 9 * qp1] = 0.0;
       }
     } else {
-      std::memset(&U[qq_tmp], 0, sizeof(real_T) << 3U);
+      std::memset(&U[qp1 * 9], 0, 9U * sizeof(real_T));
       U[qq] = 1.0;
     }
   }
 
-  for (qp1 = 7; qp1 >= 0; qp1--) {
-    if ((qp1 + 1 <= 6) && (e[qp1] != 0.0)) {
-      qq = ((qp1 << 3) + qp1) + 2;
-      for (qjj = qp1 + 2; qjj < 9; qjj++) {
-        qp1jj = (((qjj - 1) << 3) + qp1) + 2;
-        xaxpy(7 - qp1, -(xdotc(7 - qp1, V, qq, V, qp1jj) / V[qq - 1]), qq, V,
+  for (qp1 = 8; qp1 >= 0; qp1--) {
+    if ((qp1 + 1 <= 7) && (e[qp1] != 0.0)) {
+      qq = (9 * qp1 + qp1) + 2;
+      for (qjj = qp1 + 2; qjj < 10; qjj++) {
+        qp1jj = ((qjj - 1) * 9 + qp1) + 2;
+        xaxpy(8 - qp1, -(xdotc(8 - qp1, V, qq, V, qp1jj) / V[qq - 1]), qq, V,
               qp1jj);
       }
     }
 
-    std::memset(&V[qp1 << 3], 0, sizeof(real_T) << 3U);
-    V[qp1 + (qp1 << 3)] = 1.0;
+    std::memset(&V[qp1 * 9], 0, 9U * sizeof(real_T));
+    V[qp1 + 9 * qp1] = 1.0;
   }
 
-  for (qp1 = 0; qp1 < 8; qp1++) {
+  for (qp1 = 0; qp1 < 9; qp1++) {
     nrm = s[qp1];
     if (nrm != 0.0) {
       rt = std::abs(nrm);
       nrm /= rt;
       s[qp1] = rt;
-      if (qp1 + 1 < 8) {
+      if (qp1 + 1 < 9) {
         e[qp1] /= nrm;
       }
 
-      qq = (qp1 << 3) + 1;
-      for (qjj = qq; qjj <= qq + 7; qjj++) {
+      qq = 9 * qp1 + 1;
+      for (qjj = qq; qjj <= qq + 8; qjj++) {
         U[qjj - 1] *= nrm;
       }
     }
 
-    if (qp1 + 1 < 8) {
+    if (qp1 + 1 < 9) {
       smm1 = e[qp1];
       if (smm1 != 0.0) {
         rt = std::abs(smm1);
         nrm = rt / smm1;
         e[qp1] = rt;
         s[qp1 + 1] *= nrm;
-        qq = ((qp1 + 1) << 3) + 1;
-        for (qjj = qq; qjj <= qq + 7; qjj++) {
+        qq = (qp1 + 1) * 9 + 1;
+        for (qjj = qq; qjj <= qq + 8; qjj++) {
           V[qjj - 1] *= nrm;
         }
       }
@@ -421,7 +418,7 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
 
   qp1 = 0;
   nrm = 0.0;
-  for (qq = 0; qq < 8; qq++) {
+  for (qq = 0; qq < 9; qq++) {
     nrm = std::fmax(nrm, std::fmax(std::abs(s[qq]), std::abs(e[qq])));
   }
 
@@ -452,29 +449,29 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
       qp1jj = 4;
     } else {
       qjj = i + 2;
-      qq_tmp_tmp = i + 2;
+      qq_tmp = i + 2;
       exitg2 = false;
-      while ((!exitg2) && (qq_tmp_tmp >= qp1jj)) {
-        qjj = qq_tmp_tmp;
-        if (qq_tmp_tmp == qp1jj) {
+      while ((!exitg2) && (qq_tmp >= qp1jj)) {
+        qjj = qq_tmp;
+        if (qq_tmp == qp1jj) {
           exitg2 = true;
         } else {
           rt = 0.0;
-          if (qq_tmp_tmp < i + 2) {
-            rt = std::abs(e[qq_tmp_tmp - 1]);
+          if (qq_tmp < i + 2) {
+            rt = std::abs(e[qq_tmp - 1]);
           }
 
-          if (qq_tmp_tmp > qp1jj + 1) {
-            rt += std::abs(e[qq_tmp_tmp - 2]);
+          if (qq_tmp > qp1jj + 1) {
+            rt += std::abs(e[qq_tmp - 2]);
           }
 
-          ztest = std::abs(s[qq_tmp_tmp - 1]);
+          ztest = std::abs(s[qq_tmp - 1]);
           if ((ztest <= 2.2204460492503131E-16 * rt) || (ztest <=
                1.0020841800044864E-292)) {
-            s[qq_tmp_tmp - 1] = 0.0;
+            s[qq_tmp - 1] = 0.0;
             exitg2 = true;
           } else {
-            qq_tmp_tmp--;
+            qq_tmp--;
           }
         }
       }
@@ -501,7 +498,7 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
           e[qjj - 2] = smm1 * ztest;
         }
 
-        xrot(V, ((qjj - 1) << 3) + 1, ((i + 1) << 3) + 1, ztest, sqds);
+        xrot(V, 9 * (qjj - 1) + 1, 9 * (i + 1) + 1, ztest, sqds);
       }
       break;
 
@@ -513,7 +510,7 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
         smm1 = e[qjj - 1];
         rt = -sqds * smm1;
         e[qjj - 1] = smm1 * ztest;
-        xrot(U, ((qjj - 1) << 3) + 1, ((qq - 1) << 3) + 1, ztest, sqds);
+        xrot(U, 9 * (qjj - 1) + 1, 9 * (qq - 1) + 1, ztest, sqds);
       }
       break;
 
@@ -552,9 +549,9 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
         e[qjj - 1] = emm1 * sqds - rt * smm1;
         ztest = smm1 * s[qjj];
         s[qjj] *= sqds;
-        qq_tmp_tmp = ((qjj - 1) << 3) + 1;
-        qq_tmp = (qjj << 3) + 1;
-        xrot(V, qq_tmp_tmp, qq_tmp, sqds, smm1);
+        qp1jj = (qjj - 1) * 9 + 1;
+        qq_tmp = 9 * qjj + 1;
+        xrot(V, qp1jj, qq_tmp, sqds, smm1);
         s[qjj - 1] = rt * sqds + emm1 * smm1;
         xrotg(&s[qjj - 1], &ztest, &sqds, &smm1);
         ztest = e[qjj - 1];
@@ -562,7 +559,7 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
         s[qjj] = ztest * -smm1 + sqds * s[qjj];
         ztest = smm1 * e[qjj];
         e[qjj] *= sqds;
-        xrot(U, qq_tmp_tmp, qq_tmp, sqds, smm1);
+        xrot(U, qp1jj, qq_tmp, sqds, smm1);
       }
 
       e[i] = rt;
@@ -572,21 +569,21 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
      default:
       if (s[qq] < 0.0) {
         s[qq] = -s[qq];
-        qp1 = (qq << 3) + 1;
-        for (qjj = qp1; qjj <= qp1 + 7; qjj++) {
+        qp1 = 9 * qq + 1;
+        for (qjj = qp1; qjj <= qp1 + 8; qjj++) {
           V[qjj - 1] = -V[qjj - 1];
         }
       }
 
       qp1 = qq + 1;
-      while ((qq + 1 < 8) && (s[qq] < s[qp1])) {
+      while ((qq + 1 < 9) && (s[qq] < s[qp1])) {
         rt = s[qq];
         s[qq] = s[qp1];
         s[qp1] = rt;
-        qq_tmp_tmp = (qq << 3) + 1;
-        qq_tmp = ((qq + 1) << 3) + 1;
-        xswap(V, qq_tmp_tmp, qq_tmp);
-        xswap(U, qq_tmp_tmp, qq_tmp);
+        qp1jj = 9 * qq + 1;
+        qq_tmp = (qq + 1) * 9 + 1;
+        xswap(V, qp1jj, qq_tmp);
+        xswap(U, qp1jj, qq_tmp);
         qq = qp1;
         qp1++;
       }
@@ -599,7 +596,7 @@ void talos_ekf::svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64])
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-real_T talos_ekf::xnrm2_ln(int32_T n, const real_T x[192], int32_T ix0)
+real_T talos_ekf::xnrm2_ln(int32_T n, const real_T x[225], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -648,14 +645,14 @@ real_T rt_hypotd_snf(real_T u0, real_T u1)
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::xgemv(int32_T m, int32_T n, const real_T A[192], int32_T ia0,
-                      const real_T x[192], int32_T ix0, real_T y[8])
+void talos_ekf::xgemv(int32_T m, int32_T n, const real_T A[225], int32_T ia0,
+                      const real_T x[225], int32_T ix0, real_T y[9])
 {
   if (n != 0) {
     int32_T d;
     std::memset(&y[0], 0, static_cast<uint8_T>(n) * sizeof(real_T));
-    d = (n - 1) * 24 + ia0;
-    for (int32_T b_iy{ia0}; b_iy <= d; b_iy += 24) {
+    d = (n - 1) * 25 + ia0;
+    for (int32_T b_iy{ia0}; b_iy <= d; b_iy += 25) {
       real_T c;
       int32_T b;
       int32_T e;
@@ -665,7 +662,7 @@ void talos_ekf::xgemv(int32_T m, int32_T n, const real_T A[192], int32_T ia0,
         c += x[((ix0 + b) - b_iy) - 1] * A[b - 1];
       }
 
-      b = div_nde_s32_floor(b_iy - ia0, 24);
+      b = div_nde_s32_floor(b_iy - ia0, 25);
       y[b] += c;
     }
   }
@@ -673,7 +670,7 @@ void talos_ekf::xgemv(int32_T m, int32_T n, const real_T A[192], int32_T ia0,
 
 // Function for MATLAB Function: '<S2>/Correct'
 void talos_ekf::xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-                      real_T y[8], real_T A[192], int32_T ia0)
+                      real_T y[9], real_T A[225], int32_T ia0)
 {
   if (!(alpha1 == 0.0)) {
     int32_T b;
@@ -692,27 +689,27 @@ void talos_ekf::xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
         }
       }
 
-      jA += 24;
+      jA += 25;
     }
   }
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::trisolve(const real_T A[64], real_T B_0[128])
+void talos_ekf::trisolve(const real_T A[81], real_T B_0[144])
 {
   for (int32_T j{0}; j < 16; j++) {
     int32_T jBcol;
-    jBcol = j << 3;
-    for (int32_T b_k{0}; b_k < 8; b_k++) {
+    jBcol = 9 * j;
+    for (int32_T b_k{0}; b_k < 9; b_k++) {
       real_T B_1;
       int32_T B_tmp;
       int32_T kAcol;
-      kAcol = b_k << 3;
+      kAcol = 9 * b_k;
       B_tmp = b_k + jBcol;
       B_1 = B_0[B_tmp];
       if (B_1 != 0.0) {
         B_0[B_tmp] = B_1 / A[b_k + kAcol];
-        for (int32_T i{b_k + 2}; i < 9; i++) {
+        for (int32_T i{b_k + 2}; i < 10; i++) {
           int32_T tmp;
           tmp = (i + jBcol) - 1;
           B_0[tmp] -= A[(i + kAcol) - 1] * B_0[B_tmp];
@@ -723,16 +720,16 @@ void talos_ekf::trisolve(const real_T A[64], real_T B_0[128])
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::trisolve_b(const real_T A[64], real_T B_2[128])
+void talos_ekf::trisolve_b(const real_T A[81], real_T B_2[144])
 {
   for (int32_T j{0}; j < 16; j++) {
     int32_T jBcol;
-    jBcol = j << 3;
-    for (int32_T k{7}; k >= 0; k--) {
+    jBcol = 9 * j;
+    for (int32_T k{8}; k >= 0; k--) {
       real_T tmp;
       int32_T kAcol;
       int32_T tmp_0;
-      kAcol = k << 3;
+      kAcol = 9 * k;
       tmp_0 = k + jBcol;
       tmp = B_2[tmp_0];
       if (tmp != 0.0) {
@@ -748,7 +745,7 @@ void talos_ekf::trisolve_b(const real_T A[64], real_T B_2[128])
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-real_T talos_ekf::xnrm2_lno(int32_T n, const real_T x[384], int32_T ix0)
+real_T talos_ekf::xnrm2_lno(int32_T n, const real_T x[400], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -775,14 +772,14 @@ real_T talos_ekf::xnrm2_lno(int32_T n, const real_T x[384], int32_T ix0)
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
-void talos_ekf::xgemv_i(int32_T m, int32_T n, const real_T A[384], int32_T ia0,
-  const real_T x[384], int32_T ix0, real_T y[16])
+void talos_ekf::xgemv_i(int32_T m, int32_T n, const real_T A[400], int32_T ia0,
+  const real_T x[400], int32_T ix0, real_T y[16])
 {
   if (n != 0) {
     int32_T d;
     std::memset(&y[0], 0, static_cast<uint8_T>(n) * sizeof(real_T));
-    d = (n - 1) * 24 + ia0;
-    for (int32_T b_iy{ia0}; b_iy <= d; b_iy += 24) {
+    d = (n - 1) * 25 + ia0;
+    for (int32_T b_iy{ia0}; b_iy <= d; b_iy += 25) {
       real_T c;
       int32_T b;
       int32_T e;
@@ -792,7 +789,7 @@ void talos_ekf::xgemv_i(int32_T m, int32_T n, const real_T A[384], int32_T ia0,
         c += x[((ix0 + b) - b_iy) - 1] * A[b - 1];
       }
 
-      b = div_nde_s32_floor(b_iy - ia0, 24);
+      b = div_nde_s32_floor(b_iy - ia0, 25);
       y[b] += c;
     }
   }
@@ -800,7 +797,7 @@ void talos_ekf::xgemv_i(int32_T m, int32_T n, const real_T A[384], int32_T ia0,
 
 // Function for MATLAB Function: '<S2>/Correct'
 void talos_ekf::xgerc_j(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-  real_T y[16], real_T A[384], int32_T ia0)
+  real_T y[16], real_T A[400], int32_T ia0)
 {
   if (!(alpha1 == 0.0)) {
     int32_T b;
@@ -819,22 +816,22 @@ void talos_ekf::xgerc_j(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
         }
       }
 
-      jA += 24;
+      jA += 25;
     }
   }
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
 void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
-  const real_T residue[8], const real_T Pxy[128], const real_T Sy[64], const
-  real_T H[128], const real_T Rsqrt[64])
+  const real_T residue[9], const real_T Pxy[144], const real_T Sy[81], const
+  real_T H[144], const real_T Rsqrt[81])
 {
-  real_T b_A[384];
+  real_T b_A[400];
   real_T A[256];
   real_T y[256];
-  real_T K[128];
-  real_T b_C[128];
-  real_T Sy_0[64];
+  real_T K[144];
+  real_T b_C[144];
+  real_T Sy_0[81];
   real_T tau[16];
   real_T work[16];
   real_T A_0;
@@ -848,45 +845,45 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
   int32_T j;
   int32_T lastv;
   boolean_T exitg2;
-  for (ii = 0; ii < 8; ii++) {
+  for (ii = 0; ii < 9; ii++) {
     for (j = 0; j < 16; j++) {
-      K[ii + (j << 3)] = Pxy[(ii << 4) + j];
+      K[ii + 9 * j] = Pxy[(ii << 4) + j];
     }
   }
 
   trisolve(Sy, K);
-  std::memcpy(&b_C[0], &K[0], sizeof(real_T) << 7U);
-  for (j = 0; j < 8; j++) {
-    for (ii = 0; ii < 8; ii++) {
-      Sy_0[ii + (j << 3)] = Sy[(ii << 3) + j];
+  std::memcpy(&b_C[0], &K[0], 144U * sizeof(real_T));
+  for (j = 0; j < 9; j++) {
+    for (ii = 0; ii < 9; ii++) {
+      Sy_0[ii + 9 * j] = Sy[9 * ii + j];
     }
   }
 
   trisolve_b(Sy_0, b_C);
-  for (j = 0; j < 8; j++) {
+  for (j = 0; j < 9; j++) {
     for (ii = 0; ii < 16; ii++) {
-      K[ii + (j << 4)] = b_C[(ii << 3) + j];
+      K[ii + (j << 4)] = b_C[9 * ii + j];
     }
   }
 
   for (j = 0; j < 16; j++) {
     A_0 = 0.0;
-    for (ii = 0; ii < 8; ii++) {
+    for (ii = 0; ii < 9; ii++) {
       A_0 += K[(ii << 4) + j] * residue[ii];
     }
 
     x[j] += A_0;
   }
 
-  for (j = 0; j < 128; j++) {
+  for (j = 0; j < 144; j++) {
     b_C[j] = -K[j];
   }
 
   for (j = 0; j < 16; j++) {
     for (ii = 0; ii < 16; ii++) {
       A_0 = 0.0;
-      for (coffset = 0; coffset < 8; coffset++) {
-        A_0 += b_C[(coffset << 4) + ii] * H[(j << 3) + coffset];
+      for (coffset = 0; coffset < 9; coffset++) {
+        A_0 += b_C[(coffset << 4) + ii] * H[9 * j + coffset];
       }
 
       A[ii + (j << 4)] = A_0;
@@ -911,29 +908,29 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
     }
   }
 
-  for (j = 0; j < 8; j++) {
+  for (j = 0; j < 9; j++) {
     for (ii = 0; ii < 16; ii++) {
       A_0 = 0.0;
-      for (coffset = 0; coffset < 8; coffset++) {
-        A_0 += K[(coffset << 4) + ii] * Rsqrt[(j << 3) + coffset];
+      for (coffset = 0; coffset < 9; coffset++) {
+        A_0 += K[(coffset << 4) + ii] * Rsqrt[9 * j + coffset];
       }
 
-      b_C[j + (ii << 3)] = A_0;
+      b_C[j + 9 * ii] = A_0;
     }
   }
 
   for (ii = 0; ii < 16; ii++) {
-    std::memcpy(&b_A[ii * 24], &y[ii << 4], sizeof(real_T) << 4U);
-    std::memcpy(&b_A[ii * 24 + 16], &b_C[ii << 3], sizeof(real_T) << 3U);
+    std::memcpy(&b_A[ii * 25], &y[ii << 4], sizeof(real_T) << 4U);
+    std::memcpy(&b_A[ii * 25 + 16], &b_C[ii * 9], 9U * sizeof(real_T));
     work[ii] = 0.0;
   }
 
   for (j = 0; j < 16; j++) {
-    ii = j * 24 + j;
+    ii = j * 25 + j;
     A_0 = b_A[ii];
     lastv = ii + 2;
     tau[j] = 0.0;
-    s = xnrm2_lno(23 - j, b_A, ii + 2);
+    s = xnrm2_lno(24 - j, b_A, ii + 2);
     if (s != 0.0) {
       b_A_0 = b_A[ii];
       s = rt_hypotd_snf(b_A_0, s);
@@ -943,7 +940,7 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
 
       if (std::abs(s) < 1.0020841800044864E-292) {
         coffset = 0;
-        c_tmp = (ii - j) + 24;
+        c_tmp = (ii - j) + 25;
         do {
           coffset++;
           for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
@@ -954,7 +951,7 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
           A_0 *= 9.9792015476736E+291;
         } while ((std::abs(s) < 1.0020841800044864E-292) && (coffset < 20));
 
-        s = rt_hypotd_snf(A_0, xnrm2_lno(23 - j, b_A, ii + 2));
+        s = rt_hypotd_snf(A_0, xnrm2_lno(24 - j, b_A, ii + 2));
         if (A_0 >= 0.0) {
           s = -s;
         }
@@ -973,7 +970,7 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
       } else {
         tau[j] = (s - b_A_0) / s;
         A_0 = 1.0 / (b_A_0 - s);
-        aoffset = (ii - j) + 24;
+        aoffset = (ii - j) + 25;
         for (coffset = lastv; coffset <= aoffset; coffset++) {
           b_A[coffset - 1] *= A_0;
         }
@@ -986,8 +983,8 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
     if (j + 1 < 16) {
       b_A[ii] = 1.0;
       if (tau[j] != 0.0) {
-        lastv = 24 - j;
-        coffset = (ii - j) + 23;
+        lastv = 25 - j;
+        coffset = (ii - j) + 24;
         while ((lastv > 0) && (b_A[coffset] == 0.0)) {
           lastv--;
           coffset--;
@@ -996,7 +993,7 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
         coffset = 15 - j;
         exitg2 = false;
         while ((!exitg2) && (coffset > 0)) {
-          aoffset = ((coffset - 1) * 24 + ii) + 24;
+          aoffset = ((coffset - 1) * 25 + ii) + 25;
           c_tmp = aoffset;
           do {
             exitg1 = 0;
@@ -1022,8 +1019,8 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
       }
 
       if (lastv > 0) {
-        xgemv_i(lastv, coffset, b_A, ii + 25, b_A, ii + 1, work);
-        xgerc_j(lastv, coffset, -tau[j], ii + 1, work, b_A, ii + 25);
+        xgemv_i(lastv, coffset, b_A, ii + 26, b_A, ii + 1, work);
+        xgerc_j(lastv, coffset, -tau[j], ii + 1, work, b_A, ii + 26);
       }
 
       b_A[ii] = A_0;
@@ -1032,7 +1029,7 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
 
   for (j = 0; j < 16; j++) {
     for (ii = 0; ii <= j; ii++) {
-      A[ii + (j << 4)] = b_A[24 * j + ii];
+      A[ii + (j << 4)] = b_A[25 * j + ii];
     }
 
     for (ii = j + 2; ii < 17; ii++) {
@@ -1048,401 +1045,7 @@ void talos_ekf::EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256],
 }
 
 // Function for MATLAB Function: '<S3>/Correct'
-real_T talos_ekf::xnrm2_h(int32_T n, const real_T x[17], int32_T ix0)
-{
-  real_T y;
-  y = 0.0;
-  if (n >= 1) {
-    if (n == 1) {
-      y = std::abs(x[ix0 - 1]);
-    } else {
-      real_T scale;
-      int32_T kend;
-      scale = 3.3121686421112381E-170;
-      kend = (ix0 + n) - 1;
-      for (int32_T k{ix0}; k <= kend; k++) {
-        real_T absxk;
-        absxk = std::abs(x[k - 1]);
-        if (absxk > scale) {
-          real_T t;
-          t = scale / absxk;
-          y = y * t * t + 1.0;
-          scale = absxk;
-        } else {
-          real_T t;
-          t = absxk / scale;
-          y += t * t;
-        }
-      }
-
-      y = scale * std::sqrt(y);
-    }
-  }
-
-  return y;
-}
-
-// Function for MATLAB Function: '<S3>/Correct'
-void talos_ekf::trisolve_i(real_T A, real_T B_3[16])
-{
-  for (int32_T j{0}; j < 16; j++) {
-    real_T B_4;
-    B_4 = B_3[j];
-    if (B_4 != 0.0) {
-      B_3[j] = B_4 / A;
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S3>/Correct'
-real_T talos_ekf::xnrm2_hm(int32_T n, const real_T x[272], int32_T ix0)
-{
-  real_T y;
-  y = 0.0;
-  if (n >= 1) {
-    if (n == 1) {
-      y = std::abs(x[ix0 - 1]);
-    } else {
-      real_T scale;
-      int32_T kend;
-      scale = 3.3121686421112381E-170;
-      kend = (ix0 + n) - 1;
-      for (int32_T k{ix0}; k <= kend; k++) {
-        real_T absxk;
-        absxk = std::abs(x[k - 1]);
-        if (absxk > scale) {
-          real_T t;
-          t = scale / absxk;
-          y = y * t * t + 1.0;
-          scale = absxk;
-        } else {
-          real_T t;
-          t = absxk / scale;
-          y += t * t;
-        }
-      }
-
-      y = scale * std::sqrt(y);
-    }
-  }
-
-  return y;
-}
-
-// Function for MATLAB Function: '<S3>/Correct'
-void talos_ekf::xgemv_h(int32_T m, int32_T n, const real_T A[272], int32_T ia0,
-  const real_T x[272], int32_T ix0, real_T y[16])
-{
-  if ((m != 0) && (n != 0)) {
-    int32_T b;
-    if (n - 1 >= 0) {
-      std::memset(&y[0], 0, static_cast<uint32_T>(n) * sizeof(real_T));
-    }
-
-    b = (n - 1) * 17 + ia0;
-    for (int32_T b_iy{ia0}; b_iy <= b; b_iy += 17) {
-      real_T c;
-      int32_T d;
-      int32_T iyend;
-      c = 0.0;
-      d = (b_iy + m) - 1;
-      for (iyend = b_iy; iyend <= d; iyend++) {
-        c += x[((ix0 + iyend) - b_iy) - 1] * A[iyend - 1];
-      }
-
-      iyend = div_nde_s32_floor(b_iy - ia0, 17);
-      y[iyend] += c;
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S3>/Correct'
-void talos_ekf::xgerc_f(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-  real_T y[16], real_T A[272], int32_T ia0)
-{
-  if (!(alpha1 == 0.0)) {
-    int32_T jA;
-    jA = ia0;
-    for (int32_T j{0}; j < n; j++) {
-      real_T temp;
-      temp = y[j];
-      if (temp != 0.0) {
-        int32_T b;
-        temp *= alpha1;
-        b = m + jA;
-        for (int32_T ijA{jA}; ijA < b; ijA++) {
-          A[ijA - 1] += A[((ix0 + ijA) - jA) - 1] * temp;
-        }
-      }
-
-      jA += 17;
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S3>/Correct'
-void talos_ekf::EKFCorrector_correctStateAndS_n(real_T x[16], real_T S[256],
-  real_T residue, const real_T Pxy[16], real_T Sy, const real_T H[16], real_T
-  Rsqrt)
-{
-  real_T b_A[272];
-  real_T A[256];
-  real_T C[16];
-  real_T K[16];
-  real_T K_0;
-  real_T b_A_0;
-  real_T s;
-  int32_T aoffset;
-  int32_T c_tmp;
-  int32_T coffset;
-  int32_T exitg1;
-  int32_T ii;
-  int32_T j;
-  int32_T lastv;
-  boolean_T exitg2;
-  std::memcpy(&C[0], &Pxy[0], sizeof(real_T) << 4U);
-  trisolve_i(Sy, C);
-  std::memcpy(&K[0], &C[0], sizeof(real_T) << 4U);
-  trisolve_i(Sy, K);
-  for (j = 0; j < 16; j++) {
-    K_0 = K[j];
-    x[j] += K_0 * residue;
-    C[j] = -K_0;
-  }
-
-  for (j = 0; j < 16; j++) {
-    for (ii = 0; ii < 16; ii++) {
-      A[ii + (j << 4)] = C[ii] * H[j];
-    }
-  }
-
-  for (j = 0; j < 16; j++) {
-    ii = (j << 4) + j;
-    A[ii]++;
-  }
-
-  for (j = 0; j < 16; j++) {
-    for (ii = 0; ii < 16; ii++) {
-      aoffset = ii << 4;
-      s = 0.0;
-      for (lastv = 0; lastv < 16; lastv++) {
-        s += A[(lastv << 4) + j] * S[aoffset + lastv];
-      }
-
-      b_A[ii + 17 * j] = s;
-    }
-
-    b_A[17 * j + 16] = K[j] * Rsqrt;
-    K[j] = 0.0;
-  }
-
-  for (j = 0; j < 16; j++) {
-    ii = j * 17 + j;
-    K_0 = b_A[ii];
-    lastv = ii + 2;
-    C[j] = 0.0;
-    s = xnrm2_hm(16 - j, b_A, ii + 2);
-    if (s != 0.0) {
-      b_A_0 = b_A[ii];
-      s = rt_hypotd_snf(b_A_0, s);
-      if (b_A_0 >= 0.0) {
-        s = -s;
-      }
-
-      if (std::abs(s) < 1.0020841800044864E-292) {
-        coffset = 0;
-        c_tmp = (ii - j) + 17;
-        do {
-          coffset++;
-          for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
-            b_A[aoffset - 1] *= 9.9792015476736E+291;
-          }
-
-          s *= 9.9792015476736E+291;
-          K_0 *= 9.9792015476736E+291;
-        } while ((std::abs(s) < 1.0020841800044864E-292) && (coffset < 20));
-
-        s = rt_hypotd_snf(K_0, xnrm2_hm(16 - j, b_A, ii + 2));
-        if (K_0 >= 0.0) {
-          s = -s;
-        }
-
-        C[j] = (s - K_0) / s;
-        K_0 = 1.0 / (K_0 - s);
-        for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
-          b_A[aoffset - 1] *= K_0;
-        }
-
-        for (lastv = 0; lastv < coffset; lastv++) {
-          s *= 1.0020841800044864E-292;
-        }
-
-        K_0 = s;
-      } else {
-        C[j] = (s - b_A_0) / s;
-        K_0 = 1.0 / (b_A_0 - s);
-        aoffset = (ii - j) + 17;
-        for (coffset = lastv; coffset <= aoffset; coffset++) {
-          b_A[coffset - 1] *= K_0;
-        }
-
-        K_0 = s;
-      }
-    }
-
-    b_A[ii] = K_0;
-    if (j + 1 < 16) {
-      b_A[ii] = 1.0;
-      if (C[j] != 0.0) {
-        lastv = 17 - j;
-        coffset = (ii - j) + 16;
-        while ((lastv > 0) && (b_A[coffset] == 0.0)) {
-          lastv--;
-          coffset--;
-        }
-
-        coffset = 15 - j;
-        exitg2 = false;
-        while ((!exitg2) && (coffset > 0)) {
-          aoffset = ((coffset - 1) * 17 + ii) + 17;
-          c_tmp = aoffset;
-          do {
-            exitg1 = 0;
-            if (c_tmp + 1 <= aoffset + lastv) {
-              if (b_A[c_tmp] != 0.0) {
-                exitg1 = 1;
-              } else {
-                c_tmp++;
-              }
-            } else {
-              coffset--;
-              exitg1 = 2;
-            }
-          } while (exitg1 == 0);
-
-          if (exitg1 == 1) {
-            exitg2 = true;
-          }
-        }
-      } else {
-        lastv = 0;
-        coffset = 0;
-      }
-
-      if (lastv > 0) {
-        xgemv_h(lastv, coffset, b_A, ii + 18, b_A, ii + 1, K);
-        xgerc_f(lastv, coffset, -C[j], ii + 1, K, b_A, ii + 18);
-      }
-
-      b_A[ii] = K_0;
-    }
-  }
-
-  for (j = 0; j < 16; j++) {
-    for (ii = 0; ii <= j; ii++) {
-      A[ii + (j << 4)] = b_A[17 * j + ii];
-    }
-
-    for (ii = j + 2; ii < 17; ii++) {
-      A[(ii + (j << 4)) - 1] = 0.0;
-    }
-  }
-
-  for (j = 0; j < 16; j++) {
-    for (ii = 0; ii < 16; ii++) {
-      S[ii + (j << 4)] = A[(ii << 4) + j];
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S3>/Correct'
-void talos_ekf::EKFCorrector_correct(real_T z, real_T Rs, real_T x[16], real_T
-  S[256])
-{
-  real_T A[17];
-  real_T b_x[16];
-  real_T c_x[16];
-  real_T dHdx[16];
-  real_T h;
-  real_T x_0;
-  int32_T S_tmp;
-  int32_T f_k;
-  int32_T i;
-  int32_T knt;
-  for (f_k = 0; f_k < 16; f_k++) {
-    h = 1.0E-6 * std::fmax(1.0, std::abs(x[f_k]));
-    std::memcpy(&b_x[0], &x[0], sizeof(real_T) << 4U);
-    std::memcpy(&c_x[0], &x[0], sizeof(real_T) << 4U);
-    x_0 = x[f_k];
-    b_x[f_k] = x_0 + h;
-    c_x[f_k] = x_0 - h;
-    dHdx[f_k] = (b_x[12] - c_x[12]) / (2.0 * h);
-  }
-
-  for (f_k = 0; f_k < 16; f_k++) {
-    i = f_k << 4;
-    h = 0.0;
-    for (knt = 0; knt < 16; knt++) {
-      h += S[i + knt] * dHdx[knt];
-    }
-
-    A[f_k] = h;
-  }
-
-  A[16] = Rs;
-  x_0 = A[0];
-  h = xnrm2_h(16, A, 2);
-  if (h != 0.0) {
-    h = rt_hypotd_snf(A[0], h);
-    if (A[0] >= 0.0) {
-      h = -h;
-    }
-
-    if (std::abs(h) < 1.0020841800044864E-292) {
-      knt = 0;
-      do {
-        knt++;
-        for (i = 0; i < 16; i++) {
-          A[i + 1] *= 9.9792015476736E+291;
-        }
-
-        h *= 9.9792015476736E+291;
-        x_0 *= 9.9792015476736E+291;
-      } while ((std::abs(h) < 1.0020841800044864E-292) && (knt < 20));
-
-      h = rt_hypotd_snf(x_0, xnrm2_h(16, A, 2));
-      if (x_0 >= 0.0) {
-        h = -h;
-      }
-
-      for (i = 0; i < knt; i++) {
-        h *= 1.0020841800044864E-292;
-      }
-
-      x_0 = h;
-    } else {
-      x_0 = h;
-    }
-  }
-
-  for (f_k = 0; f_k < 16; f_k++) {
-    c_x[f_k] = 0.0;
-    for (i = 0; i < 16; i++) {
-      h = 0.0;
-      for (knt = 0; knt < 16; knt++) {
-        S_tmp = knt << 4;
-        h += S[S_tmp + f_k] * S[S_tmp + i];
-      }
-
-      c_x[f_k] += h * dHdx[i];
-    }
-  }
-
-  EKFCorrector_correctStateAndS_n(x, S, z - x[12], c_x, x_0, dHdx, Rs);
-}
-
-// Function for MATLAB Function: '<S4>/Correct'
-real_T talos_ekf::xnrm2_i(int32_T n, const real_T x[9], int32_T ix0)
+real_T talos_ekf::xnrm2_h(int32_T n, const real_T x[9], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -1468,8 +1071,8 @@ real_T talos_ekf::xnrm2_i(int32_T n, const real_T x[9], int32_T ix0)
   return scale * std::sqrt(y);
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-real_T talos_ekf::xdotc_m(int32_T n, const real_T x[9], int32_T ix0, const
+// Function for MATLAB Function: '<S3>/Correct'
+real_T talos_ekf::xdotc_j(int32_T n, const real_T x[9], int32_T ix0, const
   real_T y[9], int32_T iy0)
 {
   real_T d;
@@ -1483,8 +1086,8 @@ real_T talos_ekf::xdotc_m(int32_T n, const real_T x[9], int32_T ix0, const
   return d;
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xaxpy_j(int32_T n, real_T a, int32_T ix0, real_T y[9], int32_T
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xaxpy_d(int32_T n, real_T a, int32_T ix0, real_T y[9], int32_T
   iy0)
 {
   if (!(a == 0.0)) {
@@ -1496,8 +1099,8 @@ void talos_ekf::xaxpy_j(int32_T n, real_T a, int32_T ix0, real_T y[9], int32_T
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-real_T talos_ekf::xnrm2_iz(const real_T x[3], int32_T ix0)
+// Function for MATLAB Function: '<S3>/Correct'
+real_T talos_ekf::xnrm2_hm(const real_T x[3], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -1521,8 +1124,8 @@ real_T talos_ekf::xnrm2_iz(const real_T x[3], int32_T ix0)
   return scale * std::sqrt(y);
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xaxpy_jn(int32_T n, real_T a, const real_T x[9], int32_T ix0,
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xaxpy_dp(int32_T n, real_T a, const real_T x[9], int32_T ix0,
   real_T y[3], int32_T iy0)
 {
   if (!(a == 0.0)) {
@@ -1534,8 +1137,8 @@ void talos_ekf::xaxpy_jn(int32_T n, real_T a, const real_T x[9], int32_T ix0,
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xaxpy_jnu(int32_T n, real_T a, const real_T x[3], int32_T ix0,
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xaxpy_dpe(int32_T n, real_T a, const real_T x[3], int32_T ix0,
   real_T y[9], int32_T iy0)
 {
   if (!(a == 0.0)) {
@@ -1547,8 +1150,8 @@ void talos_ekf::xaxpy_jnu(int32_T n, real_T a, const real_T x[3], int32_T ix0,
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xswap_l(real_T x[9], int32_T ix0, int32_T iy0)
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xswap_o(real_T x[9], int32_T ix0, int32_T iy0)
 {
   real_T temp;
   temp = x[ix0 - 1];
@@ -1562,8 +1165,8 @@ void talos_ekf::xswap_l(real_T x[9], int32_T ix0, int32_T iy0)
   x[iy0 + 1] = temp;
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xrot_f(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s)
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xrot_j(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s)
 {
   real_T temp;
   real_T temp_tmp;
@@ -1580,8 +1183,8 @@ void talos_ekf::xrot_f(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s
   x[ix0 + 1] = temp_tmp * c + temp * s;
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::svd_a(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
 {
   real_T b_A[9];
   real_T b_s[3];
@@ -1623,7 +1226,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
     qq_tmp = 3 * m + m;
     qq = qq_tmp + 1;
     apply_transform = false;
-    nrm = xnrm2_i(3 - m, b_A, qq_tmp + 1);
+    nrm = xnrm2_h(3 - m, b_A, qq_tmp + 1);
     if (nrm > 0.0) {
       apply_transform = true;
       if (b_A[qq_tmp] < 0.0) {
@@ -1653,7 +1256,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
     for (kase = qp1; kase < 4; kase++) {
       qjj = (kase - 1) * 3 + m;
       if (apply_transform) {
-        xaxpy_j(3 - m, -(xdotc_m(3 - m, b_A, qq_tmp + 1, b_A, qjj + 1) /
+        xaxpy_d(3 - m, -(xdotc_j(3 - m, b_A, qq_tmp + 1, b_A, qjj + 1) /
                          b_A[qq_tmp]), qq_tmp + 1, b_A, qjj + 1);
       }
 
@@ -1666,7 +1269,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
     }
 
     if (m + 1 <= 1) {
-      nrm = xnrm2_iz(e, 2);
+      nrm = xnrm2_hm(e, 2);
       if (nrm == 0.0) {
         e[0] = 0.0;
       } else {
@@ -1695,11 +1298,11 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
         }
 
         for (qq = qp1; qq < 4; qq++) {
-          xaxpy_jn(2, e[qq - 1], b_A, 3 * (qq - 1) + 2, work, 2);
+          xaxpy_dp(2, e[qq - 1], b_A, 3 * (qq - 1) + 2, work, 2);
         }
 
         for (qq = qp1; qq < 4; qq++) {
-          xaxpy_jnu(2, -e[qq - 1] / e[1], work, 2, b_A, 3 * (qq - 1) + 2);
+          xaxpy_dpe(2, -e[qq - 1] / e[1], work, 2, b_A, 3 * (qq - 1) + 2);
         }
       }
 
@@ -1721,7 +1324,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
     if (b_s[qp1] != 0.0) {
       for (kase = qp1 + 2; kase < 4; kase++) {
         qjj = ((kase - 1) * 3 + qp1) + 1;
-        xaxpy_j(3 - qp1, -(xdotc_m(3 - qp1, U, qq + 1, U, qjj) / U[qq]), qq + 1,
+        xaxpy_d(3 - qp1, -(xdotc_j(3 - qp1, U, qq + 1, U, qjj) / U[qq]), qq + 1,
                 U, qjj);
       }
 
@@ -1744,8 +1347,8 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
 
   for (qp1 = 2; qp1 >= 0; qp1--) {
     if ((qp1 + 1 <= 1) && (e[0] != 0.0)) {
-      xaxpy_j(2, -(xdotc_m(2, V, 2, V, 5) / V[1]), 2, V, 5);
-      xaxpy_j(2, -(xdotc_m(2, V, 2, V, 8) / V[1]), 2, V, 8);
+      xaxpy_d(2, -(xdotc_j(2, V, 2, V, 5) / V[1]), 2, V, 5);
+      xaxpy_d(2, -(xdotc_j(2, V, 2, V, 8) / V[1]), 2, V, 8);
     }
 
     V[3 * qp1] = 0.0;
@@ -1864,7 +1467,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
           e[0] *= ztest;
         }
 
-        xrot_f(V, 3 * (qjj - 1) + 1, 3 * (m + 1) + 1, ztest, sqds);
+        xrot_j(V, 3 * (qjj - 1) + 1, 3 * (m + 1) + 1, ztest, sqds);
       }
       break;
 
@@ -1876,7 +1479,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
         smm1 = e[qjj - 1];
         rt = -sqds * smm1;
         e[qjj - 1] = smm1 * ztest;
-        xrot_f(U, 3 * (qjj - 1) + 1, 3 * (qq - 1) + 1, ztest, sqds);
+        xrot_j(U, 3 * (qjj - 1) + 1, 3 * (qq - 1) + 1, ztest, sqds);
       }
       break;
 
@@ -1917,7 +1520,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
         b_s[qjj] *= sqds;
         kase = (qjj - 1) * 3 + 1;
         qq_tmp = 3 * qjj + 1;
-        xrot_f(V, kase, qq_tmp, sqds, smm1);
+        xrot_j(V, kase, qq_tmp, sqds, smm1);
         b_s[qjj - 1] = rt * sqds + emm1 * smm1;
         xrotg(&b_s[qjj - 1], &ztest, &sqds, &smm1);
         emm1 = e[qjj - 1];
@@ -1925,7 +1528,7 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
         b_s[qjj] = emm1 * -smm1 + sqds * b_s[qjj];
         ztest = smm1 * e[qjj];
         e[qjj] *= sqds;
-        xrot_f(U, kase, qq_tmp, sqds, smm1);
+        xrot_j(U, kase, qq_tmp, sqds, smm1);
       }
 
       e[m] = rt;
@@ -1948,8 +1551,8 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
         b_s[qp1] = rt;
         kase = 3 * qq + 1;
         qq_tmp = (qq + 1) * 3 + 1;
-        xswap_l(V, kase, qq_tmp);
-        xswap_l(U, kase, qq_tmp);
+        xswap_o(V, kase, qq_tmp);
+        xswap_o(U, kase, qq_tmp);
         qq = qp1;
         qp1++;
       }
@@ -1965,8 +1568,8 @@ void talos_ekf::svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9])
   s[2] = b_s[2];
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-real_T talos_ekf::xnrm2_izk(int32_T n, const real_T x[57], int32_T ix0)
+// Function for MATLAB Function: '<S3>/Correct'
+real_T talos_ekf::xnrm2_hmd(int32_T n, const real_T x[57], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -1992,8 +1595,8 @@ real_T talos_ekf::xnrm2_izk(int32_T n, const real_T x[57], int32_T ix0)
   return scale * std::sqrt(y);
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xgemv_a(int32_T m, int32_T n, const real_T A[57], int32_T ia0,
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xgemv_h(int32_T m, int32_T n, const real_T A[57], int32_T ia0,
   const real_T x[57], int32_T ix0, real_T y[3])
 {
   if (n != 0) {
@@ -2016,8 +1619,8 @@ void talos_ekf::xgemv_a(int32_T m, int32_T n, const real_T A[57], int32_T ia0,
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xgerc_n(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xgerc_f(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
   real_T y[3], real_T A[57], int32_T ia0)
 {
   if (!(alpha1 == 0.0)) {
@@ -2042,33 +1645,33 @@ void talos_ekf::xgerc_n(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::trisolve_f(const real_T A[9], real_T B_5[48])
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::trisolve_i(const real_T A[9], real_T B_3[48])
 {
   for (int32_T j{0}; j < 16; j++) {
     int32_T jBcol;
     jBcol = 3 * j;
     for (int32_T b_k{0}; b_k < 3; b_k++) {
-      real_T B_6;
+      real_T B_4;
       int32_T B_tmp;
       int32_T kAcol;
       kAcol = 3 * b_k;
       B_tmp = b_k + jBcol;
-      B_6 = B_5[B_tmp];
-      if (B_6 != 0.0) {
-        B_5[B_tmp] = B_6 / A[b_k + kAcol];
+      B_4 = B_3[B_tmp];
+      if (B_4 != 0.0) {
+        B_3[B_tmp] = B_4 / A[b_k + kAcol];
         for (int32_T i{b_k + 2}; i < 4; i++) {
           int32_T tmp;
           tmp = (i + jBcol) - 1;
-          B_5[tmp] -= A[(i + kAcol) - 1] * B_5[B_tmp];
+          B_3[tmp] -= A[(i + kAcol) - 1] * B_3[B_tmp];
         }
       }
     }
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::trisolve_fc(const real_T A[9], real_T B_7[48])
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::trisolve_if(const real_T A[9], real_T B_5[48])
 {
   for (int32_T j{0}; j < 16; j++) {
     int32_T jBcol;
@@ -2079,21 +1682,21 @@ void talos_ekf::trisolve_fc(const real_T A[9], real_T B_7[48])
       int32_T tmp_0;
       kAcol = 3 * k;
       tmp_0 = k + jBcol;
-      tmp = B_7[tmp_0];
+      tmp = B_5[tmp_0];
       if (tmp != 0.0) {
-        B_7[tmp_0] = tmp / A[k + kAcol];
+        B_5[tmp_0] = tmp / A[k + kAcol];
         for (int32_T i{0}; i < k; i++) {
           int32_T tmp_1;
           tmp_1 = i + jBcol;
-          B_7[tmp_1] -= A[i + kAcol] * B_7[tmp_0];
+          B_5[tmp_1] -= A[i + kAcol] * B_5[tmp_0];
         }
       }
     }
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-real_T talos_ekf::xnrm2_izk3(int32_T n, const real_T x[304], int32_T ix0)
+// Function for MATLAB Function: '<S3>/Correct'
+real_T talos_ekf::xnrm2_hmda(int32_T n, const real_T x[304], int32_T ix0)
 {
   real_T scale;
   real_T y;
@@ -2119,8 +1722,8 @@ real_T talos_ekf::xnrm2_izk3(int32_T n, const real_T x[304], int32_T ix0)
   return scale * std::sqrt(y);
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xgemv_a3(int32_T m, int32_T n, const real_T A[304], int32_T ia0,
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xgemv_ht(int32_T m, int32_T n, const real_T A[304], int32_T ia0,
   const real_T x[304], int32_T ix0, real_T y[16])
 {
   if (n != 0) {
@@ -2143,8 +1746,8 @@ void talos_ekf::xgemv_a3(int32_T m, int32_T n, const real_T A[304], int32_T ia0,
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::xgerc_nv(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::xgerc_f0(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
   real_T y[16], real_T A[304], int32_T ia0)
 {
   if (!(alpha1 == 0.0)) {
@@ -2169,8 +1772,8 @@ void talos_ekf::xgerc_nv(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
   }
 }
 
-// Function for MATLAB Function: '<S4>/Correct'
-void talos_ekf::EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256],
+// Function for MATLAB Function: '<S3>/Correct'
+void talos_ekf::EKFCorrector_correctStateAndS_n(real_T x[16], real_T S[256],
   const real_T residue[3], const real_T Pxy[48], const real_T Sy[9], const
   real_T H[48], const real_T Rsqrt[9])
 {
@@ -2201,7 +1804,7 @@ void talos_ekf::EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256],
     K[3 * j + 2] = Pxy[j + 32];
   }
 
-  trisolve_f(Sy, K);
+  trisolve_i(Sy, K);
   for (j = 0; j < 16; j++) {
     b_C[3 * j] = K[3 * j];
     coffset = 3 * j + 1;
@@ -2216,7 +1819,7 @@ void talos_ekf::EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256],
     Sy_0[3 * coffset + 2] = Sy[coffset + 6];
   }
 
-  trisolve_fc(Sy_0, b_C);
+  trisolve_if(Sy_0, b_C);
   residue_0 = residue[0];
   s = residue[1];
   residue_1 = residue[2];
@@ -2285,7 +1888,7 @@ void talos_ekf::EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256],
     K_0 = b_A[ii];
     lastv = ii + 2;
     tau[j] = 0.0;
-    s = xnrm2_izk3(18 - j, b_A, ii + 2);
+    s = xnrm2_hmda(18 - j, b_A, ii + 2);
     if (s != 0.0) {
       residue_0 = b_A[ii];
       s = rt_hypotd_snf(residue_0, s);
@@ -2306,7 +1909,7 @@ void talos_ekf::EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256],
           K_0 *= 9.9792015476736E+291;
         } while ((std::abs(s) < 1.0020841800044864E-292) && (coffset < 20));
 
-        s = rt_hypotd_snf(K_0, xnrm2_izk3(18 - j, b_A, ii + 2));
+        s = rt_hypotd_snf(K_0, xnrm2_hmda(18 - j, b_A, ii + 2));
         if (K_0 >= 0.0) {
           s = -s;
         }
@@ -2374,8 +1977,8 @@ void talos_ekf::EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256],
       }
 
       if (lastv > 0) {
-        xgemv_a3(lastv, coffset, b_A, ii + 20, b_A, ii + 1, work);
-        xgerc_nv(lastv, coffset, -tau[j], ii + 1, work, b_A, ii + 20);
+        xgemv_ht(lastv, coffset, b_A, ii + 20, b_A, ii + 1, work);
+        xgerc_f0(lastv, coffset, -tau[j], ii + 1, work, b_A, ii + 20);
       }
 
       b_A[ii] = K_0;
@@ -2400,8 +2003,316 @@ void talos_ekf::EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256],
 }
 
 // Function for MATLAB Function: '<S5>/Correct'
-void talos_ekf::EKFCorrector_correct_p(real_T z, real_T Rs, real_T x[16], real_T
-  S[256])
+real_T talos_ekf::xnrm2_n(int32_T n, const real_T x[17], int32_T ix0)
+{
+  real_T y;
+  y = 0.0;
+  if (n >= 1) {
+    if (n == 1) {
+      y = std::abs(x[ix0 - 1]);
+    } else {
+      real_T scale;
+      int32_T kend;
+      scale = 3.3121686421112381E-170;
+      kend = (ix0 + n) - 1;
+      for (int32_T k{ix0}; k <= kend; k++) {
+        real_T absxk;
+        absxk = std::abs(x[k - 1]);
+        if (absxk > scale) {
+          real_T t;
+          t = scale / absxk;
+          y = y * t * t + 1.0;
+          scale = absxk;
+        } else {
+          real_T t;
+          t = absxk / scale;
+          y += t * t;
+        }
+      }
+
+      y = scale * std::sqrt(y);
+    }
+  }
+
+  return y;
+}
+
+// Function for MATLAB Function: '<S5>/Correct'
+void talos_ekf::trisolve_c(real_T A, real_T B_9[16])
+{
+  for (int32_T j{0}; j < 16; j++) {
+    real_T B_a;
+    B_a = B_9[j];
+    if (B_a != 0.0) {
+      B_9[j] = B_a / A;
+    }
+  }
+}
+
+// Function for MATLAB Function: '<S5>/Correct'
+real_T talos_ekf::xnrm2_nd(int32_T n, const real_T x[272], int32_T ix0)
+{
+  real_T y;
+  y = 0.0;
+  if (n >= 1) {
+    if (n == 1) {
+      y = std::abs(x[ix0 - 1]);
+    } else {
+      real_T scale;
+      int32_T kend;
+      scale = 3.3121686421112381E-170;
+      kend = (ix0 + n) - 1;
+      for (int32_T k{ix0}; k <= kend; k++) {
+        real_T absxk;
+        absxk = std::abs(x[k - 1]);
+        if (absxk > scale) {
+          real_T t;
+          t = scale / absxk;
+          y = y * t * t + 1.0;
+          scale = absxk;
+        } else {
+          real_T t;
+          t = absxk / scale;
+          y += t * t;
+        }
+      }
+
+      y = scale * std::sqrt(y);
+    }
+  }
+
+  return y;
+}
+
+// Function for MATLAB Function: '<S5>/Correct'
+void talos_ekf::xgemv_e(int32_T m, int32_T n, const real_T A[272], int32_T ia0,
+  const real_T x[272], int32_T ix0, real_T y[16])
+{
+  if ((m != 0) && (n != 0)) {
+    int32_T b;
+    if (n - 1 >= 0) {
+      std::memset(&y[0], 0, static_cast<uint32_T>(n) * sizeof(real_T));
+    }
+
+    b = (n - 1) * 17 + ia0;
+    for (int32_T b_iy{ia0}; b_iy <= b; b_iy += 17) {
+      real_T c;
+      int32_T d;
+      int32_T iyend;
+      c = 0.0;
+      d = (b_iy + m) - 1;
+      for (iyend = b_iy; iyend <= d; iyend++) {
+        c += x[((ix0 + iyend) - b_iy) - 1] * A[iyend - 1];
+      }
+
+      iyend = div_nde_s32_floor(b_iy - ia0, 17);
+      y[iyend] += c;
+    }
+  }
+}
+
+// Function for MATLAB Function: '<S5>/Correct'
+void talos_ekf::xgerc_n1(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+  real_T y[16], real_T A[272], int32_T ia0)
+{
+  if (!(alpha1 == 0.0)) {
+    int32_T jA;
+    jA = ia0;
+    for (int32_T j{0}; j < n; j++) {
+      real_T temp;
+      temp = y[j];
+      if (temp != 0.0) {
+        int32_T b;
+        temp *= alpha1;
+        b = m + jA;
+        for (int32_T ijA{jA}; ijA < b; ijA++) {
+          A[ijA - 1] += A[((ix0 + ijA) - jA) - 1] * temp;
+        }
+      }
+
+      jA += 17;
+    }
+  }
+}
+
+// Function for MATLAB Function: '<S5>/Correct'
+void talos_ekf::EKFCorrector_correctStateAndS_h(real_T x[16], real_T S[256],
+  real_T residue, const real_T Pxy[16], real_T Sy, const real_T H[16], real_T
+  Rsqrt)
+{
+  real_T b_A[272];
+  real_T A[256];
+  real_T C[16];
+  real_T K[16];
+  real_T K_0;
+  real_T b_A_0;
+  real_T s;
+  int32_T aoffset;
+  int32_T c_tmp;
+  int32_T coffset;
+  int32_T exitg1;
+  int32_T ii;
+  int32_T j;
+  int32_T lastv;
+  boolean_T exitg2;
+  std::memcpy(&C[0], &Pxy[0], sizeof(real_T) << 4U);
+  trisolve_c(Sy, C);
+  std::memcpy(&K[0], &C[0], sizeof(real_T) << 4U);
+  trisolve_c(Sy, K);
+  for (j = 0; j < 16; j++) {
+    K_0 = K[j];
+    x[j] += K_0 * residue;
+    C[j] = -K_0;
+  }
+
+  for (j = 0; j < 16; j++) {
+    for (ii = 0; ii < 16; ii++) {
+      A[ii + (j << 4)] = C[ii] * H[j];
+    }
+  }
+
+  for (j = 0; j < 16; j++) {
+    ii = (j << 4) + j;
+    A[ii]++;
+  }
+
+  for (j = 0; j < 16; j++) {
+    for (ii = 0; ii < 16; ii++) {
+      aoffset = ii << 4;
+      s = 0.0;
+      for (lastv = 0; lastv < 16; lastv++) {
+        s += A[(lastv << 4) + j] * S[aoffset + lastv];
+      }
+
+      b_A[ii + 17 * j] = s;
+    }
+
+    b_A[17 * j + 16] = K[j] * Rsqrt;
+    K[j] = 0.0;
+  }
+
+  for (j = 0; j < 16; j++) {
+    ii = j * 17 + j;
+    K_0 = b_A[ii];
+    lastv = ii + 2;
+    C[j] = 0.0;
+    s = xnrm2_nd(16 - j, b_A, ii + 2);
+    if (s != 0.0) {
+      b_A_0 = b_A[ii];
+      s = rt_hypotd_snf(b_A_0, s);
+      if (b_A_0 >= 0.0) {
+        s = -s;
+      }
+
+      if (std::abs(s) < 1.0020841800044864E-292) {
+        coffset = 0;
+        c_tmp = (ii - j) + 17;
+        do {
+          coffset++;
+          for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+            b_A[aoffset - 1] *= 9.9792015476736E+291;
+          }
+
+          s *= 9.9792015476736E+291;
+          K_0 *= 9.9792015476736E+291;
+        } while ((std::abs(s) < 1.0020841800044864E-292) && (coffset < 20));
+
+        s = rt_hypotd_snf(K_0, xnrm2_nd(16 - j, b_A, ii + 2));
+        if (K_0 >= 0.0) {
+          s = -s;
+        }
+
+        C[j] = (s - K_0) / s;
+        K_0 = 1.0 / (K_0 - s);
+        for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+          b_A[aoffset - 1] *= K_0;
+        }
+
+        for (lastv = 0; lastv < coffset; lastv++) {
+          s *= 1.0020841800044864E-292;
+        }
+
+        K_0 = s;
+      } else {
+        C[j] = (s - b_A_0) / s;
+        K_0 = 1.0 / (b_A_0 - s);
+        aoffset = (ii - j) + 17;
+        for (coffset = lastv; coffset <= aoffset; coffset++) {
+          b_A[coffset - 1] *= K_0;
+        }
+
+        K_0 = s;
+      }
+    }
+
+    b_A[ii] = K_0;
+    if (j + 1 < 16) {
+      b_A[ii] = 1.0;
+      if (C[j] != 0.0) {
+        lastv = 17 - j;
+        coffset = (ii - j) + 16;
+        while ((lastv > 0) && (b_A[coffset] == 0.0)) {
+          lastv--;
+          coffset--;
+        }
+
+        coffset = 15 - j;
+        exitg2 = false;
+        while ((!exitg2) && (coffset > 0)) {
+          aoffset = ((coffset - 1) * 17 + ii) + 17;
+          c_tmp = aoffset;
+          do {
+            exitg1 = 0;
+            if (c_tmp + 1 <= aoffset + lastv) {
+              if (b_A[c_tmp] != 0.0) {
+                exitg1 = 1;
+              } else {
+                c_tmp++;
+              }
+            } else {
+              coffset--;
+              exitg1 = 2;
+            }
+          } while (exitg1 == 0);
+
+          if (exitg1 == 1) {
+            exitg2 = true;
+          }
+        }
+      } else {
+        lastv = 0;
+        coffset = 0;
+      }
+
+      if (lastv > 0) {
+        xgemv_e(lastv, coffset, b_A, ii + 18, b_A, ii + 1, K);
+        xgerc_n1(lastv, coffset, -C[j], ii + 1, K, b_A, ii + 18);
+      }
+
+      b_A[ii] = K_0;
+    }
+  }
+
+  for (j = 0; j < 16; j++) {
+    for (ii = 0; ii <= j; ii++) {
+      A[ii + (j << 4)] = b_A[17 * j + ii];
+    }
+
+    for (ii = j + 2; ii < 17; ii++) {
+      A[(ii + (j << 4)) - 1] = 0.0;
+    }
+  }
+
+  for (j = 0; j < 16; j++) {
+    for (ii = 0; ii < 16; ii++) {
+      S[ii + (j << 4)] = A[(ii << 4) + j];
+    }
+  }
+}
+
+// Function for MATLAB Function: '<S5>/Correct'
+void talos_ekf::EKFCorrector_correct(real_T z, real_T Rs, real_T x[16], real_T
+  S[256], real_T varargin_1)
 {
   real_T A[17];
   real_T b_x[16];
@@ -2420,7 +2331,7 @@ void talos_ekf::EKFCorrector_correct_p(real_T z, real_T Rs, real_T x[16], real_T
     x_0 = x[f_k];
     b_x[f_k] = x_0 + h;
     c_x[f_k] = x_0 - h;
-    dHdx[f_k] = (b_x[2] - c_x[2]) / (2.0 * h);
+    dHdx[f_k] = (varargin_1 * b_x[2] - varargin_1 * c_x[2]) / (2.0 * h);
   }
 
   for (f_k = 0; f_k < 16; f_k++) {
@@ -2435,7 +2346,7 @@ void talos_ekf::EKFCorrector_correct_p(real_T z, real_T Rs, real_T x[16], real_T
 
   A[16] = Rs;
   x_0 = A[0];
-  h = xnrm2_h(16, A, 2);
+  h = xnrm2_n(16, A, 2);
   if (h != 0.0) {
     h = rt_hypotd_snf(A[0], h);
     if (A[0] >= 0.0) {
@@ -2454,7 +2365,7 @@ void talos_ekf::EKFCorrector_correct_p(real_T z, real_T Rs, real_T x[16], real_T
         x_0 *= 9.9792015476736E+291;
       } while ((std::abs(h) < 1.0020841800044864E-292) && (knt < 20));
 
-      h = rt_hypotd_snf(x_0, xnrm2_h(16, A, 2));
+      h = rt_hypotd_snf(x_0, xnrm2_n(16, A, 2));
       if (x_0 >= 0.0) {
         h = -h;
       }
@@ -2482,7 +2393,8 @@ void talos_ekf::EKFCorrector_correct_p(real_T z, real_T Rs, real_T x[16], real_T
     }
   }
 
-  EKFCorrector_correctStateAndS_n(x, S, z - x[2], c_x, x_0, dHdx, Rs);
+  EKFCorrector_correctStateAndS_h(x, S, z - varargin_1 * x[2], c_x, x_0, dHdx,
+    Rs);
 }
 
 // Function for MATLAB Function: '<S6>/Correct'
@@ -3236,24 +3148,24 @@ void talos_ekf::qrFactor(const real_T A[256], real_T S[256], const real_T Ns[256
 }
 
 // Function for MATLAB Function: '<S6>/Correct'
-void talos_ekf::trisolve_j(const real_T A[256], real_T B_a[256])
+void talos_ekf::trisolve_j(const real_T A[256], real_T B_b[256])
 {
   for (int32_T j{0}; j < 16; j++) {
     int32_T jBcol;
     jBcol = j << 4;
     for (int32_T b_k{0}; b_k < 16; b_k++) {
-      real_T B_b;
+      real_T B_c;
       int32_T B_tmp;
       int32_T kAcol;
       kAcol = b_k << 4;
       B_tmp = b_k + jBcol;
-      B_b = B_a[B_tmp];
-      if (B_b != 0.0) {
-        B_a[B_tmp] = B_b / A[b_k + kAcol];
+      B_c = B_b[B_tmp];
+      if (B_c != 0.0) {
+        B_b[B_tmp] = B_c / A[b_k + kAcol];
         for (int32_T i{b_k + 2}; i < 17; i++) {
           int32_T tmp;
           tmp = (i + jBcol) - 1;
-          B_a[tmp] -= A[(i + kAcol) - 1] * B_a[B_tmp];
+          B_b[tmp] -= A[(i + kAcol) - 1] * B_b[B_tmp];
         }
       }
     }
@@ -3261,7 +3173,7 @@ void talos_ekf::trisolve_j(const real_T A[256], real_T B_a[256])
 }
 
 // Function for MATLAB Function: '<S6>/Correct'
-void talos_ekf::trisolve_jl(const real_T A[256], real_T B_c[256])
+void talos_ekf::trisolve_jl(const real_T A[256], real_T B_d[256])
 {
   for (int32_T j{0}; j < 16; j++) {
     int32_T jBcol;
@@ -3272,13 +3184,13 @@ void talos_ekf::trisolve_jl(const real_T A[256], real_T B_c[256])
       int32_T tmp_0;
       kAcol = k << 4;
       tmp_0 = k + jBcol;
-      tmp = B_c[tmp_0];
+      tmp = B_d[tmp_0];
       if (tmp != 0.0) {
-        B_c[tmp_0] = tmp / A[k + kAcol];
+        B_d[tmp_0] = tmp / A[k + kAcol];
         for (int32_T i{0}; i < k; i++) {
           int32_T tmp_1;
           tmp_1 = i + jBcol;
-          B_c[tmp_1] -= A[i + kAcol] * B_c[tmp_0];
+          B_d[tmp_1] -= A[i + kAcol] * B_d[tmp_0];
         }
       }
     }
@@ -3336,8 +3248,8 @@ real_T talos_ekf::xdotc_e(int32_T n, const real_T x[256], int32_T ix0, const
 }
 
 // Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xaxpy_d(int32_T n, real_T a, int32_T ix0, real_T y[256], int32_T
-  iy0)
+void talos_ekf::xaxpy_d2(int32_T n, real_T a, int32_T ix0, real_T y[256],
+  int32_T iy0)
 {
   if ((n >= 1) && (!(a == 0.0))) {
     for (int32_T k{0}; k < n; k++) {
@@ -3384,7 +3296,7 @@ real_T talos_ekf::xnrm2_dz(int32_T n, const real_T x[16], int32_T ix0)
 }
 
 // Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xaxpy_d2(int32_T n, real_T a, const real_T x[256], int32_T ix0,
+void talos_ekf::xaxpy_d2s(int32_T n, real_T a, const real_T x[256], int32_T ix0,
   real_T y[16], int32_T iy0)
 {
   if ((n >= 1) && (!(a == 0.0))) {
@@ -3397,7 +3309,7 @@ void talos_ekf::xaxpy_d2(int32_T n, real_T a, const real_T x[256], int32_T ix0,
 }
 
 // Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xaxpy_d2s(int32_T n, real_T a, const real_T x[16], int32_T ix0,
+void talos_ekf::xaxpy_d2sz(int32_T n, real_T a, const real_T x[16], int32_T ix0,
   real_T y[256], int32_T iy0)
 {
   if ((n >= 1) && (!(a == 0.0))) {
@@ -3475,8 +3387,8 @@ void talos_ekf::svd_n(const real_T A[256], real_T U[256], real_T s[16], real_T
     for (qp1jj = qp1; qp1jj < 17; qp1jj++) {
       qjj = ((qp1jj - 1) << 4) + i;
       if (apply_transform) {
-        xaxpy_d(16 - i, -(xdotc_e(16 - i, b_A, qq_tmp + 1, b_A, qjj + 1) /
-                          b_A[qq_tmp]), qq_tmp + 1, b_A, qjj + 1);
+        xaxpy_d2(16 - i, -(xdotc_e(16 - i, b_A, qq_tmp + 1, b_A, qjj + 1) /
+                           b_A[qq_tmp]), qq_tmp + 1, b_A, qjj + 1);
       }
 
       e[qp1jj - 1] = b_A[qjj];
@@ -3517,13 +3429,13 @@ void talos_ekf::svd_n(const real_T A[256], real_T U[256], real_T s[16], real_T
         }
 
         for (qq = qp1; qq < 17; qq++) {
-          xaxpy_d2(15 - i, e[qq - 1], b_A, (i + ((qq - 1) << 4)) + 2, work, i +
-                   2);
+          xaxpy_d2s(15 - i, e[qq - 1], b_A, (i + ((qq - 1) << 4)) + 2, work, i +
+                    2);
         }
 
         for (qq = qp1; qq < 17; qq++) {
-          xaxpy_d2s(15 - i, -e[qq - 1] / e[i + 1], work, i + 2, b_A, (i + ((qq -
-            1) << 4)) + 2);
+          xaxpy_d2sz(15 - i, -e[qq - 1] / e[i + 1], work, i + 2, b_A, (i + ((qq
+            - 1) << 4)) + 2);
         }
       }
 
@@ -3545,8 +3457,8 @@ void talos_ekf::svd_n(const real_T A[256], real_T U[256], real_T s[16], real_T
     if (s[qp1] != 0.0) {
       for (qp1jj = qp1 + 2; qp1jj < 17; qp1jj++) {
         qjj = (((qp1jj - 1) << 4) + qp1) + 1;
-        xaxpy_d(16 - qp1, -(xdotc_e(16 - qp1, U, qq + 1, U, qjj) / U[qq]), qq +
-                1, U, qjj);
+        xaxpy_d2(16 - qp1, -(xdotc_e(16 - qp1, U, qq + 1, U, qjj) / U[qq]), qq +
+                 1, U, qjj);
       }
 
       for (qjj = qp1 + 1; qjj < 17; qjj++) {
@@ -3569,8 +3481,8 @@ void talos_ekf::svd_n(const real_T A[256], real_T U[256], real_T s[16], real_T
       qq = ((qp1 << 4) + qp1) + 2;
       for (qjj = qp1 + 2; qjj < 17; qjj++) {
         qp1jj = (((qjj - 1) << 4) + qp1) + 2;
-        xaxpy_d(15 - qp1, -(xdotc_e(15 - qp1, V, qq, V, qp1jj) / V[qq - 1]), qq,
-                V, qp1jj);
+        xaxpy_d2(15 - qp1, -(xdotc_e(15 - qp1, V, qq, V, qp1jj) / V[qq - 1]), qq,
+                 V, qp1jj);
       }
     }
 
@@ -4021,13 +3933,13 @@ void talos_ekf::step()
   real_T K[256];
   real_T K_0[256];
   real_T Rsqrt_1[256];
-  real_T Ss_1[256];
-  real_T A[192];
-  real_T dHdx[128];
-  real_T tmp_0[128];
-  real_T Rsqrt[64];
-  real_T Ss[64];
-  real_T a[64];
+  real_T Ss_0[256];
+  real_T A[225];
+  real_T dHdx[144];
+  real_T tmp_0[144];
+  real_T Rsqrt[81];
+  real_T Ss[81];
+  real_T a[81];
   real_T A_0[57];
   real_T dHdx_0[48];
   real_T y[48];
@@ -4035,21 +3947,19 @@ void talos_ekf::step()
   real_T tmp[16];
   real_T xm[16];
   real_T Rsqrt_0[9];
-  real_T Ss_0[9];
-  real_T a_0[9];
-  real_T s[8];
-  real_T work[8];
+  real_T s[9];
+  real_T work[9];
   real_T s_0[3];
-  real_T tau[3];
+  real_T work_0[3];
   real_T Vf;
-  real_T b_q_idx_0;
-  real_T b_q_idx_1;
-  real_T b_q_idx_2;
   real_T h;
   real_T q_idx_0;
   real_T q_idx_1;
   real_T q_idx_2;
   real_T q_idx_3;
+  real_T s_1;
+  real_T s_2;
+  real_T x;
   int32_T aoffset;
   int32_T c_tmp;
   int32_T coffset;
@@ -4070,11 +3980,12 @@ void talos_ekf::step()
     //   DataStoreRead: '<S2>/Data Store ReadX'
     //   DataStoreWrite: '<S2>/Data Store WriteP'
     //   Inport: '<Root>/R_imu'
+    //   Inport: '<Root>/imu_context'
     //   Inport: '<Root>/imu_measurement'
 
     rtDW.blockOrdering_k = true;
     p = true;
-    for (m = 0; m < 64; m++) {
+    for (m = 0; m < 81; m++) {
       if (p && (std::isinf(rtU.R_imu[m]) || std::isnan(rtU.R_imu[m]))) {
         p = false;
       }
@@ -4083,32 +3994,32 @@ void talos_ekf::step()
     if (p) {
       svd(rtU.R_imu, Ss, s, a);
     } else {
-      for (i = 0; i < 8; i++) {
+      for (i = 0; i < 9; i++) {
         s[i] = (rtNaN);
       }
 
-      for (lastv = 0; lastv < 64; lastv++) {
+      for (lastv = 0; lastv < 81; lastv++) {
         a[lastv] = (rtNaN);
       }
     }
 
-    std::memset(&Ss[0], 0, sizeof(real_T) << 6U);
-    for (m = 0; m < 8; m++) {
-      Ss[m + (m << 3)] = s[m];
+    std::memset(&Ss[0], 0, 81U * sizeof(real_T));
+    for (m = 0; m < 9; m++) {
+      Ss[m + 9 * m] = s[m];
     }
 
-    for (m = 0; m < 64; m++) {
+    for (m = 0; m < 81; m++) {
       Ss[m] = std::sqrt(Ss[m]);
     }
 
-    for (lastv = 0; lastv < 8; lastv++) {
-      for (m = 0; m < 8; m++) {
+    for (lastv = 0; lastv < 9; lastv++) {
+      for (m = 0; m < 9; m++) {
         h = 0.0;
-        for (i = 0; i < 8; i++) {
-          h += a[(i << 3) + m] * Ss[(lastv << 3) + i];
+        for (i = 0; i < 9; i++) {
+          h += a[9 * i + m] * Ss[9 * lastv + i];
         }
 
-        Rsqrt[m + (lastv << 3)] = h;
+        Rsqrt[m + 9 * lastv] = h;
       }
     }
 
@@ -4116,9 +4027,9 @@ void talos_ekf::step()
       h = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[aoffset]));
       std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
       std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
-      q_idx_0 = rtDW.x[aoffset];
-      rtb_xNew_k[aoffset] = q_idx_0 + h;
-      xm[aoffset] = q_idx_0 - h;
+      x = rtDW.x[aoffset];
+      rtb_xNew_k[aoffset] = x + h;
+      xm[aoffset] = x - h;
       Vf = std::fmax(std::sqrt(((rtb_xNew_k[3] * rtb_xNew_k[3] + rtb_xNew_k[4] *
         rtb_xNew_k[4]) + rtb_xNew_k[5] * rtb_xNew_k[5]) + rtb_xNew_k[6] *
         rtb_xNew_k[6]), 1.0E-12);
@@ -4126,31 +4037,45 @@ void talos_ekf::step()
       q_idx_1 = rtb_xNew_k[4] / Vf;
       q_idx_2 = rtb_xNew_k[5] / Vf;
       q_idx_3 = rtb_xNew_k[6] / Vf;
+      x = (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) * 2.0;
+      s_1 = (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) * 2.0;
+      s_2 = 1.0 - (q_idx_1 * q_idx_1 + q_idx_2 * q_idx_2) * 2.0;
       Vf = std::fmax(std::sqrt(((xm[3] * xm[3] + xm[4] * xm[4]) + xm[5] * xm[5])
         + xm[6] * xm[6]), 1.0E-12);
-      b_q_idx_0 = xm[3] / Vf;
-      b_q_idx_1 = xm[4] / Vf;
-      b_q_idx_2 = xm[5] / Vf;
-      Vf = xm[6] / Vf;
-      s[0] = (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) * 2.0;
-      s[1] = (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) * 2.0;
-      s[2] = 1.0 - (q_idx_1 * q_idx_1 + q_idx_2 * q_idx_2) * 2.0;
-      s[3] = rtb_xNew_k[10];
-      s[4] = rtb_xNew_k[11];
-      s[5] = rtb_xNew_k[13];
-      s[6] = rtb_xNew_k[14];
-      s[7] = rtb_xNew_k[15];
-      work[0] = (b_q_idx_1 * Vf - b_q_idx_0 * b_q_idx_2) * 2.0;
-      work[1] = (b_q_idx_2 * Vf + b_q_idx_0 * b_q_idx_1) * 2.0;
-      work[2] = 1.0 - (b_q_idx_1 * b_q_idx_1 + b_q_idx_2 * b_q_idx_2) * 2.0;
-      work[3] = xm[10];
-      work[4] = xm[11];
-      work[5] = xm[13];
-      work[6] = xm[14];
-      work[7] = xm[15];
+      q_idx_0 = xm[3] / Vf;
+      q_idx_1 = xm[4] / Vf;
+      q_idx_2 = xm[5] / Vf;
+      q_idx_3 = xm[6] / Vf;
+      Vf = (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) * 2.0;
+      q_idx_0 = (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) * 2.0;
+      q_idx_1 = 1.0 - (q_idx_1 * q_idx_1 + q_idx_2 * q_idx_2) * 2.0;
+      work[0] = (rtU.imu_context[1] * s_2 - s_1 * rtU.imu_context[2]) *
+        rtU.imu_context[3];
+      work[1] = (x * rtU.imu_context[2] - rtU.imu_context[0] * s_2) *
+        rtU.imu_context[4];
+      work[2] = (rtU.imu_context[0] * s_1 - x * rtU.imu_context[1]) *
+        rtU.imu_context[5];
+      Rsqrt_0[0] = (rtU.imu_context[1] * q_idx_1 - q_idx_0 * rtU.imu_context[2])
+        * rtU.imu_context[3];
+      Rsqrt_0[1] = (Vf * rtU.imu_context[2] - rtU.imu_context[0] * q_idx_1) *
+        rtU.imu_context[4];
+      Rsqrt_0[2] = (rtU.imu_context[0] * q_idx_0 - Vf * rtU.imu_context[1]) *
+        rtU.imu_context[5];
+      work[3] = rtU.imu_context[6] * rtb_xNew_k[10];
+      work[6] = rtU.imu_context[9] * rtb_xNew_k[13];
+      Rsqrt_0[3] = rtU.imu_context[6] * xm[10];
+      Rsqrt_0[6] = rtU.imu_context[9] * xm[13];
+      work[4] = rtU.imu_context[7] * rtb_xNew_k[11];
+      work[7] = rtU.imu_context[10] * rtb_xNew_k[14];
+      Rsqrt_0[4] = rtU.imu_context[7] * xm[11];
+      Rsqrt_0[7] = rtU.imu_context[10] * xm[14];
+      work[5] = rtU.imu_context[8] * rtb_xNew_k[12];
+      work[8] = rtU.imu_context[11] * rtb_xNew_k[15];
+      Rsqrt_0[5] = rtU.imu_context[8] * xm[12];
+      Rsqrt_0[8] = rtU.imu_context[11] * xm[15];
       h *= 2.0;
-      for (lastv = 0; lastv < 8; lastv++) {
-        dHdx[lastv + (aoffset << 3)] = (s[lastv] - work[lastv]) / h;
+      for (lastv = 0; lastv < 9; lastv++) {
+        dHdx[lastv + 9 * aoffset] = (work[lastv] - Rsqrt_0[lastv]) / h;
       }
     }
 
@@ -4160,40 +4085,43 @@ void talos_ekf::step()
     q_idx_1 = rtDW.x[4] / h;
     q_idx_2 = rtDW.x[5] / h;
     q_idx_3 = rtDW.x[6] / h;
-    for (m = 0; m < 8; m++) {
+    s_0[0] = (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) * 2.0;
+    s_0[1] = (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) * 2.0;
+    s_0[2] = 1.0 - (q_idx_1 * q_idx_1 + q_idx_2 * q_idx_2) * 2.0;
+    for (m = 0; m < 9; m++) {
       for (i = 0; i < 16; i++) {
         aoffset = i << 4;
         h = 0.0;
         for (lastv = 0; lastv < 16; lastv++) {
-          h += dHdx[(lastv << 3) + m] * rtDW.P_i[aoffset + lastv];
+          h += dHdx[lastv * 9 + m] * rtDW.P_i[aoffset + lastv];
         }
 
-        A[i + 24 * m] = h;
+        A[i + 25 * m] = h;
       }
 
-      for (lastv = 0; lastv < 8; lastv++) {
-        A[(lastv + 24 * m) + 16] = Rsqrt[(lastv << 3) + m];
+      for (lastv = 0; lastv < 9; lastv++) {
+        A[(lastv + 25 * m) + 16] = Rsqrt[9 * lastv + m];
       }
 
       work[m] = 0.0;
     }
 
-    for (m = 0; m < 8; m++) {
-      coffset = m * 24 + m;
+    for (m = 0; m < 9; m++) {
+      coffset = m * 25 + m;
       Vf = A[coffset];
       lastv = coffset + 2;
       s[m] = 0.0;
-      h = xnrm2_ln(23 - m, A, coffset + 2);
+      h = xnrm2_ln(24 - m, A, coffset + 2);
       if (h != 0.0) {
-        b_q_idx_0 = A[coffset];
-        h = rt_hypotd_snf(b_q_idx_0, h);
-        if (b_q_idx_0 >= 0.0) {
+        x = A[coffset];
+        h = rt_hypotd_snf(x, h);
+        if (x >= 0.0) {
           h = -h;
         }
 
         if (std::abs(h) < 1.0020841800044864E-292) {
           i = 0;
-          c_tmp = (coffset - m) + 24;
+          c_tmp = (coffset - m) + 25;
           do {
             i++;
             for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
@@ -4204,7 +4132,7 @@ void talos_ekf::step()
             Vf *= 9.9792015476736E+291;
           } while ((std::abs(h) < 1.0020841800044864E-292) && (i < 20));
 
-          h = rt_hypotd_snf(Vf, xnrm2_ln(23 - m, A, coffset + 2));
+          h = rt_hypotd_snf(Vf, xnrm2_ln(24 - m, A, coffset + 2));
           if (Vf >= 0.0) {
             h = -h;
           }
@@ -4221,9 +4149,9 @@ void talos_ekf::step()
 
           Vf = h;
         } else {
-          s[m] = (h - b_q_idx_0) / h;
-          Vf = 1.0 / (b_q_idx_0 - h);
-          i = (coffset - m) + 24;
+          s[m] = (h - x) / h;
+          Vf = 1.0 / (x - h);
+          i = (coffset - m) + 25;
           for (aoffset = lastv; aoffset <= i; aoffset++) {
             A[aoffset - 1] *= Vf;
           }
@@ -4233,20 +4161,20 @@ void talos_ekf::step()
       }
 
       A[coffset] = Vf;
-      if (m + 1 < 8) {
+      if (m + 1 < 9) {
         A[coffset] = 1.0;
         if (s[m] != 0.0) {
-          lastv = 24 - m;
-          i = (coffset - m) + 23;
+          lastv = 25 - m;
+          i = (coffset - m) + 24;
           while ((lastv > 0) && (A[i] == 0.0)) {
             lastv--;
             i--;
           }
 
-          i = 7 - m;
+          i = 8 - m;
           exitg2 = false;
           while ((!exitg2) && (i > 0)) {
-            aoffset = ((i - 1) * 24 + coffset) + 24;
+            aoffset = ((i - 1) * 25 + coffset) + 25;
             c_tmp = aoffset;
             do {
               exitg1 = 0;
@@ -4272,26 +4200,26 @@ void talos_ekf::step()
         }
 
         if (lastv > 0) {
-          xgemv(lastv, i, A, coffset + 25, A, coffset + 1, work);
-          xgerc(lastv, i, -s[m], coffset + 1, work, A, coffset + 25);
+          xgemv(lastv, i, A, coffset + 26, A, coffset + 1, work);
+          xgerc(lastv, i, -s[m], coffset + 1, work, A, coffset + 26);
         }
 
         A[coffset] = Vf;
       }
     }
 
-    for (m = 0; m < 8; m++) {
+    for (m = 0; m < 9; m++) {
       for (coffset = 0; coffset <= m; coffset++) {
-        Ss[coffset + (m << 3)] = A[24 * m + coffset];
+        Ss[coffset + 9 * m] = A[25 * m + coffset];
       }
 
-      for (coffset = m + 2; coffset < 9; coffset++) {
-        Ss[(coffset + (m << 3)) - 1] = 0.0;
+      for (coffset = m + 2; coffset < 10; coffset++) {
+        Ss[(coffset + 9 * m) - 1] = 0.0;
       }
     }
 
     std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    std::memcpy(&Ss_1[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
+    std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
         h = 0.0;
@@ -4304,36 +4232,38 @@ void talos_ekf::step()
       }
     }
 
-    s[0] = rtU.imu_measurement[0] - (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) *
-      2.0;
-    s[1] = rtU.imu_measurement[1] - (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) *
-      2.0;
-    s[2] = rtU.imu_measurement[2] - (1.0 - (q_idx_1 * q_idx_1 + q_idx_2 *
-      q_idx_2) * 2.0);
-    s[3] = rtU.imu_measurement[3] - rtDW.x[10];
-    s[4] = rtU.imu_measurement[4] - rtDW.x[11];
-    s[5] = rtU.imu_measurement[5] - rtDW.x[13];
-    s[6] = rtU.imu_measurement[6] - rtDW.x[14];
-    s[7] = rtU.imu_measurement[7] - rtDW.x[15];
+    work[0] = rtU.imu_measurement[0] - (rtU.imu_context[1] * s_0[2] - s_0[1] *
+      rtU.imu_context[2]) * rtU.imu_context[3];
+    work[1] = rtU.imu_measurement[1] - (s_0[0] * rtU.imu_context[2] -
+      rtU.imu_context[0] * s_0[2]) * rtU.imu_context[4];
+    work[2] = rtU.imu_measurement[2] - (rtU.imu_context[0] * s_0[1] - s_0[0] *
+      rtU.imu_context[1]) * rtU.imu_context[5];
+    work[3] = rtU.imu_measurement[3] - rtU.imu_context[6] * rtDW.x[10];
+    work[6] = rtU.imu_measurement[6] - rtU.imu_context[9] * rtDW.x[13];
+    work[4] = rtU.imu_measurement[4] - rtU.imu_context[7] * rtDW.x[11];
+    work[7] = rtU.imu_measurement[7] - rtU.imu_context[10] * rtDW.x[14];
+    work[5] = rtU.imu_measurement[5] - rtU.imu_context[8] * rtDW.x[12];
+    work[8] = rtU.imu_measurement[8] - rtU.imu_context[11] * rtDW.x[15];
     for (lastv = 0; lastv < 16; lastv++) {
-      for (m = 0; m < 8; m++) {
+      for (m = 0; m < 9; m++) {
         h = 0.0;
         for (i = 0; i < 16; i++) {
-          h += C[(i << 4) + lastv] * dHdx[(i << 3) + m];
+          h += C[(i << 4) + lastv] * dHdx[9 * i + m];
         }
 
         tmp_0[lastv + (m << 4)] = h;
       }
     }
 
-    for (lastv = 0; lastv < 8; lastv++) {
-      for (m = 0; m < 8; m++) {
-        a[m + (lastv << 3)] = Ss[(m << 3) + lastv];
+    for (lastv = 0; lastv < 9; lastv++) {
+      for (m = 0; m < 9; m++) {
+        a[m + 9 * lastv] = Ss[9 * m + lastv];
       }
     }
 
-    EKFCorrector_correctStateAndSqr(rtb_xNew_k, Ss_1, s, tmp_0, a, dHdx, Rsqrt);
-    std::memcpy(&rtDW.P_i[0], &Ss_1[0], sizeof(real_T) << 8U);
+    EKFCorrector_correctStateAndSqr(rtb_xNew_k, Ss_0, work, tmp_0, a, dHdx,
+      Rsqrt);
+    std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
 
     // End of MATLAB Function: '<S2>/Correct'
 
@@ -4350,106 +4280,65 @@ void talos_ekf::step()
   // Inport: '<Root>/enable_fog'
   if (rtU.enable_fog) {
     // MATLAB Function: '<S3>/Correct' incorporates:
+    //   DataStoreRead: '<S3>/Data Store ReadX'
+    //   DataStoreWrite: '<S3>/Data Store WriteP'
     //   Inport: '<Root>/R_fog'
+    //   Inport: '<Root>/fog_mask'
+    //   Inport: '<Root>/fog_measurement'
 
     rtDW.blockOrdering_n = rtDW.blockOrdering_k;
-    if ((!std::isinf(rtU.R_fog)) && (!std::isnan(rtU.R_fog))) {
-      h = rtU.R_fog;
-      Vf = 1.0;
-      if (rtU.R_fog != 0.0) {
-        h = std::abs(rtU.R_fog);
-      }
-
-      if (h < 0.0) {
-        h = -h;
-        Vf = -1.0;
-      }
-    } else {
-      h = (rtNaN);
-      Vf = (rtNaN);
-    }
-
-    // DataStoreWrite: '<S3>/Data Store WriteX' incorporates:
-    //   DataStoreWrite: '<S3>/Data Store WriteP'
-    //   Inport: '<Root>/fog_measurement'
-    //   MATLAB Function: '<S3>/Correct'
-
-    EKFCorrector_correct(rtU.fog_measurement, Vf * std::sqrt(h), rtDW.x,
-                         rtDW.P_i);
-  }
-
-  // End of Inport: '<Root>/enable_fog'
-  // End of Outputs for SubSystem: '<S1>/Correct2'
-
-  // Outputs for Enabled SubSystem: '<S1>/Correct3' incorporates:
-  //   EnablePort: '<S4>/Enable'
-
-  // Inport: '<Root>/enable_dvl'
-  if (rtU.enable_dvl) {
-    // MATLAB Function: '<S4>/Correct' incorporates:
-    //   DataStoreRead: '<S4>/Data Store ReadX'
-    //   DataStoreWrite: '<S4>/Data Store WriteP'
-    //   Inport: '<Root>/R_dvl'
-    //   Inport: '<Root>/dvl_measurement'
-    //   Inport: '<Root>/dvl_offset'
-
-    rtDW.blockOrdering_p = rtDW.blockOrdering_n;
     p = true;
     for (m = 0; m < 9; m++) {
-      if (p && (std::isinf(rtU.R_dvl[m]) || std::isnan(rtU.R_dvl[m]))) {
+      if (p && (std::isinf(rtU.R_fog[m]) || std::isnan(rtU.R_fog[m]))) {
         p = false;
       }
     }
 
     if (p) {
-      svd_k(rtU.R_dvl, Ss_0, s_0, a_0);
+      svd_a(rtU.R_fog, work, s_0, s);
     } else {
       s_0[0] = (rtNaN);
       s_0[1] = (rtNaN);
       s_0[2] = (rtNaN);
-      for (lastv = 0; lastv < 9; lastv++) {
-        a_0[lastv] = (rtNaN);
+      for (i = 0; i < 9; i++) {
+        s[i] = (rtNaN);
       }
     }
 
-    std::memset(&Ss_0[0], 0, 9U * sizeof(real_T));
-    Ss_0[0] = s_0[0];
-    Ss_0[4] = s_0[1];
-    Ss_0[8] = s_0[2];
+    std::memset(&work[0], 0, 9U * sizeof(real_T));
+    work[0] = s_0[0];
+    work[4] = s_0[1];
+    work[8] = s_0[2];
     for (m = 0; m < 9; m++) {
-      Ss_0[m] = std::sqrt(Ss_0[m]);
+      work[m] = std::sqrt(work[m]);
     }
 
     for (lastv = 0; lastv < 3; lastv++) {
-      h = Ss_0[3 * lastv + 1];
-      q_idx_0 = Ss_0[3 * lastv];
-      q_idx_1 = Ss_0[3 * lastv + 2];
+      Vf = work[3 * lastv + 1];
+      q_idx_0 = work[3 * lastv];
+      q_idx_1 = work[3 * lastv + 2];
       for (m = 0; m < 3; m++) {
-        Rsqrt_0[m + 3 * lastv] = (a_0[m + 3] * h + q_idx_0 * a_0[m]) + a_0[m + 6]
-          * q_idx_1;
+        Rsqrt_0[m + 3 * lastv] = (s[m + 3] * Vf + q_idx_0 * s[m]) + s[m + 6] *
+          q_idx_1;
       }
     }
 
-    std::memset(&dHdx_0[0], 0, 48U * sizeof(real_T));
-    for (lastv = 0; lastv < 3; lastv++) {
-      m = (lastv + 7) * 3;
-      dHdx_0[m] = 0.0;
-      dHdx_0[m + 1] = 0.0;
-      dHdx_0[m + 2] = 0.0;
+    for (aoffset = 0; aoffset < 16; aoffset++) {
+      h = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[aoffset]));
+      std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
+      std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
+      x = rtDW.x[aoffset];
+      rtb_xNew_k[aoffset] = x + h;
+      xm[aoffset] = x - h;
+      h *= 2.0;
+      dHdx_0[3 * aoffset] = (rtU.fog_mask[0] * rtb_xNew_k[10] - rtU.fog_mask[0] *
+        xm[10]) / h;
+      dHdx_0[3 * aoffset + 1] = (rtU.fog_mask[1] * rtb_xNew_k[11] -
+        rtU.fog_mask[1] * xm[11]) / h;
+      dHdx_0[3 * aoffset + 2] = (rtU.fog_mask[2] * rtb_xNew_k[12] -
+        rtU.fog_mask[2] * xm[12]) / h;
     }
 
-    dHdx_0[21] = 1.0;
-    dHdx_0[25] = 1.0;
-    dHdx_0[29] = 1.0;
-    dHdx_0[30] = 0.0;
-    dHdx_0[33] = rtU.dvl_offset[2];
-    dHdx_0[36] = -rtU.dvl_offset[1];
-    dHdx_0[31] = -rtU.dvl_offset[2];
-    dHdx_0[34] = 0.0;
-    dHdx_0[37] = rtU.dvl_offset[0];
-    dHdx_0[32] = rtU.dvl_offset[1];
-    dHdx_0[35] = -rtU.dvl_offset[0];
-    dHdx_0[38] = 0.0;
     for (m = 0; m < 3; m++) {
       coffset = m << 4;
       for (i = 0; i < 16; i++) {
@@ -4473,19 +4362,19 @@ void talos_ekf::step()
       A_0[19 * i + 16] = Rsqrt_0[i];
       A_0[19 * i + 17] = Rsqrt_0[i + 3];
       A_0[19 * i + 18] = Rsqrt_0[i + 6];
-      s_0[i] = 0.0;
+      work_0[i] = 0.0;
     }
 
     for (m = 0; m < 3; m++) {
       coffset = m * 19 + m;
       Vf = A_0[coffset];
       lastv = coffset + 2;
-      tau[m] = 0.0;
-      h = xnrm2_izk(18 - m, A_0, coffset + 2);
+      s_0[m] = 0.0;
+      h = xnrm2_hmd(18 - m, A_0, coffset + 2);
       if (h != 0.0) {
-        b_q_idx_0 = A_0[coffset];
-        h = rt_hypotd_snf(b_q_idx_0, h);
-        if (b_q_idx_0 >= 0.0) {
+        x = A_0[coffset];
+        h = rt_hypotd_snf(x, h);
+        if (x >= 0.0) {
           h = -h;
         }
 
@@ -4502,12 +4391,12 @@ void talos_ekf::step()
             Vf *= 9.9792015476736E+291;
           } while ((std::abs(h) < 1.0020841800044864E-292) && (i < 20));
 
-          h = rt_hypotd_snf(Vf, xnrm2_izk(18 - m, A_0, coffset + 2));
+          h = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
           if (Vf >= 0.0) {
             h = -h;
           }
 
-          tau[m] = (h - Vf) / h;
+          s_0[m] = (h - Vf) / h;
           Vf = 1.0 / (Vf - h);
           for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
             A_0[aoffset - 1] *= Vf;
@@ -4519,8 +4408,8 @@ void talos_ekf::step()
 
           Vf = h;
         } else {
-          tau[m] = (h - b_q_idx_0) / h;
-          Vf = 1.0 / (b_q_idx_0 - h);
+          s_0[m] = (h - x) / h;
+          Vf = 1.0 / (x - h);
           i = (coffset - m) + 19;
           for (aoffset = lastv; aoffset <= i; aoffset++) {
             A_0[aoffset - 1] *= Vf;
@@ -4533,7 +4422,7 @@ void talos_ekf::step()
       A_0[coffset] = Vf;
       if (m + 1 < 3) {
         A_0[coffset] = 1.0;
-        if (tau[m] != 0.0) {
+        if (s_0[m] != 0.0) {
           lastv = 19 - m;
           i = (coffset - m) + 18;
           while ((lastv > 0) && (A_0[i] == 0.0)) {
@@ -4570,8 +4459,8 @@ void talos_ekf::step()
         }
 
         if (lastv > 0) {
-          xgemv_a(lastv, i, A_0, coffset + 20, A_0, coffset + 1, s_0);
-          xgerc_n(lastv, i, -tau[m], coffset + 1, s_0, A_0, coffset + 20);
+          xgemv_h(lastv, i, A_0, coffset + 20, A_0, coffset + 1, work_0);
+          xgerc_f(lastv, i, -s_0[m], coffset + 1, work_0, A_0, coffset + 20);
         }
 
         A_0[coffset] = Vf;
@@ -4580,22 +4469,290 @@ void talos_ekf::step()
 
     for (m = 0; m < 3; m++) {
       for (coffset = 0; coffset <= m; coffset++) {
-        Ss_0[coffset + 3 * m] = A_0[19 * m + coffset];
+        work[coffset + 3 * m] = A_0[19 * m + coffset];
       }
 
       for (coffset = m + 2; coffset < 4; coffset++) {
-        Ss_0[(coffset + 3 * m) - 1] = 0.0;
+        work[(coffset + 3 * m) - 1] = 0.0;
       }
     }
 
     std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    std::memcpy(&Ss_1[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
-    s_0[0] = rtU.dvl_measurement[0] - ((rtU.dvl_offset[2] * rtDW.x[11] -
-      rtU.dvl_offset[1] * rtDW.x[12]) + rtDW.x[7]);
-    s_0[1] = rtU.dvl_measurement[1] - ((rtU.dvl_offset[0] * rtDW.x[12] -
-      rtU.dvl_offset[2] * rtDW.x[10]) + rtDW.x[8]);
-    s_0[2] = rtU.dvl_measurement[2] - ((rtU.dvl_offset[1] * rtDW.x[10] -
-      rtU.dvl_offset[0] * rtDW.x[11]) + rtDW.x[9]);
+    std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
+    for (lastv = 0; lastv < 16; lastv++) {
+      for (m = 0; m < 16; m++) {
+        h = 0.0;
+        for (i = 0; i < 16; i++) {
+          aoffset = i << 4;
+          h += rtDW.P_i[aoffset + lastv] * rtDW.P_i[aoffset + m];
+        }
+
+        C[lastv + (m << 4)] = h;
+      }
+    }
+
+    work_0[0] = rtU.fog_measurement[0] - rtU.fog_mask[0] * rtDW.x[10];
+    work_0[1] = rtU.fog_measurement[1] - rtU.fog_mask[1] * rtDW.x[11];
+    work_0[2] = rtU.fog_measurement[2] - rtU.fog_mask[2] * rtDW.x[12];
+    for (lastv = 0; lastv < 16; lastv++) {
+      for (m = 0; m < 3; m++) {
+        h = 0.0;
+        for (i = 0; i < 16; i++) {
+          h += C[(i << 4) + lastv] * dHdx_0[3 * i + m];
+        }
+
+        y[lastv + (m << 4)] = h;
+      }
+    }
+
+    for (lastv = 0; lastv < 3; lastv++) {
+      s[3 * lastv] = work[lastv];
+      s[3 * lastv + 1] = work[lastv + 3];
+      s[3 * lastv + 2] = work[lastv + 6];
+    }
+
+    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0,
+      Rsqrt_0);
+    std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
+
+    // End of MATLAB Function: '<S3>/Correct'
+
+    // DataStoreWrite: '<S3>/Data Store WriteX'
+    std::memcpy(&rtDW.x[0], &rtb_xNew_k[0], sizeof(real_T) << 4U);
+  }
+
+  // End of Inport: '<Root>/enable_fog'
+  // End of Outputs for SubSystem: '<S1>/Correct2'
+
+  // Outputs for Enabled SubSystem: '<S1>/Correct3' incorporates:
+  //   EnablePort: '<S4>/Enable'
+
+  // Inport: '<Root>/enable_dvl'
+  if (rtU.enable_dvl) {
+    // MATLAB Function: '<S4>/Correct' incorporates:
+    //   DataStoreRead: '<S4>/Data Store ReadX'
+    //   DataStoreWrite: '<S4>/Data Store WriteP'
+    //   Inport: '<Root>/R_dvl'
+    //   Inport: '<Root>/dvl_context'
+    //   Inport: '<Root>/dvl_measurement'
+
+    rtDW.blockOrdering_p = rtDW.blockOrdering_n;
+    p = true;
+    for (m = 0; m < 9; m++) {
+      if (p && (std::isinf(rtU.R_dvl[m]) || std::isnan(rtU.R_dvl[m]))) {
+        p = false;
+      }
+    }
+
+    if (p) {
+      svd_a(rtU.R_dvl, work, s_0, s);
+    } else {
+      s_0[0] = (rtNaN);
+      s_0[1] = (rtNaN);
+      s_0[2] = (rtNaN);
+      for (i = 0; i < 9; i++) {
+        s[i] = (rtNaN);
+      }
+    }
+
+    std::memset(&work[0], 0, 9U * sizeof(real_T));
+    work[0] = s_0[0];
+    work[4] = s_0[1];
+    work[8] = s_0[2];
+    for (m = 0; m < 9; m++) {
+      work[m] = std::sqrt(work[m]);
+    }
+
+    for (lastv = 0; lastv < 3; lastv++) {
+      Vf = work[3 * lastv + 1];
+      q_idx_0 = work[3 * lastv];
+      q_idx_1 = work[3 * lastv + 2];
+      for (m = 0; m < 3; m++) {
+        Rsqrt_0[m + 3 * lastv] = (s[m + 3] * Vf + q_idx_0 * s[m]) + s[m + 6] *
+          q_idx_1;
+      }
+    }
+
+    std::memset(&dHdx_0[0], 0, 48U * sizeof(real_T));
+    for (lastv = 0; lastv < 3; lastv++) {
+      m = (lastv + 7) * 3;
+      dHdx_0[m] = 0.0;
+      dHdx_0[m + 1] = 0.0;
+      dHdx_0[m + 2] = 0.0;
+    }
+
+    dHdx_0[21] = rtU.dvl_context[3];
+    dHdx_0[25] = rtU.dvl_context[4];
+    dHdx_0[29] = rtU.dvl_context[5];
+    std::memset(&s[0], 0, 9U * sizeof(real_T));
+    s[0] = rtU.dvl_context[3];
+    s[4] = rtU.dvl_context[4];
+    s[8] = rtU.dvl_context[5];
+    work[0] = 0.0;
+    work[3] = rtU.dvl_context[2];
+    work[6] = -rtU.dvl_context[1];
+    work[1] = -rtU.dvl_context[2];
+    work[4] = 0.0;
+    work[7] = rtU.dvl_context[0];
+    work[2] = rtU.dvl_context[1];
+    work[5] = -rtU.dvl_context[0];
+    work[8] = 0.0;
+    for (lastv = 0; lastv < 3; lastv++) {
+      x = s[lastv + 3];
+      s_1 = s[lastv];
+      s_2 = s[lastv + 6];
+      for (m = 0; m < 3; m++) {
+        dHdx_0[lastv + 3 * (m + 10)] = (work[3 * m + 1] * x + work[3 * m] * s_1)
+          + work[3 * m + 2] * s_2;
+      }
+    }
+
+    for (m = 0; m < 3; m++) {
+      coffset = m << 4;
+      for (i = 0; i < 16; i++) {
+        aoffset = i << 4;
+        h = 0.0;
+        for (lastv = 0; lastv < 16; lastv++) {
+          h += dHdx_0[lastv * 3 + m] * rtDW.P_i[aoffset + lastv];
+        }
+
+        y[coffset + i] = h;
+      }
+    }
+
+    for (lastv = 0; lastv < 16; lastv++) {
+      A_0[lastv] = y[lastv];
+      A_0[lastv + 19] = y[lastv + 16];
+      A_0[lastv + 38] = y[lastv + 32];
+    }
+
+    for (i = 0; i < 3; i++) {
+      A_0[19 * i + 16] = Rsqrt_0[i];
+      A_0[19 * i + 17] = Rsqrt_0[i + 3];
+      A_0[19 * i + 18] = Rsqrt_0[i + 6];
+      work_0[i] = 0.0;
+    }
+
+    for (m = 0; m < 3; m++) {
+      coffset = m * 19 + m;
+      Vf = A_0[coffset];
+      lastv = coffset + 2;
+      s_0[m] = 0.0;
+      h = xnrm2_hmd(18 - m, A_0, coffset + 2);
+      if (h != 0.0) {
+        x = A_0[coffset];
+        h = rt_hypotd_snf(x, h);
+        if (x >= 0.0) {
+          h = -h;
+        }
+
+        if (std::abs(h) < 1.0020841800044864E-292) {
+          i = 0;
+          c_tmp = (coffset - m) + 19;
+          do {
+            i++;
+            for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+              A_0[aoffset - 1] *= 9.9792015476736E+291;
+            }
+
+            h *= 9.9792015476736E+291;
+            Vf *= 9.9792015476736E+291;
+          } while ((std::abs(h) < 1.0020841800044864E-292) && (i < 20));
+
+          h = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
+          if (Vf >= 0.0) {
+            h = -h;
+          }
+
+          s_0[m] = (h - Vf) / h;
+          Vf = 1.0 / (Vf - h);
+          for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+            A_0[aoffset - 1] *= Vf;
+          }
+
+          for (lastv = 0; lastv < i; lastv++) {
+            h *= 1.0020841800044864E-292;
+          }
+
+          Vf = h;
+        } else {
+          s_0[m] = (h - x) / h;
+          Vf = 1.0 / (x - h);
+          i = (coffset - m) + 19;
+          for (aoffset = lastv; aoffset <= i; aoffset++) {
+            A_0[aoffset - 1] *= Vf;
+          }
+
+          Vf = h;
+        }
+      }
+
+      A_0[coffset] = Vf;
+      if (m + 1 < 3) {
+        A_0[coffset] = 1.0;
+        if (s_0[m] != 0.0) {
+          lastv = 19 - m;
+          i = (coffset - m) + 18;
+          while ((lastv > 0) && (A_0[i] == 0.0)) {
+            lastv--;
+            i--;
+          }
+
+          i = 2 - m;
+          exitg2 = false;
+          while ((!exitg2) && (i > 0)) {
+            aoffset = ((i - 1) * 19 + coffset) + 19;
+            c_tmp = aoffset;
+            do {
+              exitg1 = 0;
+              if (c_tmp + 1 <= aoffset + lastv) {
+                if (A_0[c_tmp] != 0.0) {
+                  exitg1 = 1;
+                } else {
+                  c_tmp++;
+                }
+              } else {
+                i--;
+                exitg1 = 2;
+              }
+            } while (exitg1 == 0);
+
+            if (exitg1 == 1) {
+              exitg2 = true;
+            }
+          }
+        } else {
+          lastv = 0;
+          i = 0;
+        }
+
+        if (lastv > 0) {
+          xgemv_h(lastv, i, A_0, coffset + 20, A_0, coffset + 1, work_0);
+          xgerc_f(lastv, i, -s_0[m], coffset + 1, work_0, A_0, coffset + 20);
+        }
+
+        A_0[coffset] = Vf;
+      }
+    }
+
+    for (m = 0; m < 3; m++) {
+      for (coffset = 0; coffset <= m; coffset++) {
+        work[coffset + 3 * m] = A_0[19 * m + coffset];
+      }
+
+      for (coffset = m + 2; coffset < 4; coffset++) {
+        work[(coffset + 3 * m) - 1] = 0.0;
+      }
+    }
+
+    std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
+    std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
+    work_0[0] = rtU.dvl_measurement[0] - ((rtU.dvl_context[2] * rtDW.x[11] -
+      rtU.dvl_context[1] * rtDW.x[12]) + rtDW.x[7]) * rtU.dvl_context[3];
+    work_0[1] = rtU.dvl_measurement[1] - ((rtU.dvl_context[0] * rtDW.x[12] -
+      rtU.dvl_context[2] * rtDW.x[10]) + rtDW.x[8]) * rtU.dvl_context[4];
+    work_0[2] = rtU.dvl_measurement[2] - ((rtU.dvl_context[1] * rtDW.x[10] -
+      rtU.dvl_context[0] * rtDW.x[11]) + rtDW.x[9]) * rtU.dvl_context[5];
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
         h = 0.0;
@@ -4618,14 +4775,14 @@ void talos_ekf::step()
     }
 
     for (lastv = 0; lastv < 3; lastv++) {
-      a_0[3 * lastv] = Ss_0[lastv];
-      a_0[3 * lastv + 1] = Ss_0[lastv + 3];
-      a_0[3 * lastv + 2] = Ss_0[lastv + 6];
+      s[3 * lastv] = work[lastv];
+      s[3 * lastv + 1] = work[lastv + 3];
+      s[3 * lastv + 2] = work[lastv + 6];
     }
 
-    EKFCorrector_correctStateAndS_l(rtb_xNew_k, Ss_1, s_0, y, a_0, dHdx_0,
+    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0,
       Rsqrt_0);
-    std::memcpy(&rtDW.P_i[0], &Ss_1[0], sizeof(real_T) << 8U);
+    std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
 
     // End of MATLAB Function: '<S4>/Correct'
 
@@ -4662,11 +4819,12 @@ void talos_ekf::step()
 
     // DataStoreWrite: '<S5>/Data Store WriteX' incorporates:
     //   DataStoreWrite: '<S5>/Data Store WriteP'
+    //   Inport: '<Root>/depth_mask'
     //   Inport: '<Root>/depth_measurement'
     //   MATLAB Function: '<S5>/Correct'
 
-    EKFCorrector_correct_p(rtU.depth_measurement, Vf * std::sqrt(h), rtDW.x,
-      rtDW.P_i);
+    EKFCorrector_correct(rtU.depth_measurement, Vf * std::sqrt(h), rtDW.x,
+                         rtDW.P_i, rtU.depth_mask);
   }
 
   // End of Inport: '<Root>/enable_depth'
@@ -4691,7 +4849,7 @@ void talos_ekf::step()
     }
 
     if (p) {
-      svd_d(rtU.R_reset, Ss_1, rtb_xNew_k, K);
+      svd_d(rtU.R_reset, Ss_0, rtb_xNew_k, K);
     } else {
       for (i = 0; i < 16; i++) {
         rtb_xNew_k[i] = (rtNaN);
@@ -4702,20 +4860,20 @@ void talos_ekf::step()
       }
     }
 
-    std::memset(&Ss_1[0], 0, sizeof(real_T) << 8U);
+    std::memset(&Ss_0[0], 0, sizeof(real_T) << 8U);
     for (m = 0; m < 16; m++) {
-      Ss_1[m + (m << 4)] = rtb_xNew_k[m];
+      Ss_0[m + (m << 4)] = rtb_xNew_k[m];
     }
 
     for (m = 0; m < 256; m++) {
-      Ss_1[m] = std::sqrt(Ss_1[m]);
+      Ss_0[m] = std::sqrt(Ss_0[m]);
     }
 
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
         h = 0.0;
         for (i = 0; i < 16; i++) {
-          h += K[(i << 4) + m] * Ss_1[(lastv << 4) + i];
+          h += K[(i << 4) + m] * Ss_0[(lastv << 4) + i];
         }
 
         Rsqrt_1[m + (lastv << 4)] = h;
@@ -4743,23 +4901,23 @@ void talos_ekf::step()
           h += C[(i << 4) + m] * b[(lastv << 4) + i];
         }
 
-        Ss_1[lastv + (m << 4)] = h;
+        Ss_0[lastv + (m << 4)] = h;
       }
     }
 
-    std::memcpy(&C[0], &Ss_1[0], sizeof(real_T) << 8U);
+    std::memcpy(&C[0], &Ss_0[0], sizeof(real_T) << 8U);
     trisolve_j(K, C);
     for (m = 0; m < 16; m++) {
-      std::memcpy(&Ss_1[m << 4], &C[m << 4], sizeof(real_T) << 4U);
+      std::memcpy(&Ss_0[m << 4], &C[m << 4], sizeof(real_T) << 4U);
       for (coffset = 0; coffset < 16; coffset++) {
         K_0[(m << 4) + coffset] = K[(coffset << 4) + m];
       }
     }
 
-    trisolve_jl(K_0, Ss_1);
+    trisolve_jl(K_0, Ss_0);
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        K[m + (lastv << 4)] = Ss_1[(m << 4) + lastv];
+        K[m + (lastv << 4)] = Ss_0[(m << 4) + lastv];
       }
     }
 
@@ -4774,24 +4932,24 @@ void talos_ekf::step()
           h += K_0[(i << 4) + m] * b[(lastv << 4) + i];
         }
 
-        Ss_1[m + (lastv << 4)] = h;
+        Ss_0[m + (lastv << 4)] = h;
       }
     }
 
     for (i = 0; i < 16; i++) {
       m = (i << 4) + i;
-      Ss_1[m]++;
+      Ss_0[m]++;
       for (lastv = 0; lastv < 16; lastv++) {
-        q_idx_0 = 0.0;
+        x = 0.0;
         for (m = 0; m < 16; m++) {
-          q_idx_0 += K[(m << 4) + i] * Rsqrt_1[(lastv << 4) + m];
+          x += K[(m << 4) + i] * Rsqrt_1[(lastv << 4) + m];
         }
 
-        K_0[i + (lastv << 4)] = q_idx_0;
+        K_0[i + (lastv << 4)] = x;
       }
     }
 
-    qrFactor(Ss_1, rtDW.P_i, K_0);
+    qrFactor(Ss_0, rtDW.P_i, K_0);
     for (lastv = 0; lastv < 16; lastv++) {
       tmp[lastv] = rtU.reset_state[lastv] - rtDW.x[lastv];
     }
@@ -4867,7 +5025,7 @@ void talos_ekf::step()
   }
 
   if (p) {
-    svd_n(rtU.Q, Ss_1, rtb_xNew_k, K);
+    svd_n(rtU.Q, Ss_0, rtb_xNew_k, K);
   } else {
     for (i = 0; i < 16; i++) {
       rtb_xNew_k[i] = (rtNaN);
@@ -4878,22 +5036,22 @@ void talos_ekf::step()
     }
   }
 
-  std::memset(&Ss_1[0], 0, sizeof(real_T) << 8U);
+  std::memset(&Ss_0[0], 0, sizeof(real_T) << 8U);
   for (m = 0; m < 16; m++) {
-    Ss_1[m + (m << 4)] = rtb_xNew_k[m];
+    Ss_0[m + (m << 4)] = rtb_xNew_k[m];
   }
 
   for (m = 0; m < 256; m++) {
-    Ss_1[m] = std::sqrt(Ss_1[m]);
+    Ss_0[m] = std::sqrt(Ss_0[m]);
   }
 
   for (m = 0; m < 16; m++) {
     h = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[m]));
     std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
     std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    q_idx_0 = rtDW.x[m];
-    rtb_xNew_k[m] = q_idx_0 + h;
-    xm[m] = q_idx_0 - h;
+    x = rtDW.x[m];
+    rtb_xNew_k[m] = x + h;
+    xm[m] = x - h;
     talos_state_transition(rtb_xNew_k, rtU.dt, tmp);
     talos_state_transition(xm, rtU.dt, rtb_xNew_k);
     h *= 2.0;
@@ -4907,14 +5065,14 @@ void talos_ekf::step()
     for (i = 0; i < 16; i++) {
       coffset = i << 4;
       h = 0.0;
-      q_idx_0 = 0.0;
+      x = 0.0;
       for (lastv = 0; lastv < 16; lastv++) {
         c_tmp = lastv << 4;
         h += Rsqrt_1[c_tmp + m] * rtDW.P_i[coffset + lastv];
-        q_idx_0 += K[c_tmp + i] * Ss_1[aoffset + lastv];
+        x += K[c_tmp + i] * Ss_0[aoffset + lastv];
       }
 
-      K_0[m + coffset] = q_idx_0;
+      K_0[m + coffset] = x;
       C[aoffset + i] = h;
     }
   }
@@ -4937,9 +5095,9 @@ void talos_ekf::step()
     rtb_xNew_k[m] = 0.0;
     h = xnrm2_dzn(31 - m, A_1, coffset + 2);
     if (h != 0.0) {
-      b_q_idx_0 = A_1[coffset];
-      h = rt_hypotd_snf(b_q_idx_0, h);
-      if (b_q_idx_0 >= 0.0) {
+      x = A_1[coffset];
+      h = rt_hypotd_snf(x, h);
+      if (x >= 0.0) {
         h = -h;
       }
 
@@ -4973,8 +5131,8 @@ void talos_ekf::step()
 
         Vf = h;
       } else {
-        rtb_xNew_k[m] = (h - b_q_idx_0) / h;
-        Vf = 1.0 / (b_q_idx_0 - h);
+        rtb_xNew_k[m] = (h - x) / h;
+        Vf = 1.0 / (x - h);
         i = (coffset - m) + 32;
         for (aoffset = lastv; aoffset <= i; aoffset++) {
           A_1[aoffset - 1] *= Vf;
@@ -5034,17 +5192,17 @@ void talos_ekf::step()
 
   for (m = 0; m < 16; m++) {
     for (coffset = 0; coffset <= m; coffset++) {
-      Ss_1[coffset + (m << 4)] = A_1[(m << 5) + coffset];
+      Ss_0[coffset + (m << 4)] = A_1[(m << 5) + coffset];
     }
 
     for (coffset = m + 2; coffset < 17; coffset++) {
-      Ss_1[(coffset + (m << 4)) - 1] = 0.0;
+      Ss_0[(coffset + (m << 4)) - 1] = 0.0;
     }
   }
 
   for (lastv = 0; lastv < 16; lastv++) {
     for (m = 0; m < 16; m++) {
-      rtDW.P_i[m + (lastv << 4)] = Ss_1[(m << 4) + lastv];
+      rtDW.P_i[m + (lastv << 4)] = Ss_0[(m << 4) + lastv];
     }
   }
 

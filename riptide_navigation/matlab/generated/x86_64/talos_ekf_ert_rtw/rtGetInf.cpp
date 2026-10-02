@@ -7,9 +7,9 @@
 //
 // Code generated for Simulink model 'talos_ekf'.
 //
-// Model version                  : 1.5
+// Model version                  : 1.6
 // Simulink Coder version         : 9.9 (R2023a) 19-Nov-2022
-// C/C++ source code generated on : Fri Oct  2 01:21:03 2026
+// C/C++ source code generated on : Fri Oct  2 19:15:52 2026
 //
 // Target selection: ert.tlc
 // Embedded hardware selection: Intel->x86-64 (Linux 64)

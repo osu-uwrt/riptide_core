@@ -7,9 +7,9 @@
 //
 // Code generated for Simulink model 'talos_ekf'.
 //
-// Model version                  : 1.5
+// Model version                  : 1.6
 // Simulink Coder version         : 9.9 (R2023a) 19-Nov-2022
-// C/C++ source code generated on : Fri Oct  2 01:21:03 2026
+// C/C++ source code generated on : Fri Oct  2 19:15:52 2026
 //
 // Target selection: ert.tlc
 // Embedded hardware selection: Intel->x86-64 (Linux 64)
@@ -80,11 +80,11 @@ class talos_ekf final
     real_T Q[256];                     // '<Root>/Q'
     real_T dt;                         // '<Root>/dt'
     boolean_T enable_imu;              // '<Root>/enable_imu'
-    real_T imu_measurement[8];         // '<Root>/imu_measurement'
-    real_T R_imu[64];                  // '<Root>/R_imu'
+    real_T imu_measurement[9];         // '<Root>/imu_measurement'
+    real_T R_imu[81];                  // '<Root>/R_imu'
     boolean_T enable_fog;              // '<Root>/enable_fog'
-    real_T fog_measurement;            // '<Root>/fog_measurement'
-    real_T R_fog;                      // '<Root>/R_fog'
+    real_T fog_measurement[3];         // '<Root>/fog_measurement'
+    real_T R_fog[9];                   // '<Root>/R_fog'
     boolean_T enable_dvl;              // '<Root>/enable_dvl'
     real_T dvl_measurement[3];         // '<Root>/dvl_measurement'
     real_T R_dvl[9];                   // '<Root>/R_dvl'
@@ -94,7 +94,10 @@ class talos_ekf final
     boolean_T enable_reset;            // '<Root>/enable_reset'
     real_T reset_state[16];            // '<Root>/reset_state'
     real_T R_reset[256];               // '<Root>/R_reset'
-    real_T dvl_offset[3];              // '<Root>/dvl_offset'
+    real_T dvl_context[6];             // '<Root>/dvl_context'
+    real_T imu_context[12];            // '<Root>/imu_context'
+    real_T fog_mask[3];                // '<Root>/fog_mask'
+    real_T depth_mask;                 // '<Root>/depth_mask'
   };
 
   // External outputs (root outports fed by signals with default storage)
@@ -147,72 +150,72 @@ class talos_ekf final
   DW rtDW;
 
   // private member function(s) for subsystem '<Root>'
-  real_T xnrm2(int32_T n, const real_T x[64], int32_T ix0);
-  real_T xdotc(int32_T n, const real_T x[64], int32_T ix0, const real_T y[64],
+  real_T xnrm2(int32_T n, const real_T x[81], int32_T ix0);
+  real_T xdotc(int32_T n, const real_T x[81], int32_T ix0, const real_T y[81],
                int32_T iy0);
-  void xaxpy(int32_T n, real_T a, int32_T ix0, real_T y[64], int32_T iy0);
-  real_T xnrm2_l(int32_T n, const real_T x[8], int32_T ix0);
-  void xaxpy_n(int32_T n, real_T a, const real_T x[64], int32_T ix0, real_T y[8],
+  void xaxpy(int32_T n, real_T a, int32_T ix0, real_T y[81], int32_T iy0);
+  real_T xnrm2_l(int32_T n, const real_T x[9], int32_T ix0);
+  void xaxpy_n(int32_T n, real_T a, const real_T x[81], int32_T ix0, real_T y[9],
                int32_T iy0);
-  void xaxpy_ny(int32_T n, real_T a, const real_T x[8], int32_T ix0, real_T y[64],
+  void xaxpy_ny(int32_T n, real_T a, const real_T x[9], int32_T ix0, real_T y[81],
                 int32_T iy0);
-  void xswap(real_T x[64], int32_T ix0, int32_T iy0);
+  void xswap(real_T x[81], int32_T ix0, int32_T iy0);
   void xrotg(real_T *a, real_T *b, real_T *c, real_T *s);
-  void xrot(real_T x[64], int32_T ix0, int32_T iy0, real_T c, real_T s);
-  void svd(const real_T A[64], real_T U[64], real_T s[8], real_T V[64]);
-  real_T xnrm2_ln(int32_T n, const real_T x[192], int32_T ix0);
-  void xgemv(int32_T m, int32_T n, const real_T A[192], int32_T ia0, const
-             real_T x[192], int32_T ix0, real_T y[8]);
-  void xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y[8],
-             real_T A[192], int32_T ia0);
-  void trisolve(const real_T A[64], real_T B_0[128]);
-  void trisolve_b(const real_T A[64], real_T B_2[128]);
-  real_T xnrm2_lno(int32_T n, const real_T x[384], int32_T ix0);
-  void xgemv_i(int32_T m, int32_T n, const real_T A[384], int32_T ia0, const
-               real_T x[384], int32_T ix0, real_T y[16]);
+  void xrot(real_T x[81], int32_T ix0, int32_T iy0, real_T c, real_T s);
+  void svd(const real_T A[81], real_T U[81], real_T s[9], real_T V[81]);
+  real_T xnrm2_ln(int32_T n, const real_T x[225], int32_T ix0);
+  void xgemv(int32_T m, int32_T n, const real_T A[225], int32_T ia0, const
+             real_T x[225], int32_T ix0, real_T y[9]);
+  void xgerc(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y[9],
+             real_T A[225], int32_T ia0);
+  void trisolve(const real_T A[81], real_T B_0[144]);
+  void trisolve_b(const real_T A[81], real_T B_2[144]);
+  real_T xnrm2_lno(int32_T n, const real_T x[400], int32_T ix0);
+  void xgemv_i(int32_T m, int32_T n, const real_T A[400], int32_T ia0, const
+               real_T x[400], int32_T ix0, real_T y[16]);
   void xgerc_j(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y
-               [16], real_T A[384], int32_T ia0);
+               [16], real_T A[400], int32_T ia0);
   void EKFCorrector_correctStateAndSqr(real_T x[16], real_T S[256], const real_T
-    residue[8], const real_T Pxy[128], const real_T Sy[64], const real_T H[128],
-    const real_T Rsqrt[64]);
-  real_T xnrm2_h(int32_T n, const real_T x[17], int32_T ix0);
-  void trisolve_i(real_T A, real_T B_3[16]);
-  real_T xnrm2_hm(int32_T n, const real_T x[272], int32_T ix0);
-  void xgemv_h(int32_T m, int32_T n, const real_T A[272], int32_T ia0, const
-               real_T x[272], int32_T ix0, real_T y[16]);
-  void xgerc_f(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y
-               [16], real_T A[272], int32_T ia0);
-  void EKFCorrector_correctStateAndS_n(real_T x[16], real_T S[256], real_T
-    residue, const real_T Pxy[16], real_T Sy, const real_T H[16], real_T Rsqrt);
-  void EKFCorrector_correct(real_T z, real_T Rs, real_T x[16], real_T S[256]);
-  real_T xnrm2_i(int32_T n, const real_T x[9], int32_T ix0);
-  real_T xdotc_m(int32_T n, const real_T x[9], int32_T ix0, const real_T y[9],
+    residue[9], const real_T Pxy[144], const real_T Sy[81], const real_T H[144],
+    const real_T Rsqrt[81]);
+  real_T xnrm2_h(int32_T n, const real_T x[9], int32_T ix0);
+  real_T xdotc_j(int32_T n, const real_T x[9], int32_T ix0, const real_T y[9],
                  int32_T iy0);
-  void xaxpy_j(int32_T n, real_T a, int32_T ix0, real_T y[9], int32_T iy0);
-  real_T xnrm2_iz(const real_T x[3], int32_T ix0);
-  void xaxpy_jn(int32_T n, real_T a, const real_T x[9], int32_T ix0, real_T y[3],
+  void xaxpy_d(int32_T n, real_T a, int32_T ix0, real_T y[9], int32_T iy0);
+  real_T xnrm2_hm(const real_T x[3], int32_T ix0);
+  void xaxpy_dp(int32_T n, real_T a, const real_T x[9], int32_T ix0, real_T y[3],
                 int32_T iy0);
-  void xaxpy_jnu(int32_T n, real_T a, const real_T x[3], int32_T ix0, real_T y[9],
+  void xaxpy_dpe(int32_T n, real_T a, const real_T x[3], int32_T ix0, real_T y[9],
                  int32_T iy0);
-  void xswap_l(real_T x[9], int32_T ix0, int32_T iy0);
-  void xrot_f(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s);
-  void svd_k(const real_T A[9], real_T U[9], real_T s[3], real_T V[9]);
-  real_T xnrm2_izk(int32_T n, const real_T x[57], int32_T ix0);
-  void xgemv_a(int32_T m, int32_T n, const real_T A[57], int32_T ia0, const
+  void xswap_o(real_T x[9], int32_T ix0, int32_T iy0);
+  void xrot_j(real_T x[9], int32_T ix0, int32_T iy0, real_T c, real_T s);
+  void svd_a(const real_T A[9], real_T U[9], real_T s[3], real_T V[9]);
+  real_T xnrm2_hmd(int32_T n, const real_T x[57], int32_T ix0);
+  void xgemv_h(int32_T m, int32_T n, const real_T A[57], int32_T ia0, const
                real_T x[57], int32_T ix0, real_T y[3]);
-  void xgerc_n(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y
+  void xgerc_f(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y
                [3], real_T A[57], int32_T ia0);
-  void trisolve_f(const real_T A[9], real_T B_5[48]);
-  void trisolve_fc(const real_T A[9], real_T B_7[48]);
-  real_T xnrm2_izk3(int32_T n, const real_T x[304], int32_T ix0);
-  void xgemv_a3(int32_T m, int32_T n, const real_T A[304], int32_T ia0, const
+  void trisolve_i(const real_T A[9], real_T B_3[48]);
+  void trisolve_if(const real_T A[9], real_T B_5[48]);
+  real_T xnrm2_hmda(int32_T n, const real_T x[304], int32_T ix0);
+  void xgemv_ht(int32_T m, int32_T n, const real_T A[304], int32_T ia0, const
                 real_T x[304], int32_T ix0, real_T y[16]);
-  void xgerc_nv(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T
+  void xgerc_f0(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T
                 y[16], real_T A[304], int32_T ia0);
-  void EKFCorrector_correctStateAndS_l(real_T x[16], real_T S[256], const real_T
+  void EKFCorrector_correctStateAndS_n(real_T x[16], real_T S[256], const real_T
     residue[3], const real_T Pxy[48], const real_T Sy[9], const real_T H[48],
     const real_T Rsqrt[9]);
-  void EKFCorrector_correct_p(real_T z, real_T Rs, real_T x[16], real_T S[256]);
+  real_T xnrm2_n(int32_T n, const real_T x[17], int32_T ix0);
+  void trisolve_c(real_T A, real_T B_9[16]);
+  real_T xnrm2_nd(int32_T n, const real_T x[272], int32_T ix0);
+  void xgemv_e(int32_T m, int32_T n, const real_T A[272], int32_T ia0, const
+               real_T x[272], int32_T ix0, real_T y[16]);
+  void xgerc_n1(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T
+                y[16], real_T A[272], int32_T ia0);
+  void EKFCorrector_correctStateAndS_h(real_T x[16], real_T S[256], real_T
+    residue, const real_T Pxy[16], real_T Sy, const real_T H[16], real_T Rsqrt);
+  void EKFCorrector_correct(real_T z, real_T Rs, real_T x[16], real_T S[256],
+    real_T varargin_1);
   real_T xnrm2_nn(int32_T n, const real_T x[256], int32_T ix0);
   real_T xdotc_f(int32_T n, const real_T x[256], int32_T ix0, const real_T y[256],
                  int32_T iy0);
@@ -231,17 +234,17 @@ class talos_ekf final
   void xgerc_p(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y
                [16], real_T A[512], int32_T ia0);
   void qrFactor(const real_T A[256], real_T S[256], const real_T Ns[256]);
-  void trisolve_j(const real_T A[256], real_T B_a[256]);
-  void trisolve_jl(const real_T A[256], real_T B_c[256]);
+  void trisolve_j(const real_T A[256], real_T B_b[256]);
+  void trisolve_jl(const real_T A[256], real_T B_d[256]);
   real_T xnrm2_d(int32_T n, const real_T x[256], int32_T ix0);
   real_T xdotc_e(int32_T n, const real_T x[256], int32_T ix0, const real_T y[256],
                  int32_T iy0);
-  void xaxpy_d(int32_T n, real_T a, int32_T ix0, real_T y[256], int32_T iy0);
+  void xaxpy_d2(int32_T n, real_T a, int32_T ix0, real_T y[256], int32_T iy0);
   real_T xnrm2_dz(int32_T n, const real_T x[16], int32_T ix0);
-  void xaxpy_d2(int32_T n, real_T a, const real_T x[256], int32_T ix0, real_T y
-                [16], int32_T iy0);
-  void xaxpy_d2s(int32_T n, real_T a, const real_T x[16], int32_T ix0, real_T y
-                 [256], int32_T iy0);
+  void xaxpy_d2s(int32_T n, real_T a, const real_T x[256], int32_T ix0, real_T
+                 y[16], int32_T iy0);
+  void xaxpy_d2sz(int32_T n, real_T a, const real_T x[16], int32_T ix0, real_T
+                  y[256], int32_T iy0);
   void svd_n(const real_T A[256], real_T U[256], real_T s[16], real_T V[256]);
   void talos_state_transition(const real_T x[16], real_T dt, real_T next[16]);
   real_T xnrm2_dzn(int32_T n, const real_T x[512], int32_T ix0);

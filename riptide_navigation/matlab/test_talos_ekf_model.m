@@ -29,9 +29,17 @@ assert_covariance(flipCovariance);
 
 % q and -q describe the same attitude. Gravity-direction measurements are
 % deliberately identical, so no sign discontinuity can enter the innovation.
-gPositive = talos_measure_imu([zeros(3,1); 1; 0; 0; 0; zeros(9,1)]);
-gNegative = talos_measure_imu([zeros(3,1); -1; 0; 0; 0; zeros(9,1)]);
+imuContext = [0; 0; 1; 1; 1; 0; 1; 1; 0; 1; 1; 1];
+gPositive = talos_measure_imu_configured([zeros(3,1); 1; 0; 0; 0; zeros(9,1)], imuContext);
+gNegative = talos_measure_imu_configured([zeros(3,1); -1; 0; 0; 0; zeros(9,1)], imuContext);
 assert(norm(gPositive - gNegative) < 1e-12);
+
+% A disabled channel has an exactly zero measurement row and Jacobian.
+maskedContext = imuContext;
+maskedContext(5) = 0;
+maskedH = talos_measure_imu_configured_jacobian( ...
+    [zeros(3,1); 1; 0; 0; 0; zeros(9,1)], maskedContext);
+assert(norm(maskedH(2,:)) < 1e-12);
 
 fprintf('stationary_samples=%d\n', size(stationaryState,1));
 fprintf('flip_samples=%d\n', size(flipState,1));
@@ -48,11 +56,14 @@ Q(5:7,5:7) = 0.25 * cfg.processNoise(4:6,4:6) * cfg.sampleTime;
 ds{1} = timeseries(repmat(Q,1,1,N),t,'IsTimeFirst',false);
 ds{2} = timeseries(repmat(cfg.sampleTime,N,1),t);
 ds{3} = timeseries(enableImu,t);
-ds{4} = timeseries(imu,t);
-ds{5} = timeseries(repmat(cfg.imuNoise,1,1,N),t,'IsTimeFirst',false);
+imuMeasurement = [zeros(N,3), imu(:,4:5), zeros(N,1), imu(:,6:8)];
+imuNoise = diag([diag(cfg.imuNoise(1:3,1:3)); ...
+    diag(cfg.imuNoise(4:5,4:5)); cfg.imuNoise(4,4); diag(cfg.imuNoise(6:8,6:8))]);
+ds{4} = timeseries(imuMeasurement,t);
+ds{5} = timeseries(repmat(imuNoise,1,1,N),t,'IsTimeFirst',false);
 ds{6} = timeseries(enableFog,t);
-ds{7} = timeseries(zeros(N,1),t);
-ds{8} = timeseries(repmat(cfg.fogNoise,N,1),t);
+ds{7} = timeseries(zeros(N,3),t);
+ds{8} = timeseries(repmat(cfg.fogNoise*eye(3),1,1,N),t,'IsTimeFirst',false);
 ds{9} = timeseries(enableDvl,t);
 ds{10} = timeseries(zeros(N,3),t);
 ds{11} = timeseries(repmat(cfg.dvlNoise,1,1,N),t,'IsTimeFirst',false);
@@ -62,7 +73,10 @@ ds{14} = timeseries(repmat(cfg.depthNoise,N,1),t);
 ds{15} = timeseries(false(N,1),t);
 ds{16} = timeseries(zeros(N,16),t);
 ds{17} = timeseries(repmat(cfg.resetNoise,1,1,N),t,'IsTimeFirst',false);
-ds{18} = timeseries(zeros(N,3),t);
+ds{18} = timeseries(repmat([0 0 0 1 1 1],N,1),t);
+ds{19} = timeseries([imu(:,1:3), repmat([1 1 0 1 1 0 1 1 1],N,1)],t);
+ds{20} = timeseries(repmat([0 0 1],N,1),t);
+ds{21} = timeseries(ones(N,1),t);
 in = Simulink.SimulationInput('talos_ekf');
 in = in.setExternalInput(ds).setModelParameter('StopTime',num2str(t(end)));
 out = sim(in);

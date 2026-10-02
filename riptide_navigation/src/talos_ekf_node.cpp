@@ -52,6 +52,33 @@ struct Measurement
   std::uint64_t sequence{};
 };
 
+constexpr std::size_t kConfigSize = 15;
+
+std::array<double, kConfigSize> config_mask(const std::vector<bool> & values)
+{
+  std::array<double, kConfigSize> result{};
+  std::transform(
+    values.begin(), values.end(), result.begin(), [](bool value) {
+      return value ? 1.0 : 0.0;
+    });
+  return result;
+}
+
+void validate_config(
+  const std::string & name, const std::vector<bool> & values,
+  const std::array<bool, kConfigSize> & supported)
+{
+  if (values.size() != kConfigSize) {
+    throw std::invalid_argument(name + " must contain 15 booleans");
+  }
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    if (values[i] && !supported[i]) {
+      throw std::invalid_argument(
+              name + " enables unsupported field at index " + std::to_string(i));
+    }
+  }
+}
+
 struct EarlierMeasurement
 {
   bool operator()(const Measurement & a, const Measurement & b) const
@@ -125,6 +152,20 @@ void set_block(
   }
 }
 
+void copy_masked_covariance(
+  const Measurement & event, int size, const double * mask, double * destination)
+{
+  for (int row = 0; row < size; ++row) {
+    for (int col = 0; col < size; ++col) {
+      if (mask[row] != 0.0 && mask[col] != 0.0) {
+        destination[row + size * col] = event.covariance[row + 16 * col];
+      } else {
+        destination[row + size * col] = row == col ? 1.0 : 0.0;
+      }
+    }
+  }
+}
+
 diagnostic_msgs::msg::KeyValue key_value(const std::string & key, std::uint64_t value)
 {
   diagnostic_msgs::msg::KeyValue result;
@@ -184,6 +225,47 @@ public:
     depth_covariance_multiplier_ = declare_parameter("depth_covariance_multiplier", 1.0);
     covariance_floor_ = declare_parameter("covariance_floor", 1e-9);
     publish_debug_diagnostics_ = declare_parameter("publish_debug_diagnostics", false);
+
+    const std::vector<bool> imu_default{
+      false, false, false, true, true, false, false, false, false,
+      true, true, false, true, true, true};
+    const std::vector<bool> dvl_default{
+      false, false, false, false, false, false, true, true, true,
+      false, false, false, false, false, false};
+    const std::vector<bool> fog_default{
+      false, false, false, false, false, false, false, false, false,
+      false, false, true, false, false, false};
+    const std::vector<bool> depth_default{
+      false, false, true, false, false, false, false, false, false,
+      false, false, false, false, false, false};
+    const std::array<bool, kConfigSize> imu_supported{
+      false, false, false, true, true, false, false, false, false,
+      true, true, true, true, true, true};
+    const std::array<bool, kConfigSize> dvl_supported{
+      false, false, false, false, false, false, true, true, true,
+      false, false, false, false, false, false};
+    const std::array<bool, kConfigSize> fog_supported{
+      false, false, false, false, false, false, false, false, false,
+      true, true, true, false, false, false};
+    const std::array<bool, kConfigSize> depth_supported{
+      false, false, true, false, false, false, false, false, false,
+      false, false, false, false, false, false};
+    const auto imu_config =
+      declare_parameter<std::vector<bool>>("vectornav_imu_config", imu_default);
+    const auto dvl_config =
+      declare_parameter<std::vector<bool>>("dvl_twist_config", dvl_default);
+    const auto fog_config =
+      declare_parameter<std::vector<bool>>("fog_twist_config", fog_default);
+    const auto depth_config =
+      declare_parameter<std::vector<bool>>("depth_pose_config", depth_default);
+    validate_config("vectornav_imu_config", imu_config, imu_supported);
+    validate_config("dvl_twist_config", dvl_config, dvl_supported);
+    validate_config("fog_twist_config", fog_config, fog_supported);
+    validate_config("depth_pose_config", depth_config, depth_supported);
+    imu_config_ = config_mask(imu_config);
+    dvl_config_ = config_mask(dvl_config);
+    fog_config_ = config_mask(fog_config);
+    depth_config_ = config_mask(depth_config);
 
     const auto sensor_qos = rclcpp::SensorDataQoS().keep_last(100);
     imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
@@ -311,8 +393,8 @@ private:
     Measurement event{stamp, Sensor::Imu};
     event.value[0] = gravity_body.x(); event.value[1] = gravity_body.y();
     event.value[2] = gravity_body.z();
-    event.value[3] = omega.x(); event.value[4] = omega.y();
-    event.value[5] = accel.x(); event.value[6] = accel.y(); event.value[7] = accel.z();
+    event.value[3] = omega.x(); event.value[4] = omega.y(); event.value[5] = omega.z();
+    event.value[6] = accel.x(); event.value[7] = accel.y(); event.value[8] = accel.z();
 
     const tf2::Matrix3x3 r_bs(q_bs);
     std::array<double, 9> orientation{}, angular{}, acceleration{};
@@ -349,19 +431,31 @@ private:
       }
     }
     for (int i = 0; i < 3; ++i) {gravity_cov[3 * i + i] += 1e-9;}
-    set_block(event.covariance, 0, 3, gravity_cov);
-    event.covariance[3 + 16 * 3] = angular[0];
-    event.covariance[3 + 16 * 4] = angular[1];
-    event.covariance[4 + 16 * 3] = angular[3];
-    event.covariance[4 + 16 * 4] = angular[4];
+    std::array<double, 9> tilt_cov{};
+    for (int row = 0; row < 3; ++row) {
+      for (int col = 0; col < 3; ++col) {
+        for (int k = 0; k < 3; ++k) {
+          for (int l = 0; l < 3; ++l) {
+            tilt_cov[3 * row + col] +=
+              j[3 * row + k] * gravity_cov[3 * k + l] * j[3 * col + l];
+          }
+        }
+      }
+    }
+    for (int i = 0; i < 3; ++i) {tilt_cov[3 * i + i] += covariance_floor_;}
+    set_block(event.covariance, 0, 3, tilt_cov);
+    set_block(event.covariance, 3, 3, angular);
     for (int row = 0; row < 3; ++row) {
       for (int col = 0; col < 3; ++col) {
         const double gravity_term = gravity_ * gravity_ * gravity_cov[3 * row + col];
-        event.covariance[(5 + row) + 16 * (5 + col)] =
+        event.covariance[(6 + row) + 16 * (6 + col)] =
           acceleration[3 * row + col] + gravity_term;
-        const double cross_term = -gravity_ * gravity_cov[3 * row + col];
-        event.covariance[row + 16 * (5 + col)] = cross_term;
-        event.covariance[(5 + col) + 16 * row] = cross_term;
+        double cross_term = 0.0;
+        for (int k = 0; k < 3; ++k) {
+          cross_term -= gravity_ * j[3 * row + k] * gravity_cov[3 * k + col];
+        }
+        event.covariance[row + 16 * (6 + col)] = cross_term;
+        event.covariance[(6 + col) + 16 * row] = cross_term;
       }
     }
     enqueue(std::move(event));
@@ -378,7 +472,7 @@ private:
       q, tf2::Vector3(
         msg->twist.twist.angular.x, msg->twist.twist.angular.y, msg->twist.twist.angular.z));
     Measurement event{stamp, Sensor::Fog};
-    event.value[0] = omega.z();
+    event.value[0] = omega.x(); event.value[1] = omega.y(); event.value[2] = omega.z();
     std::array<double, 9> c{};
     for (int row = 0; row < 3; ++row) {
       for (int col = 0; col < 3; ++col) {
@@ -391,8 +485,8 @@ private:
       for (int i = 0; i < 3; ++i) {c[3 * i + i] = default_fog_variance_;}
     }
     condition_covariance(c, fog_covariance_multiplier_, covariance_floor_);
-    event.covariance[0] = std::max(
-      rotate_covariance(tf2::Matrix3x3(q), c)[8], covariance_floor_);
+    const auto rotated = rotate_covariance(tf2::Matrix3x3(q), c);
+    set_block(event.covariance, 0, 3, rotated);
     enqueue(std::move(event));
   }
 
@@ -545,30 +639,39 @@ private:
     switch (event.sensor) {
       case Sensor::Imu:
         core_->rtU.enable_imu = true;
-        std::copy_n(event.value.begin(), 8, core_->rtU.imu_measurement);
-        for (int row = 0; row < 8; ++row) {
-          for (int col = 0; col < 8; ++col) {
-            core_->rtU.R_imu[row + 8 * col] = event.covariance[row + 16 * col];
-          }
+        for (int i = 0; i < 3; ++i) {
+          core_->rtU.imu_measurement[i] = 0.0;
+          core_->rtU.imu_measurement[3 + i] = event.value[3 + i] * imu_config_[9 + i];
+          core_->rtU.imu_measurement[6 + i] = event.value[6 + i] * imu_config_[12 + i];
+          core_->rtU.imu_context[i] = event.value[i];
+          core_->rtU.imu_context[3 + i] = imu_config_[3 + i];
+          core_->rtU.imu_context[6 + i] = imu_config_[9 + i];
+          core_->rtU.imu_context[9 + i] = imu_config_[12 + i];
         }
+        copy_masked_covariance(event, 9, core_->rtU.imu_context + 3, core_->rtU.R_imu);
         break;
       case Sensor::Fog:
-        core_->rtU.enable_fog = true; core_->rtU.fog_measurement = event.value[0];
-        core_->rtU.R_fog = event.covariance[0];
+        core_->rtU.enable_fog = true;
+        for (int i = 0; i < 3; ++i) {
+          core_->rtU.fog_mask[i] = fog_config_[9 + i];
+          core_->rtU.fog_measurement[i] = event.value[i] * fog_config_[9 + i];
+        }
+        copy_masked_covariance(event, 3, core_->rtU.fog_mask, core_->rtU.R_fog);
         break;
       case Sensor::Dvl:
         core_->rtU.enable_dvl = true;
-        std::copy_n(event.value.begin(), 3, core_->rtU.dvl_measurement);
-        std::copy(event.offset.begin(), event.offset.end(), core_->rtU.dvl_offset);
-        for (int row = 0; row < 3; ++row) {
-          for (int col = 0; col < 3; ++col) {
-            core_->rtU.R_dvl[row + 3 * col] = event.covariance[row + 16 * col];
-          }
+        for (int i = 0; i < 3; ++i) {
+          core_->rtU.dvl_measurement[i] = event.value[i] * dvl_config_[6 + i];
+          core_->rtU.dvl_context[i] = event.offset[i];
+          core_->rtU.dvl_context[3 + i] = dvl_config_[6 + i];
         }
+        copy_masked_covariance(event, 3, core_->rtU.dvl_context + 3, core_->rtU.R_dvl);
         break;
       case Sensor::Depth:
-        core_->rtU.enable_depth = true; core_->rtU.depth_measurement = event.value[0];
-        core_->rtU.R_depth = event.covariance[0];
+        core_->rtU.enable_depth = true;
+        core_->rtU.depth_mask = depth_config_[2];
+        core_->rtU.depth_measurement = event.value[0] * depth_config_[2];
+        core_->rtU.R_depth = depth_config_[2] != 0.0 ? event.covariance[0] : 1.0;
         break;
       default: break;
     }
@@ -587,38 +690,50 @@ private:
 
   double innovation_norm(const Measurement & event) const
   {
-    std::array<double, 8> prediction{};
+    std::array<double, 9> residual{};
     int size = 1;
     switch (event.sensor) {
       case Sensor::Imu: {
           const auto r = rotation(state_);
-          prediction = {r[6], r[7], r[8], state_[10], state_[11],
-            state_[13], state_[14], state_[15]};
-          size = 8;
+          const tf2::Vector3 measured_gravity(event.value[0], event.value[1], event.value[2]);
+          const tf2::Vector3 predicted_gravity(r[6], r[7], r[8]);
+          const tf2::Vector3 tilt = measured_gravity.cross(predicted_gravity);
+          residual[0] = -tilt.x() * imu_config_[3];
+          residual[1] = -tilt.y() * imu_config_[4];
+          residual[2] = -tilt.z() * imu_config_[5];
+          for (int i = 0; i < 3; ++i) {
+            residual[3 + i] = (event.value[3 + i] - state_[10 + i]) * imu_config_[9 + i];
+            residual[6 + i] = (event.value[6 + i] - state_[13 + i]) * imu_config_[12 + i];
+          }
+          size = 9;
           break;
         }
       case Sensor::Fog:
-        prediction[0] = state_[12];
+        for (int i = 0; i < 3; ++i) {
+          residual[i] = (event.value[i] - state_[10 + i]) * fog_config_[9 + i];
+        }
+        size = 3;
         break;
       case Sensor::Dvl: {
           const tf2::Vector3 omega(state_[10], state_[11], state_[12]);
           const tf2::Vector3 offset(event.offset[0], event.offset[1], event.offset[2]);
           const tf2::Vector3 sensor_velocity =
             tf2::Vector3(state_[7], state_[8], state_[9]) + omega.cross(offset);
-          prediction = {sensor_velocity.x(), sensor_velocity.y(), sensor_velocity.z()};
+          residual[0] = (event.value[0] - sensor_velocity.x()) * dvl_config_[6];
+          residual[1] = (event.value[1] - sensor_velocity.y()) * dvl_config_[7];
+          residual[2] = (event.value[2] - sensor_velocity.z()) * dvl_config_[8];
           size = 3;
           break;
         }
       case Sensor::Depth:
-        prediction[0] = state_[2];
+        residual[0] = (event.value[0] - state_[2]) * depth_config_[2];
         break;
       default:
         return 0.0;
     }
     double squared = 0.0;
     for (int i = 0; i < size; ++i) {
-      const double residual = event.value[i] - prediction[i];
-      squared += residual * residual;
+      squared += residual[i] * residual[i];
     }
     return std::sqrt(squared);
   }
@@ -908,6 +1023,7 @@ private:
   double frequency_{}, gravity_{}, reorder_delay_{}, max_prediction_dt_{};
   std::size_t max_queue_size_{}, max_measurements_per_cycle_{};
   std::vector<double> process_noise_diag_, reset_covariance_diag_;
+  std::array<double, kConfigSize> imu_config_{}, dvl_config_{}, fog_config_{}, depth_config_{};
   double default_orientation_variance_{}, default_angular_velocity_variance_{};
   double default_acceleration_variance_{}, default_fog_variance_{}, default_dvl_variance_{},
     default_depth_variance_{};
