@@ -1,0 +1,42 @@
+/**/talos_ekf_node:
+  ros__parameters:
+    world_frame: odom
+    base_link_frame: talos/base_link
+    frequency: 30.0
+    publish_tf: true
+    gravitational_acceleration: 9.755455
+    reorder_delay: 0.02
+    max_queue_size: 512
+    max_measurements_per_cycle: 64
+    max_prediction_dt: 0.1
+    imu_topic: vectornav/imu
+    fog_topic: gyro/twist
+    dvl_topic: dvl_twist
+    depth_topic: depth/pose
+    odometry_topic: odometry/filtered
+    acceleration_topic: accel/filtered
+    # Continuous-time covariance densities. The first three attitude entries
+    # are body angular-error densities mapped through dq=0.5*G(q)*dtheta;
+    # the fourth quaternion entry is retained for config compatibility only.
+    process_noise_diag: [0.00005, 0.00005, 0.00006,
+                         0.00003, 0.00003, 0.00006, 0.000001,
+                         0.000025, 0.000025, 0.00004,
+                         0.00001, 0.00001, 0.00002,
+                         0.00001, 0.00001, 0.000015]
+    reset_covariance_diag: [1.0, 1.0, 0.25,
+                            0.0, 0.00025, 0.00025, 0.00025,
+                            0.25, 0.25, 0.25,
+                            0.05, 0.05, 0.05,
+                            0.5, 0.5, 0.5]
+    default_orientation_variance: 0.0002
+    default_angular_velocity_variance: 0.00002
+    default_acceleration_variance: 0.002
+    default_fog_variance: 0.000001
+    default_dvl_variance: 0.00025
+    default_depth_variance: 0.0025
+    covariance_floor: 0.000000001
+    imu_covariance_multiplier: 1.0
+    fog_covariance_multiplier: 1.0
+    dvl_covariance_multiplier: 1.0
+    depth_covariance_multiplier: 1.0
+    publish_debug_diagnostics: false

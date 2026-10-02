@@ -1,0 +1,85 @@
+% Part 1 model-in-the-loop assertions. This intentionally uses ordinary
+% SimulationInput simulations because this MATLAB installation has no
+% Simulink Test license.
+talos_ekf_init;
+open_system(fullfile(fileparts(mfilename('fullpath')), 'talos_ekf.slx'));
+dt = talosEkfCfg.sampleTime;
+t = (0:dt:2)';
+N = numel(t);
+
+stationaryImu = repmat([0 0 1 0 0 0 0 0], N, 1);
+out = run_case(t, stationaryImu, true(N,1), true(N,1), true(N,1), true(N,1));
+stationaryState = out.yout{1}.Values.Data;
+stationaryCovariance = out.yout{2}.Values.Data;
+assert(all(isfinite(stationaryState), 'all'));
+assert(max(vecnorm(stationaryState(:,1:3), 2, 2)) < 1e-8);
+assert_covariance(stationaryCovariance);
+
+roll = pi * t;
+flipImu = [zeros(N,1), sin(roll), cos(roll), repmat([pi 0],N,1), zeros(N,3)];
+imuEnable = true(N,1);
+imuEnable(t > 1.5) = false; % finish through prediction to exercise dropout
+out = run_case(t, flipImu, imuEnable, false(N,1), false(N,1), false(N,1));
+flipState = out.yout{1}.Values.Data;
+flipCovariance = out.yout{2}.Values.Data;
+quaternionNorm = vecnorm(flipState(:,4:7), 2, 2);
+assert(all(isfinite(flipState), 'all'));
+assert(max(abs(quaternionNorm - 1)) < 5e-3);
+assert_covariance(flipCovariance);
+
+% q and -q describe the same attitude. Gravity-direction measurements are
+% deliberately identical, so no sign discontinuity can enter the innovation.
+gPositive = talos_measure_imu([zeros(3,1); 1; 0; 0; 0; zeros(9,1)]);
+gNegative = talos_measure_imu([zeros(3,1); -1; 0; 0; 0; zeros(9,1)]);
+assert(norm(gPositive - gNegative) < 1e-12);
+
+fprintf('stationary_samples=%d\n', size(stationaryState,1));
+fprintf('flip_samples=%d\n', size(flipState,1));
+fprintf('max_quaternion_norm_error=%.12g\n', max(abs(quaternionNorm-1)));
+fprintf('minimum_covariance_eigenvalue=%.12g\n', minimum_covariance_eigenvalue(flipCovariance));
+
+function out = run_case(t, imu, enableImu, enableFog, enableDvl, enableDepth)
+cfg = evalin('base','talosEkfCfg');
+N = numel(t);
+ds = Simulink.SimulationData.Dataset;
+Q = cfg.processNoise * cfg.sampleTime;
+Q(4:7,4:7) = 0;
+Q(5:7,5:7) = 0.25 * cfg.processNoise(4:6,4:6) * cfg.sampleTime;
+ds{1} = timeseries(repmat(Q,1,1,N),t,'IsTimeFirst',false);
+ds{2} = timeseries(repmat(cfg.sampleTime,N,1),t);
+ds{3} = timeseries(enableImu,t);
+ds{4} = timeseries(imu,t);
+ds{5} = timeseries(repmat(cfg.imuNoise,1,1,N),t,'IsTimeFirst',false);
+ds{6} = timeseries(enableFog,t);
+ds{7} = timeseries(zeros(N,1),t);
+ds{8} = timeseries(repmat(cfg.fogNoise,N,1),t);
+ds{9} = timeseries(enableDvl,t);
+ds{10} = timeseries(zeros(N,3),t);
+ds{11} = timeseries(repmat(cfg.dvlNoise,1,1,N),t,'IsTimeFirst',false);
+ds{12} = timeseries(enableDepth,t);
+ds{13} = timeseries(zeros(N,1),t);
+ds{14} = timeseries(repmat(cfg.depthNoise,N,1),t);
+ds{15} = timeseries(false(N,1),t);
+ds{16} = timeseries(zeros(N,16),t);
+ds{17} = timeseries(repmat(cfg.resetNoise,1,1,N),t,'IsTimeFirst',false);
+ds{18} = timeseries(zeros(N,3),t);
+in = Simulink.SimulationInput('talos_ekf');
+in = in.setExternalInput(ds).setModelParameter('StopTime',num2str(t(end)));
+out = sim(in);
+end
+
+function assert_covariance(data)
+assert(all(isfinite(data),'all'));
+for k = 1:25:size(data,3)
+    covariance = 0.5 * (data(:,:,k) + data(:,:,k)');
+    assert(max(abs(covariance-data(:,:,k)),[],'all') < 1e-8);
+    assert(min(eig(covariance)) > -1e-8);
+end
+end
+
+function result = minimum_covariance_eigenvalue(data)
+result = inf;
+for k = 1:25:size(data,3)
+    result = min(result,min(eig(0.5*(data(:,:,k)+data(:,:,k)'))));
+end
+end
