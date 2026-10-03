@@ -53,6 +53,7 @@ struct Measurement
 };
 
 constexpr std::size_t kConfigSize = 15;
+constexpr char kImplementationVersion[] = "heading_preserving_tilt_v1";
 
 std::array<double, kConfigSize> config_mask(const std::vector<bool> & values)
 {
@@ -182,6 +183,14 @@ diagnostic_msgs::msg::KeyValue key_value(const std::string & key, double value)
   return result;
 }
 
+diagnostic_msgs::msg::KeyValue key_value(const std::string & key, const std::string & value)
+{
+  diagnostic_msgs::msg::KeyValue result;
+  result.key = key;
+  result.value = value;
+  return result;
+}
+
 }  // namespace
 
 class TalosEkfNode final : public rclcpp::Node
@@ -194,6 +203,8 @@ public:
     base_frame_ = declare_parameter("base_link_frame", "talos/base_link");
     publish_tf_ = declare_parameter("publish_tf", true);
     frequency_ = declare_parameter("frequency", 30.0);
+    vectornav_tilt_correction_frequency_ =
+      declare_parameter("vectornav_tilt_correction_frequency", 40.0);
     gravity_ = declare_parameter("gravitational_acceleration", 9.755455);
     reorder_delay_ = declare_parameter("reorder_delay", 0.02);
     max_queue_size_ = static_cast<std::size_t>(declare_parameter("max_queue_size", 512));
@@ -303,6 +314,9 @@ public:
     State initial{};
     initial[3] = 1.0;
     reset_filter(initial, get_clock()->now());
+    RCLCPP_INFO(
+      get_logger(), "Estimator implementation %s; VectorNav tilt corrections limited to %.1f Hz",
+      kImplementationVersion, vectornav_tilt_correction_frequency_);
   }
 
 private:
@@ -595,6 +609,37 @@ private:
     normalize_state_covariance(state_, covariance_, has_published_ ? &previous : nullptr);
   }
 
+  void expose_internal_state()
+  {
+    // The EKF block outputs its corrected state before its prediction stage.
+    // A zero-time step exposes the state predicted by the preceding step
+    // without advancing measurement time.
+    clear_inputs();
+    set_process_noise(0.0);
+    core_->rtU.dt = 0.0;
+    core_->step();
+    capture_output();
+  }
+
+  void install_state_covariance(const State & desired_state, const Covariance & desired_covariance)
+  {
+    clear_inputs();
+    set_process_noise(0.0);
+    core_->rtU.dt = 0.0;
+    core_->rtU.enable_reset = true;
+    std::copy(desired_state.begin(), desired_state.end(), core_->rtU.reset_state);
+    std::fill(std::begin(core_->rtU.R_reset), std::end(core_->rtU.R_reset), 0.0);
+    for (int i = 0; i < 16; ++i) {
+      core_->rtU.R_reset[i + 16 * i] = 1e-12;
+    }
+    core_->step();
+    clear_inputs();
+    core_->rtU.dt = 0.0;
+    std::copy(desired_covariance.begin(), desired_covariance.end(), core_->rtU.Q);
+    core_->step();
+    expose_internal_state();
+  }
+
   void predict_to(const rclcpp::Time & stamp)
   {
     double remaining = (stamp - filter_time_).seconds();
@@ -631,8 +676,24 @@ private:
     last_processed_stamp_ns_[sensor_index] = event.stamp.nanoseconds();
     last_queue_age_ms_ = std::max(0.0, (get_clock()->now() - event.stamp).seconds() * 1000.0);
     predict_to(event.stamp);
+    expose_internal_state();
     const State state_before = state_;
-    last_innovation_norm_[static_cast<std::size_t>(event.sensor)] = innovation_norm(event);
+    bool apply_imu_tilt = false;
+    if (event.sensor == Sensor::Imu && vectornav_tilt_correction_frequency_ > 0.0 &&
+      (imu_config_[3] != 0.0 || imu_config_[4] != 0.0 || imu_config_[5] != 0.0))
+    {
+      const std::int64_t period_ns = static_cast<std::int64_t>(
+        std::llround(1e9 / vectornav_tilt_correction_frequency_));
+      apply_imu_tilt = !has_tilt_correction_stamp_ ||
+        event.stamp.nanoseconds() - last_tilt_correction_stamp_ns_ >= period_ns;
+      if (apply_imu_tilt) {
+        last_tilt_correction_stamp_ns_ = event.stamp.nanoseconds();
+        has_tilt_correction_stamp_ = true;
+        ++tilt_corrections_;
+      }
+    }
+    last_innovation_norm_[static_cast<std::size_t>(event.sensor)] =
+      innovation_norm(event, apply_imu_tilt);
     clear_inputs();
     set_process_noise(0.0);
     core_->rtU.dt = 0.0;
@@ -644,7 +705,7 @@ private:
           core_->rtU.imu_measurement[3 + i] = event.value[3 + i] * imu_config_[9 + i];
           core_->rtU.imu_measurement[6 + i] = event.value[6 + i] * imu_config_[12 + i];
           core_->rtU.imu_context[i] = event.value[i];
-          core_->rtU.imu_context[3 + i] = imu_config_[3 + i];
+          core_->rtU.imu_context[3 + i] = apply_imu_tilt ? imu_config_[3 + i] : 0.0;
           core_->rtU.imu_context[6 + i] = imu_config_[9 + i];
           core_->rtU.imu_context[9 + i] = imu_config_[12 + i];
         }
@@ -678,6 +739,11 @@ private:
     core_->step();
     filter_time_ = event.stamp;
     capture_output();
+    if (event.sensor == Sensor::Imu && apply_imu_tilt) {
+      State projected = remove_world_yaw_correction(state_before, state_);
+      const Covariance projected_covariance = covariance_;
+      install_state_covariance(projected, projected_covariance);
+    }
     double correction_squared = 0.0;
     for (int i = 0; i < 16; ++i) {
       const double delta = state_[i] - state_before[i];
@@ -688,7 +754,7 @@ private:
     ++accepted_[static_cast<std::size_t>(event.sensor)];
   }
 
-  double innovation_norm(const Measurement & event) const
+  double innovation_norm(const Measurement & event, bool apply_imu_tilt = true) const
   {
     std::array<double, 9> residual{};
     int size = 1;
@@ -698,9 +764,9 @@ private:
           const tf2::Vector3 measured_gravity(event.value[0], event.value[1], event.value[2]);
           const tf2::Vector3 predicted_gravity(r[6], r[7], r[8]);
           const tf2::Vector3 tilt = measured_gravity.cross(predicted_gravity);
-          residual[0] = -tilt.x() * imu_config_[3];
-          residual[1] = -tilt.y() * imu_config_[4];
-          residual[2] = -tilt.z() * imu_config_[5];
+          residual[0] = -tilt.x() * imu_config_[3] * apply_imu_tilt;
+          residual[1] = -tilt.y() * imu_config_[4] * apply_imu_tilt;
+          residual[2] = -tilt.z() * imu_config_[5] * apply_imu_tilt;
           for (int i = 0; i < 3; ++i) {
             residual[3 + i] = (event.value[3 + i] - state_[10 + i]) * imu_config_[9 + i];
             residual[6 + i] = (event.value[6 + i] - state_[13 + i]) * imu_config_[12 + i];
@@ -779,30 +845,13 @@ private:
   {
     while (!queue_.empty()) {queue_.pop();}
     last_processed_stamp_ns_.fill(0);
+    has_tilt_correction_stamp_ = false;
+    last_tilt_correction_stamp_ns_ = 0;
     normalize_quaternion(state, has_published_ ? &published_state_ : nullptr);
     core_ = std::make_unique<talos_ekf>();
     core_->initialize();
-    clear_inputs();
     const Covariance desired_covariance = reset_covariance(state, pose);
-    set_process_noise(0.0);
-    core_->rtU.dt = 0.0;
-    core_->rtU.enable_reset = true;
-    std::copy(state.begin(), state.end(), core_->rtU.reset_state);
-    std::fill(std::begin(core_->rtU.R_reset), std::end(core_->rtU.R_reset), 0.0);
-    for (int i = 0; i < 16; ++i) {
-      core_->rtU.R_reset[i + 16 * i] = 1e-12;
-    }
-    core_->step();
-    // The reset measurement installs the requested state. Add the requested
-    // uncertainty in a zero-time prediction, then expose that internal result.
-    clear_inputs();
-    core_->rtU.dt = 0.0;
-    std::copy(desired_covariance.begin(), desired_covariance.end(), core_->rtU.Q);
-    core_->step();
-    clear_inputs();
-    set_process_noise(0.0);
-    core_->rtU.dt = 0.0;
-    core_->step();
+    install_state_covariance(state, desired_covariance);
     filter_time_ = stamp;
     capture_output();
     initialized_ = true;
@@ -955,6 +1004,10 @@ private:
       ::ERROR;
     status.message = valid ? "Quaternion EKF active" : "Invalid state or covariance";
     status.values.push_back(key_value("queue_depth", queue_.size()));
+    status.values.push_back(key_value("implementation_version", kImplementationVersion));
+    status.values.push_back(
+      key_value("vectornav_tilt_correction_frequency_hz", vectornav_tilt_correction_frequency_));
+    status.values.push_back(key_value("tilt_corrections", tilt_corrections_));
     status.values.push_back(key_value("resets", resets_));
     status.values.push_back(key_value("stale_rejections", stale_rejections_));
     status.values.push_back(key_value("transform_rejections", transform_rejections_));
@@ -1020,7 +1073,8 @@ private:
 
   std::string world_frame_, base_frame_;
   bool publish_tf_{}, publish_debug_diagnostics_{};
-  double frequency_{}, gravity_{}, reorder_delay_{}, max_prediction_dt_{};
+  double frequency_{}, vectornav_tilt_correction_frequency_{}, gravity_{}, reorder_delay_{};
+  double max_prediction_dt_{};
   std::size_t max_queue_size_{}, max_measurements_per_cycle_{};
   std::vector<double> process_noise_diag_, reset_covariance_diag_;
   std::array<double, kConfigSize> imu_config_{}, dvl_config_{}, fog_config_{}, depth_config_{};
@@ -1039,8 +1093,11 @@ private:
   std::uint64_t sequence_{}, resets_{}, stale_rejections_{}, transform_rejections_{};
   std::uint64_t invalid_rejections_{}, queue_rejections_{}, duplicate_rejections_{};
   std::uint64_t startup_epoch_alignments_{};
+  std::uint64_t tilt_corrections_{};
   std::array<std::uint64_t, static_cast<std::size_t>(Sensor::Count)> accepted_{};
   std::array<std::int64_t, static_cast<std::size_t>(Sensor::Count)> last_processed_stamp_ns_{};
+  std::int64_t last_tilt_correction_stamp_ns_{};
+  bool has_tilt_correction_stamp_{false};
   std::array<double, static_cast<std::size_t>(Sensor::Count)> last_innovation_norm_{};
   std::array<double, static_cast<std::size_t>(Sensor::Count)> last_correction_norm_{};
   double last_queue_age_ms_{};
