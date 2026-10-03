@@ -9,7 +9,7 @@
 //
 // Model version                  : 1.6
 // Simulink Coder version         : 9.9 (R2023a) 19-Nov-2022
-// C/C++ source code generated on : Fri Oct  2 19:18:09 2026
+// C/C++ source code generated on : Fri Oct  2 20:29:44 2026
 //
 // Target selection: ert.tlc
 // Embedded hardware selection: ARM Compatible->ARM 64-bit (LP64)
@@ -3932,11 +3932,11 @@ void talos_ekf::step()
   real_T C[256];
   real_T K[256];
   real_T K_0[256];
-  real_T Rsqrt_1[256];
+  real_T Rsqrt_0[256];
   real_T Ss_0[256];
   real_T A[225];
   real_T dHdx[144];
-  real_T tmp_0[144];
+  real_T tmp_1[144];
   real_T Rsqrt[81];
   real_T Ss[81];
   real_T a[81];
@@ -3944,29 +3944,31 @@ void talos_ekf::step()
   real_T dHdx_0[48];
   real_T y[48];
   real_T rtb_xNew_k[16];
-  real_T tmp[16];
+  real_T tmp_0[16];
   real_T xm[16];
-  real_T Rsqrt_0[9];
+  real_T s_2[12];
+  real_T tmp[12];
   real_T s[9];
+  real_T s_1[9];
   real_T work[9];
+  real_T qRaw[4];
+  real_T x_tmp[4];
   real_T s_0[3];
   real_T work_0[3];
   real_T Vf;
-  real_T h;
-  real_T q_idx_0;
-  real_T q_idx_1;
-  real_T q_idx_2;
-  real_T q_idx_3;
-  real_T s_1;
-  real_T s_2;
-  real_T x;
+  real_T qNorm;
+  real_T s_3;
+  real_T s_4;
+  real_T s_5;
   int32_T aoffset;
-  int32_T c_tmp;
   int32_T coffset;
   int32_T exitg1;
   int32_T i;
+  int32_T i_k;
+  int32_T i_k_tmp;
   int32_T lastv;
   int32_T m;
+  int8_T b_I[16];
   boolean_T exitg2;
   boolean_T p;
 
@@ -4014,89 +4016,126 @@ void talos_ekf::step()
 
     for (lastv = 0; lastv < 9; lastv++) {
       for (m = 0; m < 9; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 9; i++) {
-          h += a[9 * i + m] * Ss[9 * lastv + i];
+          qNorm += a[9 * i + m] * Ss[9 * lastv + i];
         }
 
-        Rsqrt[m + 9 * lastv] = h;
+        Rsqrt[m + 9 * lastv] = qNorm;
       }
     }
 
-    for (aoffset = 0; aoffset < 16; aoffset++) {
-      h = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[aoffset]));
-      std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-      std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
-      x = rtDW.x[aoffset];
-      rtb_xNew_k[aoffset] = x + h;
-      xm[aoffset] = x - h;
-      Vf = std::fmax(std::sqrt(((rtb_xNew_k[3] * rtb_xNew_k[3] + rtb_xNew_k[4] *
-        rtb_xNew_k[4]) + rtb_xNew_k[5] * rtb_xNew_k[5]) + rtb_xNew_k[6] *
-        rtb_xNew_k[6]), 1.0E-12);
-      q_idx_0 = rtb_xNew_k[3] / Vf;
-      q_idx_1 = rtb_xNew_k[4] / Vf;
-      q_idx_2 = rtb_xNew_k[5] / Vf;
-      q_idx_3 = rtb_xNew_k[6] / Vf;
-      x = (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) * 2.0;
-      s_1 = (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) * 2.0;
-      s_2 = 1.0 - (q_idx_1 * q_idx_1 + q_idx_2 * q_idx_2) * 2.0;
-      Vf = std::fmax(std::sqrt(((xm[3] * xm[3] + xm[4] * xm[4]) + xm[5] * xm[5])
-        + xm[6] * xm[6]), 1.0E-12);
-      q_idx_0 = xm[3] / Vf;
-      q_idx_1 = xm[4] / Vf;
-      q_idx_2 = xm[5] / Vf;
-      q_idx_3 = xm[6] / Vf;
-      Vf = (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) * 2.0;
-      q_idx_0 = (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) * 2.0;
-      q_idx_1 = 1.0 - (q_idx_1 * q_idx_1 + q_idx_2 * q_idx_2) * 2.0;
-      work[0] = (rtU.imu_context[1] * s_2 - s_1 * rtU.imu_context[2]) *
-        rtU.imu_context[3];
-      work[1] = (x * rtU.imu_context[2] - rtU.imu_context[0] * s_2) *
-        rtU.imu_context[4];
-      work[2] = (rtU.imu_context[0] * s_1 - x * rtU.imu_context[1]) *
-        rtU.imu_context[5];
-      Rsqrt_0[0] = (rtU.imu_context[1] * q_idx_1 - q_idx_0 * rtU.imu_context[2])
-        * rtU.imu_context[3];
-      Rsqrt_0[1] = (Vf * rtU.imu_context[2] - rtU.imu_context[0] * q_idx_1) *
-        rtU.imu_context[4];
-      Rsqrt_0[2] = (rtU.imu_context[0] * q_idx_0 - Vf * rtU.imu_context[1]) *
-        rtU.imu_context[5];
-      work[3] = rtU.imu_context[6] * rtb_xNew_k[10];
-      work[6] = rtU.imu_context[9] * rtb_xNew_k[13];
-      Rsqrt_0[3] = rtU.imu_context[6] * xm[10];
-      Rsqrt_0[6] = rtU.imu_context[9] * xm[13];
-      work[4] = rtU.imu_context[7] * rtb_xNew_k[11];
-      work[7] = rtU.imu_context[10] * rtb_xNew_k[14];
-      Rsqrt_0[4] = rtU.imu_context[7] * xm[11];
-      Rsqrt_0[7] = rtU.imu_context[10] * xm[14];
-      work[5] = rtU.imu_context[8] * rtb_xNew_k[12];
-      work[8] = rtU.imu_context[11] * rtb_xNew_k[15];
-      Rsqrt_0[5] = rtU.imu_context[8] * xm[12];
-      Rsqrt_0[8] = rtU.imu_context[11] * xm[15];
-      h *= 2.0;
-      for (lastv = 0; lastv < 9; lastv++) {
-        dHdx[lastv + 9 * aoffset] = (work[lastv] - Rsqrt_0[lastv]) / h;
+    x_tmp[0] = rtDW.x[3] * rtDW.x[3];
+    x_tmp[1] = rtDW.x[4] * rtDW.x[4];
+    x_tmp[2] = rtDW.x[5] * rtDW.x[5];
+    x_tmp[3] = rtDW.x[6] * rtDW.x[6];
+    qNorm = std::fmax(std::sqrt(((x_tmp[0] + x_tmp[1]) + x_tmp[2]) + x_tmp[3]),
+                      1.0E-12);
+    qRaw[0] = rtDW.x[3] / qNorm;
+    qRaw[1] = rtDW.x[4] / qNorm;
+    qRaw[2] = rtDW.x[5] / qNorm;
+    qRaw[3] = rtDW.x[6] / qNorm;
+    for (lastv = 0; lastv < 16; lastv++) {
+      b_I[lastv] = 0;
+    }
+
+    b_I[0] = 1;
+    b_I[5] = 1;
+    b_I[10] = 1;
+    b_I[15] = 1;
+    std::memset(&dHdx[0], 0, 144U * sizeof(real_T));
+    std::memset(&s[0], 0, 9U * sizeof(real_T));
+    s[0] = rtU.imu_context[3];
+    s[4] = rtU.imu_context[4];
+    s[8] = rtU.imu_context[5];
+    work[0] = 0.0;
+    work[3] = -rtU.imu_context[2];
+    work[6] = rtU.imu_context[1];
+    work[1] = rtU.imu_context[2];
+    work[4] = 0.0;
+    work[7] = -rtU.imu_context[0];
+    work[2] = -rtU.imu_context[1];
+    work[5] = rtU.imu_context[0];
+    work[8] = 0.0;
+    tmp[0] = -2.0 * qRaw[2];
+    tmp[3] = 2.0 * qRaw[3];
+    tmp[6] = -2.0 * qRaw[0];
+    tmp[9] = 2.0 * qRaw[1];
+    tmp[1] = 2.0 * qRaw[1];
+    tmp[4] = 2.0 * qRaw[0];
+    tmp[7] = 2.0 * qRaw[3];
+    tmp[10] = 2.0 * qRaw[2];
+    tmp[2] = 0.0;
+    tmp[5] = -4.0 * qRaw[1];
+    tmp[8] = -4.0 * qRaw[2];
+    tmp[11] = 0.0;
+    for (lastv = 0; lastv < 3; lastv++) {
+      Vf = s[lastv + 3];
+      s_4 = s[lastv];
+      s_5 = s[lastv + 6];
+      for (m = 0; m < 3; m++) {
+        s_1[lastv + 3 * m] = (work[3 * m + 1] * Vf + work[3 * m] * s_4) + work[3
+          * m + 2] * s_5;
+      }
+
+      Vf = s_1[lastv + 3];
+      s_4 = s_1[lastv];
+      s_5 = s_1[lastv + 6];
+      for (m = 0; m < 4; m++) {
+        s_2[lastv + 3 * m] = (tmp[3 * m + 1] * Vf + tmp[3 * m] * s_4) + tmp[3 *
+          m + 2] * s_5;
       }
     }
 
-    h = std::fmax(std::sqrt(((rtDW.x[3] * rtDW.x[3] + rtDW.x[4] * rtDW.x[4]) +
-      rtDW.x[5] * rtDW.x[5]) + rtDW.x[6] * rtDW.x[6]), 1.0E-12);
-    q_idx_0 = rtDW.x[3] / h;
-    q_idx_1 = rtDW.x[4] / h;
-    q_idx_2 = rtDW.x[5] / h;
-    q_idx_3 = rtDW.x[6] / h;
-    s_0[0] = (q_idx_1 * q_idx_3 - q_idx_0 * q_idx_2) * 2.0;
-    s_0[1] = (q_idx_2 * q_idx_3 + q_idx_0 * q_idx_1) * 2.0;
-    s_0[2] = 1.0 - (q_idx_1 * q_idx_1 + q_idx_2 * q_idx_2) * 2.0;
+    for (lastv = 0; lastv < 4; lastv++) {
+      m = lastv << 2;
+      xm[m] = (static_cast<real_T>(b_I[m]) - qRaw[0] * qRaw[lastv]) / qNorm;
+      xm[m + 1] = (static_cast<real_T>(b_I[m + 1]) - qRaw[1] * qRaw[lastv]) /
+        qNorm;
+      xm[m + 2] = (static_cast<real_T>(b_I[m + 2]) - qRaw[2] * qRaw[lastv]) /
+        qNorm;
+      xm[m + 3] = (static_cast<real_T>(b_I[m + 3]) - qRaw[3] * qRaw[lastv]) /
+        qNorm;
+    }
+
+    dHdx[93] = rtU.imu_context[6];
+    dHdx[103] = rtU.imu_context[7];
+    dHdx[113] = rtU.imu_context[8];
+    dHdx[123] = rtU.imu_context[9];
+    dHdx[133] = rtU.imu_context[10];
+    dHdx[143] = rtU.imu_context[11];
+    qNorm = x_tmp[0];
+    for (m = 0; m < 3; m++) {
+      Vf = s_2[m + 3];
+      s_4 = s_2[m];
+      s_5 = s_2[m + 6];
+      s_3 = s_2[m + 9];
+      for (lastv = 0; lastv < 4; lastv++) {
+        i = lastv << 2;
+        dHdx[m + 9 * (lastv + 3)] = ((xm[i + 1] * Vf + xm[i] * s_4) + xm[i + 2] *
+          s_5) + xm[i + 3] * s_3;
+      }
+
+      qNorm += x_tmp[m + 1];
+    }
+
+    qNorm = std::fmax(std::sqrt(qNorm), 1.0E-12);
+    qRaw[0] = rtDW.x[3] / qNorm;
+    qRaw[1] = rtDW.x[4] / qNorm;
+    qRaw[2] = rtDW.x[5] / qNorm;
+    qRaw[3] = rtDW.x[6] / qNorm;
+    work_0[0] = (qRaw[1] * qRaw[3] - qRaw[0] * qRaw[2]) * 2.0;
+    work_0[1] = (qRaw[2] * qRaw[3] + qRaw[0] * qRaw[1]) * 2.0;
+    work_0[2] = 1.0 - (qRaw[1] * qRaw[1] + qRaw[2] * qRaw[2]) * 2.0;
     for (m = 0; m < 9; m++) {
       for (i = 0; i < 16; i++) {
         aoffset = i << 4;
-        h = 0.0;
+        qNorm = 0.0;
         for (lastv = 0; lastv < 16; lastv++) {
-          h += dHdx[lastv * 9 + m] * rtDW.P_i[aoffset + lastv];
+          qNorm += dHdx[lastv * 9 + m] * rtDW.P_i[aoffset + lastv];
         }
 
-        A[i + 25 * m] = h;
+        A[i + 25 * m] = qNorm;
       }
 
       for (lastv = 0; lastv < 9; lastv++) {
@@ -4111,52 +4150,52 @@ void talos_ekf::step()
       Vf = A[coffset];
       lastv = coffset + 2;
       s[m] = 0.0;
-      h = xnrm2_ln(24 - m, A, coffset + 2);
-      if (h != 0.0) {
-        x = A[coffset];
-        h = rt_hypotd_snf(x, h);
-        if (x >= 0.0) {
-          h = -h;
+      qNorm = xnrm2_ln(24 - m, A, coffset + 2);
+      if (qNorm != 0.0) {
+        s_4 = A[coffset];
+        qNorm = rt_hypotd_snf(s_4, qNorm);
+        if (s_4 >= 0.0) {
+          qNorm = -qNorm;
         }
 
-        if (std::abs(h) < 1.0020841800044864E-292) {
+        if (std::abs(qNorm) < 1.0020841800044864E-292) {
           i = 0;
-          c_tmp = (coffset - m) + 25;
+          i_k_tmp = (coffset - m) + 25;
           do {
             i++;
-            for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+            for (aoffset = lastv; aoffset <= i_k_tmp; aoffset++) {
               A[aoffset - 1] *= 9.9792015476736E+291;
             }
 
-            h *= 9.9792015476736E+291;
+            qNorm *= 9.9792015476736E+291;
             Vf *= 9.9792015476736E+291;
-          } while ((std::abs(h) < 1.0020841800044864E-292) && (i < 20));
+          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
 
-          h = rt_hypotd_snf(Vf, xnrm2_ln(24 - m, A, coffset + 2));
+          qNorm = rt_hypotd_snf(Vf, xnrm2_ln(24 - m, A, coffset + 2));
           if (Vf >= 0.0) {
-            h = -h;
+            qNorm = -qNorm;
           }
 
-          s[m] = (h - Vf) / h;
-          Vf = 1.0 / (Vf - h);
-          for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
-            A[aoffset - 1] *= Vf;
+          s[m] = (qNorm - Vf) / qNorm;
+          Vf = 1.0 / (Vf - qNorm);
+          for (i_k = lastv; i_k <= i_k_tmp; i_k++) {
+            A[i_k - 1] *= Vf;
           }
 
           for (lastv = 0; lastv < i; lastv++) {
-            h *= 1.0020841800044864E-292;
+            qNorm *= 1.0020841800044864E-292;
           }
 
-          Vf = h;
+          Vf = qNorm;
         } else {
-          s[m] = (h - x) / h;
-          Vf = 1.0 / (x - h);
+          s[m] = (qNorm - s_4) / qNorm;
+          Vf = 1.0 / (s_4 - qNorm);
           i = (coffset - m) + 25;
           for (aoffset = lastv; aoffset <= i; aoffset++) {
             A[aoffset - 1] *= Vf;
           }
 
-          Vf = h;
+          Vf = qNorm;
         }
       }
 
@@ -4175,14 +4214,14 @@ void talos_ekf::step()
           exitg2 = false;
           while ((!exitg2) && (i > 0)) {
             aoffset = ((i - 1) * 25 + coffset) + 25;
-            c_tmp = aoffset;
+            i_k = aoffset;
             do {
               exitg1 = 0;
-              if (c_tmp + 1 <= aoffset + lastv) {
-                if (A[c_tmp] != 0.0) {
+              if (i_k + 1 <= aoffset + lastv) {
+                if (A[i_k] != 0.0) {
                   exitg1 = 1;
                 } else {
-                  c_tmp++;
+                  i_k++;
                 }
               } else {
                 i--;
@@ -4222,22 +4261,22 @@ void talos_ekf::step()
     std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          aoffset = i << 4;
-          h += rtDW.P_i[aoffset + lastv] * rtDW.P_i[aoffset + m];
+          coffset = i << 4;
+          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
         }
 
-        C[lastv + (m << 4)] = h;
+        C[lastv + (m << 4)] = qNorm;
       }
     }
 
-    work[0] = rtU.imu_measurement[0] - (rtU.imu_context[1] * s_0[2] - s_0[1] *
-      rtU.imu_context[2]) * rtU.imu_context[3];
-    work[1] = rtU.imu_measurement[1] - (s_0[0] * rtU.imu_context[2] -
-      rtU.imu_context[0] * s_0[2]) * rtU.imu_context[4];
-    work[2] = rtU.imu_measurement[2] - (rtU.imu_context[0] * s_0[1] - s_0[0] *
-      rtU.imu_context[1]) * rtU.imu_context[5];
+    work[0] = rtU.imu_measurement[0] - (rtU.imu_context[1] * work_0[2] - work_0
+      [1] * rtU.imu_context[2]) * rtU.imu_context[3];
+    work[1] = rtU.imu_measurement[1] - (work_0[0] * rtU.imu_context[2] -
+      rtU.imu_context[0] * work_0[2]) * rtU.imu_context[4];
+    work[2] = rtU.imu_measurement[2] - (rtU.imu_context[0] * work_0[1] - work_0
+      [0] * rtU.imu_context[1]) * rtU.imu_context[5];
     work[3] = rtU.imu_measurement[3] - rtU.imu_context[6] * rtDW.x[10];
     work[6] = rtU.imu_measurement[6] - rtU.imu_context[9] * rtDW.x[13];
     work[4] = rtU.imu_measurement[4] - rtU.imu_context[7] * rtDW.x[11];
@@ -4246,12 +4285,12 @@ void talos_ekf::step()
     work[8] = rtU.imu_measurement[8] - rtU.imu_context[11] * rtDW.x[15];
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 9; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          h += C[(i << 4) + lastv] * dHdx[9 * i + m];
+          qNorm += C[(i << 4) + lastv] * dHdx[9 * i + m];
         }
 
-        tmp_0[lastv + (m << 4)] = h;
+        tmp_1[lastv + (m << 4)] = qNorm;
       }
     }
 
@@ -4261,7 +4300,7 @@ void talos_ekf::step()
       }
     }
 
-    EKFCorrector_correctStateAndSqr(rtb_xNew_k, Ss_0, work, tmp_0, a, dHdx,
+    EKFCorrector_correctStateAndSqr(rtb_xNew_k, Ss_0, work, tmp_1, a, dHdx,
       Rsqrt);
     std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
 
@@ -4314,41 +4353,40 @@ void talos_ekf::step()
     }
 
     for (lastv = 0; lastv < 3; lastv++) {
-      Vf = work[3 * lastv + 1];
-      q_idx_0 = work[3 * lastv];
-      q_idx_1 = work[3 * lastv + 2];
+      qNorm = work[3 * lastv + 1];
+      Vf = work[3 * lastv];
+      s_4 = work[3 * lastv + 2];
       for (m = 0; m < 3; m++) {
-        Rsqrt_0[m + 3 * lastv] = (s[m + 3] * Vf + q_idx_0 * s[m]) + s[m + 6] *
-          q_idx_1;
+        s_1[m + 3 * lastv] = (s[m + 3] * qNorm + Vf * s[m]) + s[m + 6] * s_4;
       }
     }
 
-    for (aoffset = 0; aoffset < 16; aoffset++) {
-      h = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[aoffset]));
+    for (i_k = 0; i_k < 16; i_k++) {
+      qNorm = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[i_k]));
       std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
       std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
-      x = rtDW.x[aoffset];
-      rtb_xNew_k[aoffset] = x + h;
-      xm[aoffset] = x - h;
-      h *= 2.0;
-      dHdx_0[3 * aoffset] = (rtU.fog_mask[0] * rtb_xNew_k[10] - rtU.fog_mask[0] *
-        xm[10]) / h;
-      dHdx_0[3 * aoffset + 1] = (rtU.fog_mask[1] * rtb_xNew_k[11] -
-        rtU.fog_mask[1] * xm[11]) / h;
-      dHdx_0[3 * aoffset + 2] = (rtU.fog_mask[2] * rtb_xNew_k[12] -
-        rtU.fog_mask[2] * xm[12]) / h;
+      Vf = rtDW.x[i_k];
+      rtb_xNew_k[i_k] = Vf + qNorm;
+      xm[i_k] = Vf - qNorm;
+      qNorm *= 2.0;
+      dHdx_0[3 * i_k] = (rtU.fog_mask[0] * rtb_xNew_k[10] - rtU.fog_mask[0] *
+                         xm[10]) / qNorm;
+      dHdx_0[3 * i_k + 1] = (rtU.fog_mask[1] * rtb_xNew_k[11] - rtU.fog_mask[1] *
+        xm[11]) / qNorm;
+      dHdx_0[3 * i_k + 2] = (rtU.fog_mask[2] * rtb_xNew_k[12] - rtU.fog_mask[2] *
+        xm[12]) / qNorm;
     }
 
     for (m = 0; m < 3; m++) {
       coffset = m << 4;
       for (i = 0; i < 16; i++) {
         aoffset = i << 4;
-        h = 0.0;
+        qNorm = 0.0;
         for (lastv = 0; lastv < 16; lastv++) {
-          h += dHdx_0[lastv * 3 + m] * rtDW.P_i[aoffset + lastv];
+          qNorm += dHdx_0[lastv * 3 + m] * rtDW.P_i[aoffset + lastv];
         }
 
-        y[coffset + i] = h;
+        y[coffset + i] = qNorm;
       }
     }
 
@@ -4359,9 +4397,9 @@ void talos_ekf::step()
     }
 
     for (i = 0; i < 3; i++) {
-      A_0[19 * i + 16] = Rsqrt_0[i];
-      A_0[19 * i + 17] = Rsqrt_0[i + 3];
-      A_0[19 * i + 18] = Rsqrt_0[i + 6];
+      A_0[19 * i + 16] = s_1[i];
+      A_0[19 * i + 17] = s_1[i + 3];
+      A_0[19 * i + 18] = s_1[i + 6];
       work_0[i] = 0.0;
     }
 
@@ -4370,52 +4408,52 @@ void talos_ekf::step()
       Vf = A_0[coffset];
       lastv = coffset + 2;
       s_0[m] = 0.0;
-      h = xnrm2_hmd(18 - m, A_0, coffset + 2);
-      if (h != 0.0) {
-        x = A_0[coffset];
-        h = rt_hypotd_snf(x, h);
-        if (x >= 0.0) {
-          h = -h;
+      qNorm = xnrm2_hmd(18 - m, A_0, coffset + 2);
+      if (qNorm != 0.0) {
+        s_4 = A_0[coffset];
+        qNorm = rt_hypotd_snf(s_4, qNorm);
+        if (s_4 >= 0.0) {
+          qNorm = -qNorm;
         }
 
-        if (std::abs(h) < 1.0020841800044864E-292) {
+        if (std::abs(qNorm) < 1.0020841800044864E-292) {
           i = 0;
-          c_tmp = (coffset - m) + 19;
+          i_k_tmp = (coffset - m) + 19;
           do {
             i++;
-            for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+            for (aoffset = lastv; aoffset <= i_k_tmp; aoffset++) {
               A_0[aoffset - 1] *= 9.9792015476736E+291;
             }
 
-            h *= 9.9792015476736E+291;
+            qNorm *= 9.9792015476736E+291;
             Vf *= 9.9792015476736E+291;
-          } while ((std::abs(h) < 1.0020841800044864E-292) && (i < 20));
+          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
 
-          h = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
+          qNorm = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
           if (Vf >= 0.0) {
-            h = -h;
+            qNorm = -qNorm;
           }
 
-          s_0[m] = (h - Vf) / h;
-          Vf = 1.0 / (Vf - h);
-          for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
-            A_0[aoffset - 1] *= Vf;
+          s_0[m] = (qNorm - Vf) / qNorm;
+          Vf = 1.0 / (Vf - qNorm);
+          for (i_k = lastv; i_k <= i_k_tmp; i_k++) {
+            A_0[i_k - 1] *= Vf;
           }
 
           for (lastv = 0; lastv < i; lastv++) {
-            h *= 1.0020841800044864E-292;
+            qNorm *= 1.0020841800044864E-292;
           }
 
-          Vf = h;
+          Vf = qNorm;
         } else {
-          s_0[m] = (h - x) / h;
-          Vf = 1.0 / (x - h);
+          s_0[m] = (qNorm - s_4) / qNorm;
+          Vf = 1.0 / (s_4 - qNorm);
           i = (coffset - m) + 19;
           for (aoffset = lastv; aoffset <= i; aoffset++) {
             A_0[aoffset - 1] *= Vf;
           }
 
-          Vf = h;
+          Vf = qNorm;
         }
       }
 
@@ -4434,14 +4472,14 @@ void talos_ekf::step()
           exitg2 = false;
           while ((!exitg2) && (i > 0)) {
             aoffset = ((i - 1) * 19 + coffset) + 19;
-            c_tmp = aoffset;
+            i_k = aoffset;
             do {
               exitg1 = 0;
-              if (c_tmp + 1 <= aoffset + lastv) {
-                if (A_0[c_tmp] != 0.0) {
+              if (i_k + 1 <= aoffset + lastv) {
+                if (A_0[i_k] != 0.0) {
                   exitg1 = 1;
                 } else {
-                  c_tmp++;
+                  i_k++;
                 }
               } else {
                 i--;
@@ -4481,13 +4519,13 @@ void talos_ekf::step()
     std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          aoffset = i << 4;
-          h += rtDW.P_i[aoffset + lastv] * rtDW.P_i[aoffset + m];
+          coffset = i << 4;
+          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
         }
 
-        C[lastv + (m << 4)] = h;
+        C[lastv + (m << 4)] = qNorm;
       }
     }
 
@@ -4496,12 +4534,12 @@ void talos_ekf::step()
     work_0[2] = rtU.fog_measurement[2] - rtU.fog_mask[2] * rtDW.x[12];
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 3; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          h += C[(i << 4) + lastv] * dHdx_0[3 * i + m];
+          qNorm += C[(i << 4) + lastv] * dHdx_0[3 * i + m];
         }
 
-        y[lastv + (m << 4)] = h;
+        y[lastv + (m << 4)] = qNorm;
       }
     }
 
@@ -4511,8 +4549,7 @@ void talos_ekf::step()
       s[3 * lastv + 2] = work[lastv + 6];
     }
 
-    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0,
-      Rsqrt_0);
+    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0, s_1);
     std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
 
     // End of MATLAB Function: '<S3>/Correct'
@@ -4564,21 +4601,20 @@ void talos_ekf::step()
     }
 
     for (lastv = 0; lastv < 3; lastv++) {
-      Vf = work[3 * lastv + 1];
-      q_idx_0 = work[3 * lastv];
-      q_idx_1 = work[3 * lastv + 2];
+      qNorm = work[3 * lastv + 1];
+      Vf = work[3 * lastv];
+      s_4 = work[3 * lastv + 2];
       for (m = 0; m < 3; m++) {
-        Rsqrt_0[m + 3 * lastv] = (s[m + 3] * Vf + q_idx_0 * s[m]) + s[m + 6] *
-          q_idx_1;
+        s_1[m + 3 * lastv] = (s[m + 3] * qNorm + Vf * s[m]) + s[m + 6] * s_4;
       }
     }
 
     std::memset(&dHdx_0[0], 0, 48U * sizeof(real_T));
     for (lastv = 0; lastv < 3; lastv++) {
-      m = (lastv + 7) * 3;
-      dHdx_0[m] = 0.0;
-      dHdx_0[m + 1] = 0.0;
-      dHdx_0[m + 2] = 0.0;
+      i = (lastv + 7) * 3;
+      dHdx_0[i] = 0.0;
+      dHdx_0[i + 1] = 0.0;
+      dHdx_0[i + 2] = 0.0;
     }
 
     dHdx_0[21] = rtU.dvl_context[3];
@@ -4598,12 +4634,12 @@ void talos_ekf::step()
     work[5] = -rtU.dvl_context[0];
     work[8] = 0.0;
     for (lastv = 0; lastv < 3; lastv++) {
-      x = s[lastv + 3];
-      s_1 = s[lastv];
-      s_2 = s[lastv + 6];
+      Vf = s[lastv + 3];
+      s_4 = s[lastv];
+      s_5 = s[lastv + 6];
       for (m = 0; m < 3; m++) {
-        dHdx_0[lastv + 3 * (m + 10)] = (work[3 * m + 1] * x + work[3 * m] * s_1)
-          + work[3 * m + 2] * s_2;
+        dHdx_0[lastv + 3 * (m + 10)] = (work[3 * m + 1] * Vf + work[3 * m] * s_4)
+          + work[3 * m + 2] * s_5;
       }
     }
 
@@ -4611,12 +4647,12 @@ void talos_ekf::step()
       coffset = m << 4;
       for (i = 0; i < 16; i++) {
         aoffset = i << 4;
-        h = 0.0;
+        qNorm = 0.0;
         for (lastv = 0; lastv < 16; lastv++) {
-          h += dHdx_0[lastv * 3 + m] * rtDW.P_i[aoffset + lastv];
+          qNorm += dHdx_0[lastv * 3 + m] * rtDW.P_i[aoffset + lastv];
         }
 
-        y[coffset + i] = h;
+        y[coffset + i] = qNorm;
       }
     }
 
@@ -4627,9 +4663,9 @@ void talos_ekf::step()
     }
 
     for (i = 0; i < 3; i++) {
-      A_0[19 * i + 16] = Rsqrt_0[i];
-      A_0[19 * i + 17] = Rsqrt_0[i + 3];
-      A_0[19 * i + 18] = Rsqrt_0[i + 6];
+      A_0[19 * i + 16] = s_1[i];
+      A_0[19 * i + 17] = s_1[i + 3];
+      A_0[19 * i + 18] = s_1[i + 6];
       work_0[i] = 0.0;
     }
 
@@ -4638,52 +4674,52 @@ void talos_ekf::step()
       Vf = A_0[coffset];
       lastv = coffset + 2;
       s_0[m] = 0.0;
-      h = xnrm2_hmd(18 - m, A_0, coffset + 2);
-      if (h != 0.0) {
-        x = A_0[coffset];
-        h = rt_hypotd_snf(x, h);
-        if (x >= 0.0) {
-          h = -h;
+      qNorm = xnrm2_hmd(18 - m, A_0, coffset + 2);
+      if (qNorm != 0.0) {
+        s_4 = A_0[coffset];
+        qNorm = rt_hypotd_snf(s_4, qNorm);
+        if (s_4 >= 0.0) {
+          qNorm = -qNorm;
         }
 
-        if (std::abs(h) < 1.0020841800044864E-292) {
+        if (std::abs(qNorm) < 1.0020841800044864E-292) {
           i = 0;
-          c_tmp = (coffset - m) + 19;
+          i_k_tmp = (coffset - m) + 19;
           do {
             i++;
-            for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+            for (aoffset = lastv; aoffset <= i_k_tmp; aoffset++) {
               A_0[aoffset - 1] *= 9.9792015476736E+291;
             }
 
-            h *= 9.9792015476736E+291;
+            qNorm *= 9.9792015476736E+291;
             Vf *= 9.9792015476736E+291;
-          } while ((std::abs(h) < 1.0020841800044864E-292) && (i < 20));
+          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
 
-          h = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
+          qNorm = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
           if (Vf >= 0.0) {
-            h = -h;
+            qNorm = -qNorm;
           }
 
-          s_0[m] = (h - Vf) / h;
-          Vf = 1.0 / (Vf - h);
-          for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
-            A_0[aoffset - 1] *= Vf;
+          s_0[m] = (qNorm - Vf) / qNorm;
+          Vf = 1.0 / (Vf - qNorm);
+          for (i_k = lastv; i_k <= i_k_tmp; i_k++) {
+            A_0[i_k - 1] *= Vf;
           }
 
           for (lastv = 0; lastv < i; lastv++) {
-            h *= 1.0020841800044864E-292;
+            qNorm *= 1.0020841800044864E-292;
           }
 
-          Vf = h;
+          Vf = qNorm;
         } else {
-          s_0[m] = (h - x) / h;
-          Vf = 1.0 / (x - h);
+          s_0[m] = (qNorm - s_4) / qNorm;
+          Vf = 1.0 / (s_4 - qNorm);
           i = (coffset - m) + 19;
           for (aoffset = lastv; aoffset <= i; aoffset++) {
             A_0[aoffset - 1] *= Vf;
           }
 
-          Vf = h;
+          Vf = qNorm;
         }
       }
 
@@ -4702,14 +4738,14 @@ void talos_ekf::step()
           exitg2 = false;
           while ((!exitg2) && (i > 0)) {
             aoffset = ((i - 1) * 19 + coffset) + 19;
-            c_tmp = aoffset;
+            i_k = aoffset;
             do {
               exitg1 = 0;
-              if (c_tmp + 1 <= aoffset + lastv) {
-                if (A_0[c_tmp] != 0.0) {
+              if (i_k + 1 <= aoffset + lastv) {
+                if (A_0[i_k] != 0.0) {
                   exitg1 = 1;
                 } else {
-                  c_tmp++;
+                  i_k++;
                 }
               } else {
                 i--;
@@ -4755,22 +4791,22 @@ void talos_ekf::step()
       rtU.dvl_context[0] * rtDW.x[11]) + rtDW.x[9]) * rtU.dvl_context[5];
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          aoffset = i << 4;
-          h += rtDW.P_i[aoffset + lastv] * rtDW.P_i[aoffset + m];
+          coffset = i << 4;
+          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
         }
 
-        C[lastv + (m << 4)] = h;
+        C[lastv + (m << 4)] = qNorm;
       }
 
       for (m = 0; m < 3; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          h += C[(i << 4) + lastv] * dHdx_0[3 * i + m];
+          qNorm += C[(i << 4) + lastv] * dHdx_0[3 * i + m];
         }
 
-        y[lastv + (m << 4)] = h;
+        y[lastv + (m << 4)] = qNorm;
       }
     }
 
@@ -4780,8 +4816,7 @@ void talos_ekf::step()
       s[3 * lastv + 2] = work[lastv + 6];
     }
 
-    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0,
-      Rsqrt_0);
+    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0, s_1);
     std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
 
     // End of MATLAB Function: '<S4>/Correct'
@@ -4802,18 +4837,18 @@ void talos_ekf::step()
     //   Inport: '<Root>/R_depth'
 
     if ((!std::isinf(rtU.R_depth)) && (!std::isnan(rtU.R_depth))) {
-      h = rtU.R_depth;
+      qNorm = rtU.R_depth;
       Vf = 1.0;
       if (rtU.R_depth != 0.0) {
-        h = std::abs(rtU.R_depth);
+        qNorm = std::abs(rtU.R_depth);
       }
 
-      if (h < 0.0) {
-        h = -h;
+      if (qNorm < 0.0) {
+        qNorm = -qNorm;
         Vf = -1.0;
       }
     } else {
-      h = (rtNaN);
+      qNorm = (rtNaN);
       Vf = (rtNaN);
     }
 
@@ -4823,7 +4858,7 @@ void talos_ekf::step()
     //   Inport: '<Root>/depth_measurement'
     //   MATLAB Function: '<S5>/Correct'
 
-    EKFCorrector_correct(rtU.depth_measurement, Vf * std::sqrt(h), rtDW.x,
+    EKFCorrector_correct(rtU.depth_measurement, Vf * std::sqrt(qNorm), rtDW.x,
                          rtDW.P_i, rtU.depth_mask);
   }
 
@@ -4871,37 +4906,37 @@ void talos_ekf::step()
 
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          h += K[(i << 4) + m] * Ss_0[(lastv << 4) + i];
+          qNorm += K[(i << 4) + m] * Ss_0[(lastv << 4) + i];
         }
 
-        Rsqrt_1[m + (lastv << 4)] = h;
+        Rsqrt_0[m + (lastv << 4)] = qNorm;
       }
     }
 
     std::memcpy(&K[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
-    qrFactor(b, K, Rsqrt_1);
+    qrFactor(b, K, Rsqrt_0);
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          aoffset = i << 4;
-          h += rtDW.P_i[aoffset + lastv] * rtDW.P_i[aoffset + m];
+          coffset = i << 4;
+          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
         }
 
-        C[lastv + (m << 4)] = h;
+        C[lastv + (m << 4)] = qNorm;
       }
     }
 
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          h += C[(i << 4) + m] * b[(lastv << 4) + i];
+          qNorm += C[(i << 4) + m] * b[(lastv << 4) + i];
         }
 
-        Ss_0[lastv + (m << 4)] = h;
+        Ss_0[lastv + (m << 4)] = qNorm;
       }
     }
 
@@ -4927,12 +4962,12 @@ void talos_ekf::step()
 
     for (lastv = 0; lastv < 16; lastv++) {
       for (m = 0; m < 16; m++) {
-        h = 0.0;
+        qNorm = 0.0;
         for (i = 0; i < 16; i++) {
-          h += K_0[(i << 4) + m] * b[(lastv << 4) + i];
+          qNorm += K_0[(i << 4) + m] * b[(lastv << 4) + i];
         }
 
-        Ss_0[m + (lastv << 4)] = h;
+        Ss_0[m + (lastv << 4)] = qNorm;
       }
     }
 
@@ -4940,18 +4975,18 @@ void talos_ekf::step()
       m = (i << 4) + i;
       Ss_0[m]++;
       for (lastv = 0; lastv < 16; lastv++) {
-        x = 0.0;
+        Vf = 0.0;
         for (m = 0; m < 16; m++) {
-          x += K[(m << 4) + i] * Rsqrt_1[(lastv << 4) + m];
+          Vf += K[(m << 4) + i] * Rsqrt_0[(lastv << 4) + m];
         }
 
-        K_0[i + (lastv << 4)] = x;
+        K_0[i + (lastv << 4)] = Vf;
       }
     }
 
     qrFactor(Ss_0, rtDW.P_i, K_0);
     for (lastv = 0; lastv < 16; lastv++) {
-      tmp[lastv] = rtU.reset_state[lastv] - rtDW.x[lastv];
+      tmp_0[lastv] = rtU.reset_state[lastv] - rtDW.x[lastv];
     }
 
     // DataStoreWrite: '<S6>/Data Store WriteX' incorporates:
@@ -4959,12 +4994,12 @@ void talos_ekf::step()
     //   MATLAB Function: '<S6>/Correct'
 
     for (lastv = 0; lastv < 16; lastv++) {
-      h = 0.0;
+      qNorm = 0.0;
       for (m = 0; m < 16; m++) {
-        h += K[(m << 4) + lastv] * tmp[m];
+        qNorm += K[(m << 4) + lastv] * tmp_0[m];
       }
 
-      rtDW.x[lastv] += h;
+      rtDW.x[lastv] += qNorm;
     }
 
     // End of DataStoreWrite: '<S6>/Data Store WriteX'
@@ -4985,14 +5020,14 @@ void talos_ekf::step()
     for (lastv = 0; lastv < 16; lastv++) {
       // Outputs for Atomic SubSystem: '<S1>/Output'
       // MATLAB Function: '<S7>/MATLAB Function'
-      h = 0.0;
+      qNorm = 0.0;
 
       // End of Outputs for SubSystem: '<S1>/Output'
       for (m = 0; m < 16; m++) {
         // Outputs for Atomic SubSystem: '<S1>/Output'
         // MATLAB Function: '<S7>/MATLAB Function'
-        aoffset = m << 4;
-        h += rtDW.P_i[aoffset + i] * rtDW.P_i[aoffset + lastv];
+        coffset = m << 4;
+        qNorm += rtDW.P_i[coffset + i] * rtDW.P_i[coffset + lastv];
 
         // End of Outputs for SubSystem: '<S1>/Output'
       }
@@ -5001,7 +5036,7 @@ void talos_ekf::step()
       // MATLAB Function: '<S7>/MATLAB Function' incorporates:
       //   DataStoreRead: '<S7>/Data Store Read1'
 
-      rtY.covariance[i + (lastv << 4)] = h;
+      rtY.covariance[i + (lastv << 4)] = qNorm;
 
       // End of Outputs for SubSystem: '<S1>/Output'
     }
@@ -5046,43 +5081,43 @@ void talos_ekf::step()
   }
 
   for (m = 0; m < 16; m++) {
-    h = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[m]));
+    qNorm = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[m]));
     std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
     std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    x = rtDW.x[m];
-    rtb_xNew_k[m] = x + h;
-    xm[m] = x - h;
-    talos_state_transition(rtb_xNew_k, rtU.dt, tmp);
+    Vf = rtDW.x[m];
+    rtb_xNew_k[m] = Vf + qNorm;
+    xm[m] = Vf - qNorm;
+    talos_state_transition(rtb_xNew_k, rtU.dt, tmp_0);
     talos_state_transition(xm, rtU.dt, rtb_xNew_k);
-    h *= 2.0;
+    qNorm *= 2.0;
     for (lastv = 0; lastv < 16; lastv++) {
-      Rsqrt_1[lastv + (m << 4)] = (tmp[lastv] - rtb_xNew_k[lastv]) / h;
+      Rsqrt_0[lastv + (m << 4)] = (tmp_0[lastv] - rtb_xNew_k[lastv]) / qNorm;
     }
   }
 
   for (m = 0; m < 16; m++) {
-    aoffset = m << 4;
+    coffset = m << 4;
     for (i = 0; i < 16; i++) {
-      coffset = i << 4;
-      h = 0.0;
-      x = 0.0;
+      i_k = i << 4;
+      qNorm = 0.0;
+      Vf = 0.0;
       for (lastv = 0; lastv < 16; lastv++) {
-        c_tmp = lastv << 4;
-        h += Rsqrt_1[c_tmp + m] * rtDW.P_i[coffset + lastv];
-        x += K[c_tmp + i] * Ss_0[aoffset + lastv];
+        aoffset = lastv << 4;
+        qNorm += Rsqrt_0[aoffset + m] * rtDW.P_i[i_k + lastv];
+        Vf += K[aoffset + i] * Ss_0[coffset + lastv];
       }
 
-      K_0[m + coffset] = x;
-      C[aoffset + i] = h;
+      K_0[m + i_k] = Vf;
+      C[coffset + i] = qNorm;
     }
   }
 
   for (i = 0; i < 16; i++) {
     for (lastv = 0; lastv < 16; lastv++) {
       m = (i << 4) + lastv;
-      aoffset = (i << 5) + lastv;
-      A_1[aoffset] = C[m];
-      A_1[aoffset + 16] = K_0[m];
+      coffset = (i << 5) + lastv;
+      A_1[coffset] = C[m];
+      A_1[coffset + 16] = K_0[m];
     }
 
     xm[i] = 0.0;
@@ -5093,52 +5128,52 @@ void talos_ekf::step()
     Vf = A_1[coffset];
     lastv = coffset + 2;
     rtb_xNew_k[m] = 0.0;
-    h = xnrm2_dzn(31 - m, A_1, coffset + 2);
-    if (h != 0.0) {
-      x = A_1[coffset];
-      h = rt_hypotd_snf(x, h);
-      if (x >= 0.0) {
-        h = -h;
+    qNorm = xnrm2_dzn(31 - m, A_1, coffset + 2);
+    if (qNorm != 0.0) {
+      s_4 = A_1[coffset];
+      qNorm = rt_hypotd_snf(s_4, qNorm);
+      if (s_4 >= 0.0) {
+        qNorm = -qNorm;
       }
 
-      if (std::abs(h) < 1.0020841800044864E-292) {
+      if (std::abs(qNorm) < 1.0020841800044864E-292) {
         i = 0;
-        c_tmp = (coffset - m) + 32;
+        i_k_tmp = (coffset - m) + 32;
         do {
           i++;
-          for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
+          for (aoffset = lastv; aoffset <= i_k_tmp; aoffset++) {
             A_1[aoffset - 1] *= 9.9792015476736E+291;
           }
 
-          h *= 9.9792015476736E+291;
+          qNorm *= 9.9792015476736E+291;
           Vf *= 9.9792015476736E+291;
-        } while ((std::abs(h) < 1.0020841800044864E-292) && (i < 20));
+        } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
 
-        h = rt_hypotd_snf(Vf, xnrm2_dzn(31 - m, A_1, coffset + 2));
+        qNorm = rt_hypotd_snf(Vf, xnrm2_dzn(31 - m, A_1, coffset + 2));
         if (Vf >= 0.0) {
-          h = -h;
+          qNorm = -qNorm;
         }
 
-        rtb_xNew_k[m] = (h - Vf) / h;
-        Vf = 1.0 / (Vf - h);
-        for (aoffset = lastv; aoffset <= c_tmp; aoffset++) {
-          A_1[aoffset - 1] *= Vf;
+        rtb_xNew_k[m] = (qNorm - Vf) / qNorm;
+        Vf = 1.0 / (Vf - qNorm);
+        for (i_k = lastv; i_k <= i_k_tmp; i_k++) {
+          A_1[i_k - 1] *= Vf;
         }
 
         for (aoffset = 0; aoffset < i; aoffset++) {
-          h *= 1.0020841800044864E-292;
+          qNorm *= 1.0020841800044864E-292;
         }
 
-        Vf = h;
+        Vf = qNorm;
       } else {
-        rtb_xNew_k[m] = (h - x) / h;
-        Vf = 1.0 / (x - h);
+        rtb_xNew_k[m] = (qNorm - s_4) / qNorm;
+        Vf = 1.0 / (s_4 - qNorm);
         i = (coffset - m) + 32;
-        for (aoffset = lastv; aoffset <= i; aoffset++) {
-          A_1[aoffset - 1] *= Vf;
+        for (i_k = lastv; i_k <= i; i_k++) {
+          A_1[i_k - 1] *= Vf;
         }
 
-        Vf = h;
+        Vf = qNorm;
       }
     }
 
@@ -5157,14 +5192,14 @@ void talos_ekf::step()
         exitg2 = false;
         while ((!exitg2) && (i > 0)) {
           aoffset = (((i - 1) << 5) + coffset) + 32;
-          c_tmp = aoffset;
+          i_k = aoffset;
           do {
             exitg1 = 0;
-            if (c_tmp + 1 <= aoffset + lastv) {
-              if (A_1[c_tmp] != 0.0) {
+            if (i_k + 1 <= aoffset + lastv) {
+              if (A_1[i_k] != 0.0) {
                 exitg1 = 1;
               } else {
-                c_tmp++;
+                i_k++;
               }
             } else {
               i--;
@@ -5206,8 +5241,8 @@ void talos_ekf::step()
     }
   }
 
-  std::memcpy(&tmp[0], &rtDW.x[0], sizeof(real_T) << 4U);
-  talos_state_transition(tmp, rtU.dt, rtDW.x);
+  std::memcpy(&tmp_0[0], &rtDW.x[0], sizeof(real_T) << 4U);
+  talos_state_transition(tmp_0, rtU.dt, rtDW.x);
 
   // End of MATLAB Function: '<S8>/Predict'
   // End of Outputs for SubSystem: '<S1>/Predict'

@@ -42,6 +42,50 @@ inline bool normalize_quaternion(State & x, const State * reference = nullptr)
   return true;
 }
 
+// A gravity-direction measurement is invariant to left multiplication by a
+// world-Z rotation. Use that exact gauge freedom to retain the heading carried
+// into the correction while accepting the corrected tilt.
+inline State remove_world_yaw_correction(const State & before, State corrected)
+{
+  State reference = before;
+  if (!normalize_quaternion(reference) || !normalize_quaternion(corrected, &reference)) {
+    return before;
+  }
+
+  const double bw = reference[3], bx = reference[4];
+  const double by = reference[5], bz = reference[6];
+  const double aw = corrected[3], ax = corrected[4];
+  const double ay = corrected[5], az = corrected[6];
+
+  const double before_heading_norm = std::hypot(bw, bz);
+  const double corrected_heading_norm = std::hypot(aw, az);
+  const double absolute_half_delta = std::atan2(bz, bw) - std::atan2(az, aw);
+
+  // The nearest member of corrected's world-Z gauge orbit is well conditioned
+  // even at inverted attitude. Blend toward it as the absolute heading chart
+  // approaches its singularity. Every point in the blend is still a world-Z
+  // rotation of corrected, so the accepted gravity direction is unchanged.
+  const double orbit_dot = bw * aw + bx * ax + by * ay + bz * az;
+  const double orbit_cross = -bw * az - bx * ay + by * ax + bz * aw;
+  const double nearest_half_delta = std::atan2(orbit_cross, orbit_dot);
+  const double chart_norm = std::min(before_heading_norm, corrected_heading_norm);
+  const double blend_coordinate = std::clamp((chart_norm - 0.1) / 0.15, 0.0, 1.0);
+  const double absolute_weight =
+    blend_coordinate * blend_coordinate * (3.0 - 2.0 * blend_coordinate);
+  const double delta_difference = std::atan2(
+    std::sin(absolute_half_delta - nearest_half_delta),
+    std::cos(absolute_half_delta - nearest_half_delta));
+  const double half_delta = nearest_half_delta + absolute_weight * delta_difference;
+  const double dw = std::cos(half_delta);
+  const double dz = std::sin(half_delta);
+  corrected[3] = dw * aw - dz * az;
+  corrected[4] = dw * ax - dz * ay;
+  corrected[5] = dw * ay + dz * ax;
+  corrected[6] = dw * az + dz * aw;
+  normalize_quaternion(corrected, &reference);
+  return corrected;
+}
+
 inline std::array<double, 9> rotation(const State & x)
 {
   const double w = x[3], qx = x[4], qy = x[5], qz = x[6];

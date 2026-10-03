@@ -3,6 +3,10 @@
     world_frame: odom
     base_link_frame: talos/base_link
     frequency: 30.0
+    # VectorNav orientation samples are correlated at its full sensor rate.
+    # Fuse quaternion-derived tilt at 40 Hz (<=25 ms sampling delay), while
+    # retaining angular velocity and acceleration from every IMU sample.
+    vectornav_tilt_correction_frequency: 40.0
     publish_tf: true
     gravitational_acceleration: 9.755455
     reorder_delay: 0.02

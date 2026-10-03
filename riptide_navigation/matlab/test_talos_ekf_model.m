@@ -3,6 +3,18 @@
 % Simulink Test license.
 talos_ekf_init;
 open_system(fullfile(fileparts(mfilename('fullpath')), 'talos_ekf.slx'));
+
+% The gravity measurement must be exactly insensitive to global yaw.
+jacobianContext = [0.31; -0.42; 0.851; 1; 1; 0; 1; 1; 0; 1; 1; 1];
+jacobianState = [zeros(3,1); 0.72; -0.21; 0.43; 0.49; zeros(9,1)];
+jacobianState(4:7) = jacobianState(4:7)/norm(jacobianState(4:7));
+analyticJacobian = talos_measure_imu_configured_jacobian(jacobianState, jacobianContext);
+numericJacobian = talos_numeric_jacobian(jacobianState, 1, jacobianContext);
+assert(max(abs(analyticJacobian(:)-numericJacobian(:))) < 2e-8);
+q = jacobianState(4:7);
+worldYawTangent = [-q(4); -q(3); q(2); q(1)]/2;
+assert(norm(analyticJacobian(1:3,4:7)*worldYawTangent) < 1e-13);
+
 dt = talosEkfCfg.sampleTime;
 t = (0:dt:2)';
 N = numel(t);
