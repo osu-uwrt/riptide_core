@@ -1,5 +1,8 @@
 #goal definition
 geometry_msgs/PoseStamped[] path_points
+# How to reach each path point (index-aligned with path_points). Empty: straight
+# lines, with the yaw blended from point to point.
+riptide_msgs2/PathSegment[] segments
 ---
 #result definition
 uint8 error_code

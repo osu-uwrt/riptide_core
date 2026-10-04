@@ -65,7 +65,10 @@
         </xacro:camera_macro>
     </xacro:macro>
 
-    <xacro:macro name="zed_macro" params="namespace name parent_link">
+    <!-- parent_link is the camera center (the configured pose). zed_wrapper's camera_link is the
+         bottom mounting screw hole, height/2 below center along camera -z; its own URDF puts
+         camera_center back up at +height/2. height is 0.032 m for zedx and zedxm. -->
+    <xacro:macro name="zed_macro" params="namespace name parent_link height:=0.032">
         <link name="${name}_camera_link">
             <xacro:dummy_inertia />
             <xacro:no_collision />
@@ -74,7 +77,7 @@
         <joint name="${namespace}/${name}_origin_joint" type="fixed">
             <parent link="${parent_link}" />
             <child link="${name}_camera_link" />
-            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <origin xyz="0 0 ${-height/2}" rpy="0 0 0"/>
         </joint>
     </xacro:macro>
 
