@@ -21,6 +21,9 @@ uint8 HEADING_PATH=1     # face the direction of travel
 uint8 HEADING_LOOK_AT=2  # face look_at
 uint8 heading
 geometry_msgs/Point look_at
+# HEADING_LOOK_AT: if set, look_at is in this TF frame instead and follows it
+# live while on this segment (the frame may move; the path itself does not).
+string look_at_frame
 float64 yaw_offset # added to the HEADING_PATH / HEADING_LOOK_AT yaw; pi/2 travels sideways
 float64 spin       # extra yaw over the segment (+ = counterclockwise), spread by progress; 2*pi = one turn
 # Steady spin: extra yaw per metre travelled (+ = counterclockwise), carried on
