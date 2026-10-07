@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "minimum_samples": 200,
+  "gyro_blocks": 10,
+  "gyro_max_rms_rad_s": 0.003,
+  "gyro_max_temperature_span_c": 1.0,
+  "gyro_max_pose_delta_rad_s": 0.0015,
+  "accelerometer_max_rms_m_s2": 0.08,
+  "accelerometer_max_condition": 5000.0,
+  "accelerometer_min_axis_span_m_s2": 2.0,
+  "magnetometer_max_rms_fraction": 0.08,
+  "magnetometer_min_coverage_deg": 300.0,
+  "magnetometer_max_tilt_stddev_deg": 8.0
+}
