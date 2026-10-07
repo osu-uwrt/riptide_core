@@ -1,10 +1,21 @@
 #pragma once
 
 #include <QJsonObject>
+#include <QMap>
 #include <QString>
 #include <QVector>
 
 namespace riptide_imu {
+
+struct RegisterFieldDefinition {
+  QString name;
+  QString units;
+  QString type{"number"};
+  double minimum{0.0};
+  double maximum{0.0};
+  bool has_range{false};
+  QMap<QString, QString> enum_values;
+};
 
 struct RegisterDefinition {
   int id{-1};
@@ -15,6 +26,9 @@ struct RegisterDefinition {
   int value_count{-1};
   bool writable{false};
   bool dangerous{false};
+  QString editor{"raw"};
+  QString firmware;
+  QVector<RegisterFieldDefinition> fields;
 };
 
 struct RegisterValue {

@@ -33,6 +33,24 @@ QVector<RegisterDefinition> loadRegisterDefinitions(const QString& path,
     definition.value_count = object.value("value_count").toInt(-1);
     definition.writable = object.value("writable").toBool(false);
     definition.dangerous = object.value("dangerous").toBool(false);
+    definition.editor = object.value("editor").toString("raw");
+    definition.firmware = object.value("firmware").toString();
+    for (const auto field_value : object.value("fields").toArray()) {
+      const auto field_object = field_value.toObject();
+      RegisterFieldDefinition field;
+      field.name = field_object.value("name").toString();
+      field.units = field_object.value("units").toString();
+      field.type = field_object.value("type").toString("number");
+      if (field_object.contains("minimum") && field_object.contains("maximum")) {
+        field.has_range = true;
+        field.minimum = field_object.value("minimum").toDouble();
+        field.maximum = field_object.value("maximum").toDouble();
+      }
+      const auto enum_object = field_object.value("values").toObject();
+      for (auto entry = enum_object.constBegin(); entry != enum_object.constEnd(); ++entry)
+        field.enum_values.insert(entry.key(), entry.value().toString());
+      definition.fields.push_back(field);
+    }
     if (definition.id >= 0 && !definition.name.isEmpty()) result.push_back(definition);
   }
   if (result.isEmpty() && error) *error = "Register schema contains no registers";

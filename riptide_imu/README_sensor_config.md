@@ -19,6 +19,21 @@ field is an editable dropdown populated from `/dev/serial/by-id`,
 `/dev/ttyUSB*`, `/dev/ttyACM*`, and `/dev/ttyTHS*`. Select a detected device or
 enter any serial path, then reconnect without relaunching the application.
 
+## Dashboard
+
+The application uses a dark, dockable workbench designed for simultaneous
+configuration and monitoring. The grouped register tree and structured
+device/staged-value inspector remain central, live attitude and numeric sensor
+data occupy the right dock, and plots, calibration, and protocol diagnostics
+share tabbed lower docks. Use the **View** menu to show hidden panels or reset
+the saved layout. Window geometry and dock placement are stored per user.
+
+The main toolbar exposes read, apply, discard, XML import/export, persistent
+save, telemetry recording, and replay actions. `Ctrl+F` focuses register search,
+`F5` reads the selected register, and `Ctrl+Return` applies validated staged
+values. Structured enum and matrix/vector fields retain an editable raw
+protocol representation for diagnosis and forward compatibility.
+
 Package-owned C++ code is separated by purpose: the ROS driver is under
 `src/driver` and `include/riptide_imu/driver`, while the configuration application
 is under `src/config_tool` and `include/riptide_imu/config_tool`.

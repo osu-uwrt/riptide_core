@@ -7,7 +7,7 @@
 
 namespace riptide_imu {
 
-SensorTransport::SensorTransport(QObject* parent) : QObject(parent) {}
+SensorTransport::SensorTransport(QObject* parent) : SensorInterface(parent) {}
 
 SensorTransport::~SensorTransport() { disconnectSensor(); }
 

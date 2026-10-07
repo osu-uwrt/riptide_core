@@ -37,20 +37,28 @@ ament_target_dependencies(imu rclcpp std_msgs sensor_msgs geometry_msgs
   tf2_geometry_msgs riptide_msgs2 rclcpp_action)
 target_link_libraries(imu libvncxx)
 
-add_executable(sensor_config
-  src/config_tool/sensor_config_main.cpp
+add_library(vn_config_ui
   src/config_tool/main_window.cpp
+  src/config_tool/dashboard_widgets.cpp
   src/config_tool/sensor_transport.cpp
   include/riptide_imu/config_tool/main_window.hpp
+  include/riptide_imu/config_tool/dashboard_widgets.hpp
   include/riptide_imu/config_tool/sensor_transport.hpp)
-target_include_directories(sensor_config PRIVATE vnproglib-1.2.0.0/cpp/include include)
-ament_target_dependencies(sensor_config rclcpp ament_index_cpp)
-target_link_libraries(sensor_config vn_config_core libvncxx Qt5::Widgets)
+target_include_directories(vn_config_ui PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/vnproglib-1.2.0.0/cpp/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(vn_config_ui PUBLIC vn_config_core libvncxx Qt5::Widgets)
 if(TARGET Qt5::Charts)
-  target_link_libraries(sensor_config Qt5::Charts)
+  target_link_libraries(vn_config_ui PUBLIC Qt5::Charts)
 endif()
 
-install(TARGETS imu sensor_config libvncxx vn_config_core
+add_executable(sensor_config src/config_tool/sensor_config_main.cpp)
+target_include_directories(sensor_config PRIVATE include)
+ament_target_dependencies(sensor_config rclcpp ament_index_cpp)
+target_link_libraries(sensor_config vn_config_ui)
+
+install(TARGETS imu sensor_config libvncxx vn_config_core vn_config_ui
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME})
@@ -64,6 +72,7 @@ install(PROGRAMS test/hardware_acceptance.py
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
+  find_package(Qt5 REQUIRED COMPONENTS Test)
   set(ament_cmake_copyright_FOUND TRUE)
   set(ament_cmake_cpplint_FOUND TRUE)
   # These whole-tree checks cannot exclude the bundled legacy VNProglib.
@@ -76,6 +85,12 @@ if(BUILD_TESTING)
   target_link_libraries(test_calibration vn_config_core)
   ament_add_gtest(test_configuration test/test_configuration.cpp)
   target_link_libraries(test_configuration vn_config_core Qt5::Core Qt5::Xml)
+  add_executable(test_dashboard test/test_dashboard.cpp)
+  target_include_directories(test_dashboard PRIVATE include)
+  target_compile_definitions(test_dashboard PRIVATE
+    TEST_SHARE_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_dashboard vn_config_ui Qt5::Test)
+  add_test(NAME test_dashboard COMMAND test_dashboard -platform offscreen)
 endif()
 
 ament_export_include_directories(include)

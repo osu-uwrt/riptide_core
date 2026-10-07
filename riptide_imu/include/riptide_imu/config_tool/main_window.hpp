@@ -8,48 +8,34 @@
 
 #include "riptide_imu/config_tool/calibration.hpp"
 #include "riptide_imu/config_tool/configuration.hpp"
+#include "riptide_imu/config_tool/dashboard_widgets.hpp"
 #include "riptide_imu/config_tool/sensor_transport.hpp"
 
+class QAction;
 class QLabel;
 class QComboBox;
+class QDockWidget;
 class QLineEdit;
-class QListWidget;
 class QPlainTextEdit;
 class QPushButton;
-class QStackedWidget;
 class QTableWidget;
 class QTimer;
+class QTreeWidget;
+class QTreeWidgetItem;
+class QShowEvent;
 
 namespace riptide_imu {
-
-class AttitudeWidget : public QWidget {
-  Q_OBJECT
- public:
-  explicit AttitudeWidget(QWidget* parent = nullptr);
-  void setQuaternion(double x, double y, double z, double w);
- protected:
-  void paintEvent(QPaintEvent*) override;
- private:
-  Eigen::Quaterniond orientation_{Eigen::Quaterniond::Identity()};
-};
-
-class PlotWidget : public QWidget {
-  Q_OBJECT
- public:
-  explicit PlotWidget(QWidget* parent = nullptr);
-  void append(const Telemetry& sample);
- protected:
-  void paintEvent(QPaintEvent*) override;
- private:
-  std::deque<Telemetry> samples_;
-};
 
 class MainWindow : public QMainWindow {
   Q_OBJECT
  public:
   MainWindow(QString imu_port, int baud, QString config_file, bool demo,
-             QString share_directory, QWidget* parent = nullptr);
+             QString share_directory, QWidget* parent = nullptr,
+             SensorInterface* injected_sensor = nullptr);
   ~MainWindow() override;
+
+ protected:
+  void showEvent(QShowEvent* event) override;
 
  signals:
   void requestConnect(const QString& port, int baud);
@@ -78,13 +64,22 @@ class MainWindow : public QMainWindow {
   void exportCalibrationReport();
   void exportTelemetry();
   void loadReplay();
+  void selectRegister(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+  void stageInspectorValues();
+  void resetDashboardLayout();
 
  private:
   QWidget* buildMonitorPage();
+  QWidget* buildPlotPanel();
   QWidget* buildRegistersPage();
   QWidget* buildCalibrationPage();
   QWidget* buildDiagnosticsPage();
   QWidget* buildConnectionBar(const QString& initial_port, int initial_baud);
+  void buildMenusAndToolbar();
+  void applyDefaultDashboardLayout();
+  void restoreDashboardLayout();
+  void refreshRegisterInspector();
+  QStringList fieldNames(const RegisterDefinition& definition, int count) const;
   void loadDefinitions(const QString& path);
   void refreshRegisterTable();
   void setStatus(const QString& text, bool error = false);
@@ -101,18 +96,26 @@ class MainWindow : public QMainWindow {
   SensorConfiguration configuration_metadata_;
 
   QThread sensor_thread_;
-  SensorTransport* transport_{nullptr};
-  QStackedWidget* pages_{nullptr};
-  QListWidget* navigation_{nullptr};
+  SensorInterface* transport_{nullptr};
+  bool owns_transport_{false};
+  QDockWidget* monitor_dock_{nullptr};
+  QDockWidget* plot_dock_{nullptr};
+  QDockWidget* calibration_dock_{nullptr};
+  QDockWidget* diagnostics_dock_{nullptr};
   QComboBox* port_selector_{nullptr};
   QComboBox* baud_selector_{nullptr};
   QPushButton* connection_button_{nullptr};
   QLabel* status_{nullptr};
   QLabel* numeric_data_{nullptr};
+  QLabel* register_description_{nullptr};
+  QLabel* register_state_{nullptr};
   AttitudeWidget* attitude_{nullptr};
+  TelemetrySummaryWidget* telemetry_summary_{nullptr};
   PlotWidget* plot_{nullptr};
-  QTableWidget* register_table_{nullptr};
+  QTreeWidget* register_tree_{nullptr};
+  QTableWidget* register_inspector_{nullptr};
   QLineEdit* register_filter_{nullptr};
+  QLineEdit* raw_register_editor_{nullptr};
   QPlainTextEdit* traffic_log_{nullptr};
   QPushButton* capture_button_{nullptr};
   QPlainTextEdit* calibration_result_{nullptr};
@@ -129,6 +132,10 @@ class MainWindow : public QMainWindow {
   bool recording_{false};
   bool monitor_paused_{false};
   bool connected_{false};
+  int current_register_id_{-1};
+  bool updating_register_editor_{false};
+  QElapsedTimer last_sample_clock_;
+  QTimer* stale_timer_{nullptr};
   GyroResult gyro_result_;
   AccelerometerResult accel_result_;
   PlanarMagResult mag_result_;

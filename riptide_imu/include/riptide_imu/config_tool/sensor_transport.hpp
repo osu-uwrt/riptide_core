@@ -17,21 +17,21 @@ struct Telemetry {
   double temperature_c{0.0}, pressure_kpa{0.0};
 };
 
-class SensorTransport : public QObject {
+class SensorInterface : public QObject {
   Q_OBJECT
  public:
-  explicit SensorTransport(QObject* parent = nullptr);
-  ~SensorTransport() override;
+  explicit SensorInterface(QObject* parent = nullptr) : QObject(parent) {}
+  ~SensorInterface() override = default;
 
  public slots:
-  void connectSensor(const QString& port, int requested_baud);
-  void disconnectSensor();
-  void setDemoMode(bool enabled);
-  void readRegister(int id);
-  void writeRegister(int id, const QString& semicolon_values);
-  void writeSettings();
-  void tare();
-  void reset();
+  virtual void connectSensor(const QString& port, int requested_baud) = 0;
+  virtual void disconnectSensor() = 0;
+  virtual void setDemoMode(bool enabled) = 0;
+  virtual void readRegister(int id) = 0;
+  virtual void writeRegister(int id, const QString& semicolon_values) = 0;
+  virtual void writeSettings() = 0;
+  virtual void tare() = 0;
+  virtual void reset() = 0;
 
  signals:
   void connectionChanged(bool connected, const QString& detail);
@@ -40,6 +40,23 @@ class SensorTransport : public QObject {
   void operationFailed(const QString& operation, const QString& detail);
   void traffic(const QString& direction, const QString& packet);
   void writeVerified(int id, const QString& values);
+};
+
+class SensorTransport : public SensorInterface {
+  Q_OBJECT
+ public:
+  explicit SensorTransport(QObject* parent = nullptr);
+  ~SensorTransport() override;
+
+ public slots:
+  void connectSensor(const QString& port, int requested_baud) override;
+  void disconnectSensor() override;
+  void setDemoMode(bool enabled) override;
+  void readRegister(int id) override;
+  void writeRegister(int id, const QString& semicolon_values) override;
+  void writeSettings() override;
+  void tare() override;
+  void reset() override;
 
  private slots:
   void poll();

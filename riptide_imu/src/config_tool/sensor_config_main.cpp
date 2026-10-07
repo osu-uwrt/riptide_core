@@ -19,13 +19,7 @@ int main(int argc, char** argv) {
   QApplication application(qt_argc, qt_argv.data());
   application.setApplicationName("VectorNav Workshop");
   application.setOrganizationName("OSU Underwater Robotics");
-  application.setStyleSheet(
-      "QMainWindow,QWidget{font-size:10pt} QListWidget{background:#17212b;border:0;color:#dbe7f3;padding-top:18px}"
-      "QListWidget::item{padding:14px 18px} QListWidget::item:selected{background:#2b77c0;color:white}"
-      "QLabel#pageTitle{font-size:20pt;font-weight:600;margin:8px} QPushButton{padding:7px 12px}"
-      "QWidget#connectionBar{background:palette(alternate-base);border:1px solid palette(mid);border-radius:6px}"
-      "QPushButton#primaryButton{background:#2b77c0;color:white;border:0;border-radius:4px;font-weight:600}"
-      "QTableWidget{gridline-color:#52606d} QStatusBar{padding:4px}");
+  riptide_imu::applyDarkTheme(&application);
   riptide_imu::MainWindow window(QString::fromStdString(imu_port), baud,
                                 QString::fromStdString(config_file), demo,
                                 QString::fromStdString(ament_index_cpp::get_package_share_directory("riptide_imu")));
