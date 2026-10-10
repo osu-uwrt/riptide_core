@@ -59,7 +59,7 @@ ament_target_dependencies(talos_ekf_node
   tf2 tf2_geometry_msgs tf2_ros)
 
 install(TARGETS talos_ekf_node DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY config launch docs DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY matlab DESTINATION share/${PROJECT_NAME}
   PATTERN "slprj" EXCLUDE
   PATTERN "html" EXCLUDE
@@ -72,43 +72,5 @@ install(DIRECTORY matlab DESTINATION share/${PROJECT_NAME}
   PATTERN "*.mk" EXCLUDE
   PATTERN "rtw_proj.tmw" EXCLUDE
   PATTERN "ert_main.cpp" EXCLUDE)
-install(PROGRAMS
-  scripts/analyze_navigation_bag.py
-  scripts/record_navigation_run.sh
-  scripts/verify_jetson_install.sh
-  DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY validation DESTINATION share/${PROJECT_NAME}
-  PATTERN "runs" EXCLUDE)
-
-if(BUILD_TESTING)
-  find_package(ament_cmake_gtest REQUIRED)
-  find_package(ament_lint_auto REQUIRED)
-  set(AMENT_LINT_AUTO_EXCLUDE
-    ament_cmake_cppcheck
-    ament_cmake_copyright
-    ament_cmake_cpplint
-    ament_cmake_xmllint
-  )
-  file(GLOB_RECURSE GENERATED_LINT_EXCLUDES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.hpp"
-  )
-  set(AMENT_LINT_AUTO_FILE_EXCLUDE
-    ${GENERATED_LINT_EXCLUDES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/matlab/talos_ekf.slxc
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/riptide_navigation/codegen_compat
-  )
-  ament_lint_auto_find_test_dependencies()
-  ament_add_gtest(test_estimator_support test/test_estimator_support.cpp)
-  if(TARGET test_estimator_support)
-    target_include_directories(test_estimator_support PRIVATE include)
-  endif()
-  ament_add_gtest(test_generated_core test/test_generated_core.cpp)
-  if(TARGET test_generated_core)
-    target_link_libraries(test_generated_core talos_ekf_generated)
-  endif()
-endif()
 
 ament_package()

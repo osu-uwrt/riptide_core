@@ -7,9 +7,9 @@ base_link: [-0.14, 0.03, -0.09]
 # Vehicle mass properties, from the "Talos 7-11-26" SolidWorks CAD (claw, magnet poker,
 # 2x ZED X Mini; hidden ZED2i excluded). Parts without a material are at 1000 kg/m^3 and
 # wiring is not modeled, so prefer a scale weight for mass.
-mass: 32.444 # measured (CAD: 34.708)
+mass: 34.084 # wet, weighed after the 2026-10-03 pool session (3D prints soak; dry 32.444, CAD 34.708)
 # Previous (pre-claw CAD): mass 31.998, com [-0.157, 0.040, -0.048]
-com: [-0.150, 0.037, -0.013] # measured, everything on
+com: [-0.150, 0.041, -0.016] # wet, 2026-10-03 (dry [-0.150, 0.037, -0.013]), everything on
 inertia: [1.8429, 1.0051, 1.8607] # kg*m^2, diagonal about COM in body axes (full tensor in riptide_mpc models/talos.yaml)
 
 hull_volume: .11 #make this real
@@ -343,8 +343,9 @@ poker:
   pose: [0.2286, 0.0127, -0.17145, 0, 0, 0]
 
 torpedoes: 
-  pose: [0.048, 0.18200625, -0.1324, 0.0, 0.0, 0.0] #real z: -0.1524, real y: 0.17700625
-  baseline: 0.0365125
+  # launcher front face, centered between the two tube bores (matches nereus launcher CAD)
+  pose: [0.048, 0.1739, -0.15426, 0.0, 0.0, 0.0]
+  baseline: 0.035   # torpedo_0 at y 0.1564, torpedo_1 at y 0.1914
 
 droppers:
   pose: [0.0, 0.17200625, -0.1501, 0.0, 0.0, 0.0]
