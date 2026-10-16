@@ -15,6 +15,8 @@ runner targeted `/talos` while the driver was in the root namespace. No
 coefficients were applied or saved. The runner now validates ROS endpoint
 discovery before launch, the dashboard shows and exports per-step sample
 counts, and gravity capture has a buffer separate from accelerometer fitting.
+The gravity tilt convention now uses the reported gravity vector rather than
+the opposite specific-force direction, and reports include uncertainty evidence.
 
 Remaining: rerun the assisted bias suite against the discovered root endpoint;
 Windows Control Center bidirectional XML check.

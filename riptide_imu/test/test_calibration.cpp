@@ -97,10 +97,11 @@ TEST(MagnetometerCalibration, FitsCircleInGravityDerivedPlane) {
 
 TEST(GravityReport, ReportsTiltWithoutClaimingMountingRotation) {
   riptide_imu::CalibrationPolicy policy;
-  const Eigen::Vector3d force = Eigen::AngleAxisd(.3,Eigen::Vector3d::UnitX())*Eigen::Vector3d(0,0,9.75);
+  const Eigen::Vector3d gravity = Eigen::AngleAxisd(.3,Eigen::Vector3d::UnitX())*Eigen::Vector3d(0,0,9.75);
+  const Eigen::Vector3d force = -gravity;
   std::vector<Sample> samples(300); for(int i=0;i<300;++i)samples[i]={i*.01,force,23};
   const auto report=riptide_imu::makeGravityReport(samples,policy);
   EXPECT_TRUE(report.quality.passed); EXPECT_NEAR(report.magnitude,9.75,1e-10);
   EXPECT_NEAR(report.tilt_from_sensor_z_deg,.3*180/M_PI,1e-10);
-  EXPECT_LT((report.gravity_vector+force).norm(),1e-12);
+  EXPECT_LT((report.gravity_vector-gravity).norm(),1e-12);
 }

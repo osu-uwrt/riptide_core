@@ -277,10 +277,11 @@ GravityReport makeGravityReport(const std::vector<Sample>& samples,
     return result;
   }
   const Eigen::Vector3d direction = result.specific_force_mean / result.magnitude;
+  const Eigen::Vector3d gravity_direction = -direction;
   result.magnitude_stddev = std::sqrt(std::max(
       0.0, (direction.transpose() * result.covariance * direction).value()));
   result.tilt_from_sensor_z_deg =
-      std::acos(std::clamp(direction.dot(Eigen::Vector3d::UnitZ()), -1.0, 1.0)) *
+      std::acos(std::clamp(gravity_direction.dot(Eigen::Vector3d::UnitZ()), -1.0, 1.0)) *
       180.0 / M_PI;
   result.tilt_stddev_deg =
       std::sqrt(std::max(0.0, result.covariance.trace())) / result.magnitude *
