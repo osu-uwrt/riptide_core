@@ -2,6 +2,7 @@
 
 #include <QComboBox>
 #include <QDockWidget>
+#include <QLabel>
 #include <QSettings>
 #include <QTableWidget>
 #include <QTreeWidget>
@@ -49,6 +50,7 @@ class FakeSensor : public SensorInterface {
   void reset() override {}
 
   void provideRegister(int id, const QString& value) { emit registerRead(id, value); }
+  void provideCalibration(const Telemetry& value) { emit calibrationSampleReceived(value); }
 };
 
 class DashboardTest : public QObject {
@@ -154,6 +156,26 @@ class DashboardTest : public QObject {
     QVERIFY(QMetaObject::invokeMethod(&window, "resetDashboardLayout"));
     QVERIFY(!window.findChild<QDockWidget*>("monitorDock")->isHidden());
     QCOMPARE(window.size(), QSize(1440, 900));
+  }
+
+  void calibrationCountsSamplesAndSeparatesGravityCapture() {
+    FakeSensor sensor;
+    MainWindow window("/dev/test", 460800, QString(), false,
+                      QStringLiteral(TEST_SHARE_DIRECTORY), nullptr, &sensor);
+    auto* selector = window.findChild<QComboBox*>("calibrationStepSelector");
+    auto* count = window.findChild<QLabel*>("calibrationSampleCount");
+    QVERIFY(selector);
+    QVERIFY(count);
+    selector->setCurrentIndex(1);
+    QVERIFY(QMetaObject::invokeMethod(&window, "toggleCapture"));
+    Telemetry sample;
+    sample.az = 9.8;
+    for (int index = 0; index < 200; ++index) sensor.provideCalibration(sample);
+    QVERIFY(count->text().startsWith("200 / 200"));
+    QVERIFY(QMetaObject::invokeMethod(&window, "evaluateCalibration"));
+
+    selector->setCurrentIndex(3);
+    QVERIFY(count->text().startsWith("0 / 200"));
   }
 
   void dockVisibilityPersistsAndSmallerScreensRemainUsable() {

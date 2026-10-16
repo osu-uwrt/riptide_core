@@ -130,12 +130,14 @@ class MainWindow : public QMainWindow {
   QLineEdit* raw_register_editor_{nullptr};
   QPlainTextEdit* traffic_log_{nullptr};
   QPushButton* capture_button_{nullptr};
+  QLabel* calibration_sample_count_{nullptr};
   QPlainTextEdit* calibration_result_{nullptr};
   int calibration_step_{0};
   bool capturing_{false};
   QElapsedTimer capture_clock_;
   std::vector<Sample> gyro_samples_;
   std::vector<Sample> accel_samples_;
+  std::vector<Sample> gravity_samples_;
   std::vector<Sample> mag_samples_;
   std::vector<Sample> mag_accel_samples_;
   std::vector<Telemetry> recorded_telemetry_;

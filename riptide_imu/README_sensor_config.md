@@ -164,11 +164,13 @@ Run the operator-assisted full bias suite with:
 
 ```bash
 ros2 run riptide_imu vn_bias_suite \
-  --remote-namespace /talos \
   --report ~/vn100_bias_report.json
 ```
 
-The script launches the dashboard, gives pose-by-pose instructions, never
+The script discovers the active `*/vectornav/config` service and refuses to
+start if no driver is available or the requested namespace is wrong. Pass
+`--remote-namespace /talos` only when the driver is actually namespaced under
+`/talos`. The script launches the dashboard, gives pose-by-pose instructions, never
 applies or saves coefficients, validates every exported quality gate, and writes
 `~/vn100_bias_report_suite_result.json` with the overall pass/fail result.
 

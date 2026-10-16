@@ -10,6 +10,55 @@ import sys
 import time
 
 
+SERVICE_SUFFIX = "/vectornav/config"
+
+
+def normalize_namespace(value):
+    """Normalize a ROS namespace, using slash for the root namespace."""
+    value = value.strip()
+    if value.endswith(SERVICE_SUFFIX):
+        value = value[:-len(SERVICE_SUFFIX)]
+    value = "/" + value.strip("/") if value.strip("/") else "/"
+    return value
+
+
+def discover_endpoints():
+    """Return namespaces exposing the VectorNav configuration service."""
+    completed = subprocess.run(
+        ["ros2", "service", "list", "-t"], capture_output=True, text=True,
+        timeout=5, check=False)
+    if completed.returncode:
+        raise RuntimeError("Could not inspect ROS services: " +
+                           (completed.stderr.strip() or "ros2 failed"))
+    endpoints = []
+    for line in completed.stdout.splitlines():
+        service = line.split()[0] if line.split() else ""
+        if service.endswith(SERVICE_SUFFIX) and "QueryImuSerial" in line:
+            endpoints.append(normalize_namespace(service))
+    return sorted(set(endpoints))
+
+
+def resolve_endpoint(requested, discovered):
+    """Resolve and validate the requested driver namespace."""
+    if requested:
+        endpoint = normalize_namespace(requested)
+        if endpoint not in discovered:
+            available = ", ".join(discovered) if discovered else "none"
+            raise RuntimeError(
+                f"Requested ROS driver namespace {endpoint} is unavailable; "
+                f"discovered endpoints: {available}")
+        return endpoint
+    if len(discovered) == 1:
+        return discovered[0]
+    if not discovered:
+        raise RuntimeError(
+            "No QueryImuSerial service ending in /vectornav/config was found; "
+            "start the VN driver before the bias suite")
+    raise RuntimeError(
+        "Multiple VectorNav drivers were discovered; rerun with "
+        "--remote-namespace set to one of: " + ", ".join(discovered))
+
+
 def pause(instruction):
     """Print one operator instruction and wait for acknowledgement."""
     print(f"\n{instruction}")
@@ -26,8 +75,14 @@ def finite_vector(value, length=3):
 def assess(report):
     """Evaluate the exported application report and return named checks."""
     checks = {}
+    minimum_samples = report.get("policy", {}).get("minimum_samples", 200)
     for name in ("gyro", "accelerometer", "magnetometer", "gravity_report"):
-        checks[f"{name}_quality"] = bool(report.get(name, {}).get("passed"))
+        section = report.get(name, {})
+        checks[f"{name}_evaluated"] = bool(
+            section.get("evaluated", section.get("quality")))
+        checks[f"{name}_samples"] = (
+            section.get("sample_count", 0) >= minimum_samples)
+        checks[f"{name}_quality"] = bool(section.get("passed"))
     checks["gyro_vector_finite"] = finite_vector(
         report.get("gyro", {}).get("residual_bias_rad_s"))
     checks["accelerometer_vector_finite"] = finite_vector(
@@ -68,27 +123,38 @@ def main():
     process = None
     try:
         if not args.no_launch:
+            endpoint = resolve_endpoint(args.remote_namespace,
+                                        discover_endpoints())
+            print(f"Using ROS VectorNav driver endpoint: {endpoint}")
             command = ["ros2", "launch", "riptide_imu",
                        "sensor_config.launch.py", "connection_mode:=ros",
-                       f"remote_namespace:={args.remote_namespace}"]
+                       f"remote_namespace:={endpoint}"]
             process = subprocess.Popen(command)
             time.sleep(3.0)
         print("VN-100 full bias suite. This run captures and evaluates data only.")
         print("Do not Apply or Save Persistent Settings during this acceptance run.")
-        pause("PREPARATION: Confirm ROS mode is connected, live telemetry is fresh, "
+        pause("PREPARATION: Confirm ROS mode says connected, live telemetry is fresh, "
               "the robot is secured, thrusters are disabled, and the configuration backup exists.")
-        pause("GYRO: Select Calibration > Gyroscope. With the robot completely stationary, "
-              "capture at least 10 seconds. Stop capture before touching the robot. Repeat at "
-              "two or more arbitrary orientations, then Evaluate. Do not assume any pose is "
-              "level.")
-        pause("ACCELEROMETER: Advance to Accelerometer. Capture stationary windows at varied "
-              "reachable tilts spanning both signs of roll and pitch (target 8 or more poses). "
-              "Stop capture while repositioning, then Evaluate.")
-        pause("MAGNETOMETER: Advance to Magnetometer. Keep tilt variation small while rotating "
-              "the whole robot through a slow full horizontal circle, away from movable ferrous "
-              "objects and high-current wiring. Evaluate the limited planar fit.")
-        pause("GRAVITY/TILT: Advance to Gravity Report. Hold the robot stationary in its normal "
-              "installed pose for at least 10 seconds, then Evaluate.")
+        pause("GYRO: In the Calibration dock select 'Gyro bias'. Click Start "
+              "capture. With the robot completely stationary, capture at "
+              "least 10 seconds. Stop capture before touching the robot. "
+              "Repeat at two or more arbitrary orientations. Confirm the "
+              "displayed count exceeds the minimum, click Evaluate quality, "
+              "and verify a non-empty quality message. No pose must be level.")
+        pause("ACCELEROMETER: Select 'Accelerometer bias + magnitude'. "
+              "Capture stationary windows at varied reachable tilts spanning "
+              "both signs of roll and pitch (target 8 or more poses). Stop "
+              "capture while repositioning. Confirm the minimum count, click "
+              "Evaluate quality, and verify the quality message.")
+        pause("MAGNETOMETER: Select 'Planar magnetometer'. Keep tilt variation "
+              "small while rotating the whole robot through a slow full "
+              "horizontal circle, away from movable ferrous objects and "
+              "high-current wiring. Confirm the minimum count, click Evaluate "
+              "quality, and inspect the limited planar fit.")
+        pause("GRAVITY/TILT: Select 'Gravity/tilt report'. Hold the robot "
+              "stationary in its normal installed pose for at least 10 "
+              "seconds. Confirm the minimum count, click Evaluate quality, "
+              "and verify the quality message.")
         pause(f"REVIEW: Inspect every quality message. Click Export Report and save exactly to:\n"
               f"  {args.report}")
         if not args.report.is_file():
@@ -109,6 +175,11 @@ def main():
                                encoding="utf-8")
         for name, outcome in checks.items():
             print(f"{'PASS' if outcome else 'FAIL'}  {name}")
+        for name in ("gyro", "accelerometer", "magnetometer", "gravity_report"):
+            section = report.get(name, {})
+            if not section.get("passed"):
+                print(f"  {name}: samples={section.get('sample_count', 'not recorded')}; "
+                      f"{section.get('quality') or 'not evaluated'}")
         print(f"\nOVERALL: {'PASS' if passed else 'FAIL'}")
         print(f"Result: {result_path}")
         return 0 if passed else 1

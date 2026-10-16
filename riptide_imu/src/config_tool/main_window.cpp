@@ -644,11 +644,21 @@ QWidget* MainWindow::buildCalibrationPage() {
       "4 Gravity report. Each step is independent. Skipped steps preserve their registers. Collection never writes the sensor.");
   explanation->setWordWrap(true); layout->addWidget(explanation);
   auto* row = new QHBoxLayout; auto* selector = new QComboBox;
+  selector->setObjectName("calibrationStepSelector");
   selector->addItems({"Gyro bias", "Accelerometer bias + magnitude", "Planar magnetometer", "Gravity/tilt report"});
-  connect(selector, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) { calibration_step_ = index; });
+  calibration_sample_count_ = new QLabel("0 samples");
+  calibration_sample_count_->setObjectName("calibrationSampleCount");
+  connect(selector, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
+    if (capturing_) toggleCapture();
+    calibration_step_ = index;
+    const std::size_t count = index == 0 ? gyro_samples_.size() :
+        index == 1 ? accel_samples_.size() : index == 2 ? mag_samples_.size() : gravity_samples_.size();
+    calibration_sample_count_->setText(QString("%1 / %2 minimum samples").arg(count).arg(policy_.minimum_samples));
+  });
   capture_button_ = new QPushButton("Start capture"); auto* evaluate = new QPushButton("Evaluate quality");
+  capture_button_->setObjectName("calibrationCaptureButton");
   auto* stage = new QPushButton("Stage passed result"); auto* clear = new QPushButton("Clear selected samples");
-  row->addWidget(selector); row->addWidget(capture_button_); row->addWidget(evaluate); row->addWidget(stage); row->addWidget(clear); layout->addLayout(row);
+  row->addWidget(selector); row->addWidget(capture_button_); row->addWidget(evaluate); row->addWidget(stage); row->addWidget(clear); row->addWidget(calibration_sample_count_); layout->addLayout(row);
   calibration_result_ = new QPlainTextEdit; calibration_result_->setReadOnly(true); layout->addWidget(calibration_result_, 1);
   auto* export_button = new QPushButton("Export machine-readable report…"); layout->addWidget(export_button);
   connect(capture_button_, &QPushButton::clicked, this, &MainWindow::toggleCapture);
@@ -658,7 +668,8 @@ QWidget* MainWindow::buildCalibrationPage() {
   connect(clear, &QPushButton::clicked, this, [this] {
     if (calibration_step_ == 0) gyro_samples_.clear(); else if (calibration_step_ == 1) accel_samples_.clear();
     else if (calibration_step_ == 2) { mag_samples_.clear(); mag_accel_samples_.clear(); }
-    else accel_samples_.clear();
+    else gravity_samples_.clear();
+    calibration_sample_count_->setText(QString("0 / %1 minimum samples").arg(policy_.minimum_samples));
     calibration_result_->appendPlainText("Selected samples cleared; sensor registers unchanged.");
   });
   return page;
@@ -891,12 +902,18 @@ void MainWindow::onCalibrationSample(const Telemetry& sample) {
   const double t = capture_clock_.elapsed() / 1000.0;
   if (calibration_step_ == 0)
     gyro_samples_.push_back({t, {sample.gx, sample.gy, sample.gz}, sample.temperature_c});
-  else if (calibration_step_ == 1 || calibration_step_ == 3)
+  else if (calibration_step_ == 1)
     accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
+  else if (calibration_step_ == 3)
+    gravity_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
   else {
     mag_samples_.push_back({t, {sample.mx, sample.my, sample.mz}, sample.temperature_c});
     mag_accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
   }
+  const std::size_t count = calibration_step_ == 0 ? gyro_samples_.size() :
+      calibration_step_ == 1 ? accel_samples_.size() :
+      calibration_step_ == 2 ? mag_samples_.size() : gravity_samples_.size();
+  calibration_sample_count_->setText(QString("%1 / %2 minimum samples").arg(count).arg(policy_.minimum_samples));
 }
 
 void MainWindow::onRegisterRead(int id, const QString& values) {
@@ -980,7 +997,7 @@ void MainWindow::evaluateCalibration() {
   if (calibration_step_ == 0) { gyro_result_ = estimateGyroBias(gyro_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(gyro_result_.quality.summary) + "\nResidual " + vectorText(gyro_result_.residual_bias)); }
   else if (calibration_step_ == 1) { accel_result_ = estimateAccelerometerBias(accel_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(accel_result_.quality.summary) + "\nBias " + vectorText(accel_result_.bias) + QString("; measured magnitude %1 ± %2 m/s²").arg(accel_result_.measured_gravity).arg(accel_result_.gravity_stddev)); }
   else if (calibration_step_ == 2) { mag_result_ = estimatePlanarMagBias(mag_samples_, mag_accel_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(mag_result_.quality.summary) + "\nObservable in-plane bias " + vectorText(mag_result_.in_plane_bias)); }
-  else { gravity_report_ = makeGravityReport(accel_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(gravity_report_.quality.summary) + "\nSpecific force " + vectorText(gravity_report_.specific_force_mean) + "\nGravity vector (opposite specific force) " + vectorText(gravity_report_.gravity_vector) + QString("\nMagnitude %1 ± %2 m/s²; tilt from sensor +Z %3 ± %4 deg. This is not sensor-to-robot mounting rotation.").arg(gravity_report_.magnitude).arg(gravity_report_.magnitude_stddev).arg(gravity_report_.tilt_from_sensor_z_deg).arg(gravity_report_.tilt_stddev_deg)); }
+  else { gravity_report_ = makeGravityReport(gravity_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(gravity_report_.quality.summary) + "\nSpecific force " + vectorText(gravity_report_.specific_force_mean) + "\nGravity vector (opposite specific force) " + vectorText(gravity_report_.gravity_vector) + QString("\nMagnitude %1 ± %2 m/s²; tilt from sensor +Z %3 ± %4 deg. This is not sensor-to-robot mounting rotation.").arg(gravity_report_.magnitude).arg(gravity_report_.magnitude_stddev).arg(gravity_report_.tilt_from_sensor_z_deg).arg(gravity_report_.tilt_stddev_deg)); }
 }
 
 bool MainWindow::parseCompensation(const QString& text, Eigen::Matrix3d* matrix, Eigen::Vector3d* bias) {
@@ -1026,10 +1043,10 @@ void MainWindow::exportCalibrationReport() {
   QJsonObject report{{"schema_version", 1}, {"warning", "Gravity-derived tilt is not sensor-to-robot mounting rotation; yaw is unobservable."},
                      {"gravity_sign", "gravity_vector_sensor = -mean_stationary_specific_force"}, {"frame", "VectorNav configured sensor output frame"}};
   auto vec=[](const Eigen::Vector3d& v){return QJsonArray{v.x(),v.y(),v.z()};};
-  report["gyro"] = QJsonObject{{"passed",gyro_result_.quality.passed},{"residual_bias_rad_s",vec(gyro_result_.residual_bias)},{"quality",QString::fromStdString(gyro_result_.quality.summary)}};
-  report["accelerometer"] = QJsonObject{{"passed",accel_result_.quality.passed},{"bias_m_s2",vec(accel_result_.bias)},{"measured_magnitude_m_s2",accel_result_.measured_gravity},{"quality",QString::fromStdString(accel_result_.quality.summary)}};
-  report["magnetometer"] = QJsonObject{{"passed",mag_result_.quality.passed},{"in_plane_bias_gauss",vec(mag_result_.in_plane_bias)},{"coverage_deg",mag_result_.coverage_deg},{"quality",QString::fromStdString(mag_result_.quality.summary)}};
-  report["gravity_report"] = QJsonObject{{"passed",gravity_report_.quality.passed},{"specific_force_mean_m_s2",vec(gravity_report_.specific_force_mean)},{"gravity_vector_m_s2",vec(gravity_report_.gravity_vector)},{"magnitude_m_s2",gravity_report_.magnitude},{"tilt_from_sensor_z_deg",gravity_report_.tilt_from_sensor_z_deg},{"quality",QString::fromStdString(gravity_report_.quality.summary)}};
+  report["gyro"] = QJsonObject{{"evaluated",!gyro_result_.quality.summary.empty()},{"sample_count",static_cast<int>(gyro_samples_.size())},{"passed",gyro_result_.quality.passed},{"residual_bias_rad_s",vec(gyro_result_.residual_bias)},{"quality",QString::fromStdString(gyro_result_.quality.summary)}};
+  report["accelerometer"] = QJsonObject{{"evaluated",!accel_result_.quality.summary.empty()},{"sample_count",static_cast<int>(accel_samples_.size())},{"passed",accel_result_.quality.passed},{"bias_m_s2",vec(accel_result_.bias)},{"measured_magnitude_m_s2",accel_result_.measured_gravity},{"quality",QString::fromStdString(accel_result_.quality.summary)}};
+  report["magnetometer"] = QJsonObject{{"evaluated",!mag_result_.quality.summary.empty()},{"sample_count",static_cast<int>(mag_samples_.size())},{"paired_gravity_sample_count",static_cast<int>(mag_accel_samples_.size())},{"passed",mag_result_.quality.passed},{"in_plane_bias_gauss",vec(mag_result_.in_plane_bias)},{"coverage_deg",mag_result_.coverage_deg},{"quality",QString::fromStdString(mag_result_.quality.summary)}};
+  report["gravity_report"] = QJsonObject{{"evaluated",!gravity_report_.quality.summary.empty()},{"sample_count",static_cast<int>(gravity_samples_.size())},{"passed",gravity_report_.quality.passed},{"specific_force_mean_m_s2",vec(gravity_report_.specific_force_mean)},{"gravity_vector_m_s2",vec(gravity_report_.gravity_vector)},{"magnitude_m_s2",gravity_report_.magnitude},{"tilt_from_sensor_z_deg",gravity_report_.tilt_from_sensor_z_deg},{"quality",QString::fromStdString(gravity_report_.quality.summary)}};
   report["policy"] = QJsonObject{{"minimum_samples",static_cast<int>(policy_.minimum_samples)},
       {"gyro_max_rms_rad_s",policy_.gyro_max_rms_rad_s},{"gyro_max_temperature_span_c",policy_.gyro_max_temperature_span_c},
       {"gyro_max_pose_delta_rad_s",policy_.gyro_max_pose_delta_rad_s},{"accelerometer_max_rms_m_s2",policy_.accel_max_rms_m_s2},
