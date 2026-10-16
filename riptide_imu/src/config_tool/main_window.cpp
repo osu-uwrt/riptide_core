@@ -97,22 +97,11 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
 
   status_ = new QLabel("Disconnected"); statusBar()->addPermanentWidget(status_, 1);
   loadDefinitions(share_directory_ + "/config/registers.json");
-  {
-    QFile policy_file(share_directory_ + "/config/calibration_policy.json");
-    if (policy_file.open(QIODevice::ReadOnly)) {
-      const auto object = QJsonDocument::fromJson(policy_file.readAll()).object();
-      policy_.minimum_samples = object.value("minimum_samples").toInt(policy_.minimum_samples);
-      policy_.gyro_blocks = object.value("gyro_blocks").toInt(policy_.gyro_blocks);
-      policy_.gyro_max_rms_rad_s = object.value("gyro_max_rms_rad_s").toDouble(policy_.gyro_max_rms_rad_s);
-      policy_.gyro_max_temperature_span_c = object.value("gyro_max_temperature_span_c").toDouble(policy_.gyro_max_temperature_span_c);
-      policy_.gyro_max_pose_delta_rad_s = object.value("gyro_max_pose_delta_rad_s").toDouble(policy_.gyro_max_pose_delta_rad_s);
-      policy_.accel_max_rms_m_s2 = object.value("accelerometer_max_rms_m_s2").toDouble(policy_.accel_max_rms_m_s2);
-      policy_.accel_max_condition = object.value("accelerometer_max_condition").toDouble(policy_.accel_max_condition);
-      policy_.accel_min_axis_span_m_s2 = object.value("accelerometer_min_axis_span_m_s2").toDouble(policy_.accel_min_axis_span_m_s2);
-      policy_.mag_max_rms_fraction = object.value("magnetometer_max_rms_fraction").toDouble(policy_.mag_max_rms_fraction);
-      policy_.mag_min_coverage_deg = object.value("magnetometer_min_coverage_deg").toDouble(policy_.mag_min_coverage_deg);
-      policy_.mag_max_tilt_stddev_deg = object.value("magnetometer_max_tilt_stddev_deg").toDouble(policy_.mag_max_tilt_stddev_deg);
-    }
+  try {
+    policy_ = loadCalibrationPolicy(
+        (share_directory_ + "/config/calibration_policy.json").toStdString());
+  } catch (const std::exception& exception) {
+    setStatus("Calibration policy: " + QString::fromStdString(exception.what()), true);
   }
 
   if (injected_sensor) {

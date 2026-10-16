@@ -2,6 +2,9 @@
 
 #include <Eigen/Eigenvalues>
 #include <Eigen/QR>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -56,6 +59,35 @@ std::vector<Eigen::Vector3d> vectors(const std::vector<Sample>& samples) {
 }
 
 }  // namespace
+
+CalibrationPolicy loadCalibrationPolicy(const std::string& path) {
+  QFile file(QString::fromStdString(path));
+  if (!file.open(QIODevice::ReadOnly)) throw std::runtime_error(file.errorString().toStdString());
+  QJsonParseError parse_error;
+  const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parse_error);
+  if (parse_error.error != QJsonParseError::NoError || !document.isObject())
+    throw std::runtime_error("Invalid calibration policy JSON: " + parse_error.errorString().toStdString());
+  const QJsonObject object = document.object();
+  if (object.value("schema_version").toInt() != 1)
+    throw std::runtime_error("Unsupported calibration policy schema version");
+  CalibrationPolicy policy;
+  policy.minimum_samples = object.value("minimum_samples").toInt(policy.minimum_samples);
+  policy.gyro_blocks = object.value("gyro_blocks").toInt(policy.gyro_blocks);
+  policy.gyro_max_rms_rad_s = object.value("gyro_max_rms_rad_s").toDouble(policy.gyro_max_rms_rad_s);
+  policy.gyro_max_temperature_span_c = object.value("gyro_max_temperature_span_c").toDouble(policy.gyro_max_temperature_span_c);
+  policy.gyro_max_pose_delta_rad_s = object.value("gyro_max_pose_delta_rad_s").toDouble(policy.gyro_max_pose_delta_rad_s);
+  policy.accel_max_rms_m_s2 = object.value("accelerometer_max_rms_m_s2").toDouble(policy.accel_max_rms_m_s2);
+  policy.accel_max_condition = object.value("accelerometer_max_condition").toDouble(policy.accel_max_condition);
+  policy.accel_min_axis_span_m_s2 = object.value("accelerometer_min_axis_span_m_s2").toDouble(policy.accel_min_axis_span_m_s2);
+  policy.mag_max_rms_fraction = object.value("magnetometer_max_rms_fraction").toDouble(policy.mag_max_rms_fraction);
+  policy.mag_min_coverage_deg = object.value("magnetometer_min_coverage_deg").toDouble(policy.mag_min_coverage_deg);
+  policy.mag_max_tilt_stddev_deg = object.value("magnetometer_max_tilt_stddev_deg").toDouble(policy.mag_max_tilt_stddev_deg);
+  if (policy.minimum_samples < 2 || policy.gyro_blocks < 2 ||
+      policy.gyro_max_rms_rad_s <= 0.0 || policy.accel_max_rms_m_s2 <= 0.0 ||
+      policy.mag_min_coverage_deg <= 0.0 || policy.mag_min_coverage_deg > 360.0)
+    throw std::runtime_error("Calibration policy contains invalid limits");
+  return policy;
+}
 
 GyroResult estimateGyroBias(const std::vector<Sample>& samples,
                             const CalibrationPolicy& policy) {

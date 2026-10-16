@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "seed": 73129,
+  "sample_rate_hz": 20.0,
+  "truth": {
+    "gravity_m_s2": 9.79,
+    "earth_rate_rad_s": 0.000072921159,
+    "latitude_deg": 40.0,
+    "temperature_c": 25.0,
+    "gyro_bias_rad_s": [0.0012, -0.0008, 0.00045],
+    "accelerometer_bias_m_s2": [0.04, -0.03, 0.025],
+    "magnetic_bias_gauss": [0.07, -0.045, 0.09],
+    "magnetic_field_world_gauss": [0.22, 0.03, 0.41]
+  },
+  "noise": {
+    "gyro_rad_s": 0.00015,
+    "accelerometer_m_s2": 0.008,
+    "magnetometer_gauss": 0.0015
+  },
+  "stationary_poses_deg": [
+    [-38, -32, 0], [-30, 24, 35], [-18, -15, 80], [-8, 36, 125],
+    [6, -39, 170], [16, 18, 215], [27, -24, 260], [39, 34, 305]
+  ],
+  "scenarios": [
+    {
+      "name": "nominal",
+      "operator_lesson": "Use settled stationary windows across both signs of roll and pitch; stop capture before every repositioning movement.",
+      "seed_offset": 1,
+      "expected_pass": {"gyro": true, "accelerometer": true, "magnetometer": true, "gravity": true}
+    },
+    {
+      "name": "gyro_motion",
+      "operator_lesson": "Any movement during a gyro window contaminates the electronic-bias estimate; stop capture before touching the robot.",
+      "seed_offset": 2,
+      "gyro_motion_rad_s": 0.008,
+      "expected_pass": {"gyro": false, "accelerometer": true, "magnetometer": true, "gravity": true}
+    },
+    {
+      "name": "gyro_warmup",
+      "operator_lesson": "Let the powered sensor reach thermal stability before gyro capture; the full capture must span less than 1 C.",
+      "seed_offset": 3,
+      "gyro_temperature_span_c": 1.8,
+      "expected_pass": {"gyro": false, "accelerometer": true, "magnetometer": true, "gravity": true}
+    },
+    {
+      "name": "accelerometer_limited_tilt",
+      "operator_lesson": "Yaw-only or nearly level poses cannot distinguish accelerometer bias from gravity magnitude; use varied positive and negative roll and pitch.",
+      "seed_offset": 4,
+      "accelerometer_pose_scale": 0.08,
+      "expected_pass": {"gyro": true, "accelerometer": false, "magnetometer": true, "gravity": true}
+    },
+    {
+      "name": "accelerometer_repositioning",
+      "operator_lesson": "Capture only after the robot has settled at each accelerometer pose; exclude all repositioning motion.",
+      "seed_offset": 5,
+      "accelerometer_motion_m_s2": 0.18,
+      "expected_pass": {"gyro": true, "accelerometer": false, "magnetometer": true, "gravity": true}
+    },
+    {
+      "name": "magnetometer_short_arc",
+      "operator_lesson": "Complete a slow circle exceeding 300 degrees; a partial turn does not constrain the planar hard-iron fit.",
+      "seed_offset": 6,
+      "magnetometer_coverage_deg": 170.0,
+      "expected_pass": {"gyro": true, "accelerometer": true, "magnetometer": false, "gravity": true}
+    },
+    {
+      "name": "magnetometer_tilt",
+      "operator_lesson": "Keep roll and pitch nearly constant during the horizontal circle; large tilt variation invalidates the planar model.",
+      "seed_offset": 7,
+      "magnetometer_tilt_variation_deg": 16.0,
+      "expected_pass": {"gyro": true, "accelerometer": true, "magnetometer": false, "gravity": true}
+    },
+    {
+      "name": "magnetometer_interference",
+      "operator_lesson": "Keep movable ferrous objects and changing high-current fields away; repeat captures must see the same field.",
+      "seed_offset": 8,
+      "magnetometer_disturbance_gauss": 0.12,
+      "expected_pass": {"gyro": true, "accelerometer": true, "magnetometer": false, "gravity": true}
+    },
+    {
+      "name": "gravity_motion",
+      "operator_lesson": "For the gravity report, use one final installed pose and wait until all handling vibration has stopped.",
+      "seed_offset": 9,
+      "gravity_motion_m_s2": 0.16,
+      "expected_pass": {"gyro": true, "accelerometer": true, "magnetometer": true, "gravity": false}
+    }
+  ]
+}

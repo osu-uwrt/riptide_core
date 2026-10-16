@@ -68,6 +68,8 @@ struct CalibrationPolicy {
   double mag_max_tilt_stddev_deg{8.0};
 };
 
+CalibrationPolicy loadCalibrationPolicy(const std::string& path);
+
 GyroResult estimateGyroBias(const std::vector<Sample>& samples,
                             const CalibrationPolicy& policy);
 AccelerometerResult estimateAccelerometerBias(

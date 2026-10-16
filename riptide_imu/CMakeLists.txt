@@ -26,6 +26,7 @@ add_subdirectory(vnproglib-1.2.0.0/cpp)
 
 add_library(vn_config_core
   src/config_tool/calibration.cpp
+  src/config_tool/calibration_simulation.cpp
   src/config_tool/configuration.cpp)
 target_include_directories(vn_config_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -68,7 +69,11 @@ target_include_directories(sensor_config PRIVATE include)
 ament_target_dependencies(sensor_config rclcpp ament_index_cpp)
 target_link_libraries(sensor_config vn_config_ui)
 
-install(TARGETS imu sensor_config libvncxx vn_config_core vn_config_ui vn_driver_config
+add_executable(vn_calibration_sim src/config_tool/calibration_sim_main.cpp)
+ament_target_dependencies(vn_calibration_sim ament_index_cpp)
+target_link_libraries(vn_calibration_sim vn_config_core Qt5::Core)
+
+install(TARGETS imu sensor_config vn_calibration_sim libvncxx vn_config_core vn_config_ui vn_driver_config
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME})
@@ -96,6 +101,10 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
   ament_add_gtest(test_calibration test/test_calibration.cpp)
   target_link_libraries(test_calibration vn_config_core)
+  ament_add_gtest(test_calibration_simulation test/test_calibration_simulation.cpp)
+  target_compile_definitions(test_calibration_simulation PRIVATE
+    TEST_SHARE_DIRECTORY="${CMAKE_CURRENT_SOURCE_DIR}")
+  target_link_libraries(test_calibration_simulation vn_config_core)
   ament_add_gtest(test_configuration test/test_configuration.cpp)
   target_link_libraries(test_configuration vn_config_core Qt5::Core Qt5::Xml)
   ament_add_gtest(test_config_gateway test/test_config_gateway.cpp)

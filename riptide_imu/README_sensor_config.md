@@ -176,11 +176,33 @@ applies or saves coefficients, validates every exported quality gate, and writes
 Export reevaluates every nonempty capture buffer, so the report reflects the
 latest samples even when **Evaluate quality** was not clicked manually.
 
+### Calibration simulation
+
+Run every deterministic calibration scenario without a sensor:
+
+```bash
+ros2 run riptide_imu vn_calibration_sim \
+  --output /tmp/vn_calibration_simulation.json
+```
+
+Use `--scenario gyro_motion` to run one case. Simulation inputs, ground truth,
+noise, poses, expected gates, and operator lessons are stored in
+`config/calibration_simulation.json`. The executable loads the same
+`calibration_policy.json` used by the dashboard and exits nonzero when an
+observed quality decision differs from the configured expectation.
+
+The simulator adapts the Nereus physics pattern: world-frame gravity, magnetic
+field, and Earth rate are rotated into the sensor frame before sensor bias,
+correlated noise, thermal drift, motion, or magnetic disturbance are added.
+The scenarios cover nominal recovery, gyro motion and warm-up, insufficient
+accelerometer tilt, motion during pose changes, incomplete magnetic coverage,
+magnetic-plane tilt, magnetic interference, and a moving gravity capture.
+
 ## Feature-to-test matrix
 
 | Feature | Automated without sensor | Hardware acceptance |
 |---|---|---|
-| Calibration math and quality gates | `test_calibration` | Held-out stationary poses and repeat runs |
+| Calibration math and quality gates | `test_calibration`, `test_calibration_simulation`, `vn_calibration_sim` | Held-out stationary poses and repeat runs |
 | Compensation/frame conventions | Matrix, rotation, idempotence fixtures | Readback plus existing driver comparison |
 | Control Center XML | `test_configuration` round trips | Windows bidirectional import/export |
 | Register validation | Schema and protocol-field tests | Every supported register read; writable volatile round trip |

@@ -133,21 +133,26 @@ def main():
             time.sleep(3.0)
         print("VN-100 full bias suite. This run captures and evaluates data only.")
         print("Do not Apply or Save Persistent Settings during this acceptance run.")
-        pause("PREPARATION: Confirm ROS mode says connected, live telemetry is fresh, "
-              "the robot is secured, thrusters are disabled, and the configuration backup exists.")
+        pause("PREPARATION: Confirm ROS mode says connected, live telemetry is "
+              "fresh, the robot is secured, thrusters are disabled, and the "
+              "configuration backup exists. Leave the sensor powered until "
+              "its displayed temperature has stabilized.")
         pause("GYRO: In the Calibration dock select 'Gyro bias'. Click Start "
               "capture. With the robot completely stationary, capture at "
               "least 10 seconds. Stop capture before touching the robot. "
-              "Repeat at two or more arbitrary orientations. Confirm the "
+              "Repeat at two or more safe 3D orientations with both roll and "
+              "pitch variation; yaw-only movement is insufficient. Wait for "
+              "the robot to settle before restarting capture. Confirm the "
               "displayed count exceeds the minimum, click Evaluate quality, "
               "and verify a non-empty quality message. No pose must be level.")
         pause("ACCELEROMETER: Select 'Accelerometer bias + magnitude'. "
               "Capture stationary windows at varied reachable tilts spanning "
-              "both signs of roll and pitch (target 8 or more poses). Stop "
-              "capture while repositioning. Confirm the minimum count, click "
+              "both signs of roll and pitch (target 8 or more poses). Exact "
+              "angles and a level pose are unnecessary. Stop capture while "
+              "repositioning and wait for settling. Confirm the minimum count, click "
               "Evaluate quality, and verify the quality message.")
         pause("MAGNETOMETER: Select 'Planar magnetometer'. Keep tilt variation "
-              "small while rotating the whole robot through a slow full "
+              "small and constant while rotating the whole robot through a slow full "
               "horizontal circle, away from movable ferrous objects and "
               "high-current wiring. Confirm the minimum count, click Evaluate "
               "quality, and inspect the limited planar fit.")
