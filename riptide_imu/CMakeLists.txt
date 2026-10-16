@@ -123,6 +123,8 @@ if(BUILD_TESTING)
   add_test(NAME test_launch_interface
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_launch_interface.py
             ${CMAKE_CURRENT_SOURCE_DIR})
+  add_test(NAME test_bias_suite
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_bias_suite.py)
 endif()
 
 ament_export_include_directories(include)
