@@ -1040,6 +1040,13 @@ void MainWindow::stageCalibrationResult() {
 
 void MainWindow::exportCalibrationReport() {
   const QString path = QFileDialog::getSaveFileName(this, "Export calibration report", {}, "JSON (*.json)"); if (path.isEmpty()) return;
+  // Always report the samples currently in memory. The live Evaluate button is
+  // useful for feedback, but omitting it must not export default result objects.
+  if (!gyro_samples_.empty()) gyro_result_ = estimateGyroBias(gyro_samples_, policy_);
+  if (!accel_samples_.empty()) accel_result_ = estimateAccelerometerBias(accel_samples_, policy_);
+  if (!mag_samples_.empty() || !mag_accel_samples_.empty())
+    mag_result_ = estimatePlanarMagBias(mag_samples_, mag_accel_samples_, policy_);
+  if (!gravity_samples_.empty()) gravity_report_ = makeGravityReport(gravity_samples_, policy_);
   QJsonObject report{{"schema_version", 1}, {"warning", "Gravity-derived tilt is not sensor-to-robot mounting rotation; yaw is unobservable."},
                      {"gravity_sign", "gravity_vector_sensor = -mean_stationary_specific_force"}, {"frame", "VectorNav configured sensor output frame"}};
   auto vec=[](const Eigen::Vector3d& v){return QJsonArray{v.x(),v.y(),v.z()};};

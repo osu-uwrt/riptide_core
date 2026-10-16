@@ -173,6 +173,8 @@ start if no driver is available or the requested namespace is wrong. Pass
 `/talos`. The script launches the dashboard, gives pose-by-pose instructions, never
 applies or saves coefficients, validates every exported quality gate, and writes
 `~/vn100_bias_report_suite_result.json` with the overall pass/fail result.
+Export reevaluates every nonempty capture buffer, so the report reflects the
+latest samples even when **Evaluate quality** was not clicked manually.
 
 ## Feature-to-test matrix
 

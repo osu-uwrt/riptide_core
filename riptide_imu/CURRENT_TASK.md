@@ -17,6 +17,8 @@ discovery before launch, the dashboard shows and exports per-step sample
 counts, and gravity capture has a buffer separate from accelerometer fitting.
 The gravity tilt convention now uses the reported gravity vector rather than
 the opposite specific-force direction, and reports include uncertainty evidence.
+The next attempt captured all four datasets but evaluated only gravity; report
+export now reevaluates every nonempty capture automatically.
 
 Remaining: rerun the assisted bias suite against the discovered root endpoint;
 Windows Control Center bidirectional XML check.
