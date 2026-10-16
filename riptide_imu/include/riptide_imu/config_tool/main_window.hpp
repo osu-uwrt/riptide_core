@@ -31,7 +31,8 @@ class MainWindow : public QMainWindow {
  public:
   MainWindow(QString imu_port, int baud, QString config_file, bool demo,
              QString share_directory, QWidget* parent = nullptr,
-             SensorInterface* injected_sensor = nullptr);
+             SensorInterface* injected_sensor = nullptr,
+             QString connection_mode = "serial");
   ~MainWindow() override;
 
  protected:
@@ -40,17 +41,24 @@ class MainWindow : public QMainWindow {
  signals:
   void requestConnect(const QString& port, int baud);
   void requestDisconnect();
+  void requestConnectionMode(const QString& mode);
+  void requestEndpointDiscovery();
   void requestDemo(bool enabled);
+  void requestCalibrationCapture(bool enabled);
+  void requestOpenMaintenance();
+  void requestCloseMaintenance();
   void requestRead(int id);
   void requestWrite(int id, const QString& values);
-  void requestSaveSettings();
+  void requestSaveSettings(const QString& expected_json);
   void requestTare();
   void requestReset();
 
  private slots:
   void onTelemetry(const Telemetry& sample);
+  void onCalibrationSample(const Telemetry& sample);
   void onRegisterRead(int id, const QString& values);
   void refreshSerialPorts();
+  void refreshConnectionTargets();
   void toggleConnection();
   void readSelectedRegister();
   void applyStagedRegisters();
@@ -102,9 +110,13 @@ class MainWindow : public QMainWindow {
   QDockWidget* plot_dock_{nullptr};
   QDockWidget* calibration_dock_{nullptr};
   QDockWidget* diagnostics_dock_{nullptr};
+  QComboBox* connection_mode_selector_{nullptr};
   QComboBox* port_selector_{nullptr};
   QComboBox* baud_selector_{nullptr};
+  QLabel* baud_label_{nullptr};
   QPushButton* connection_button_{nullptr};
+  QPushButton* maintenance_button_{nullptr};
+  QLabel* connection_target_label_{nullptr};
   QLabel* status_{nullptr};
   QLabel* numeric_data_{nullptr};
   QLabel* register_description_{nullptr};
@@ -132,6 +144,8 @@ class MainWindow : public QMainWindow {
   bool recording_{false};
   bool monitor_paused_{false};
   bool connected_{false};
+  bool maintenance_active_{false};
+  QString connection_mode_{"serial"};
   int current_register_id_{-1};
   bool updating_register_editor_{false};
   QElapsedTimer last_sample_clock_;

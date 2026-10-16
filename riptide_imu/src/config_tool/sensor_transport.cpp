@@ -1,6 +1,10 @@
 #include "riptide_imu/config_tool/sensor_transport.hpp"
 
 #include <QDateTime>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QThread>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -34,6 +38,8 @@ void SensorTransport::connectSensor(const QString& port, int requested_baud) {
         sensor_->connect(port.toStdString(), rate);
         if (sensor_->verifySensorConnectivity()) {
           const QString identity = QString::fromStdString(sensor_->readModelNumber());
+          connected_port_ = port;
+          connected_baud_ = static_cast<int>(rate);
           poll_timer_->start();
           emit connectionChanged(true, QString("%1 at %2 baud").arg(identity).arg(rate));
           return;
@@ -64,7 +70,8 @@ void SensorTransport::setDemoMode(bool enabled) { demo_ = enabled; }
 QString SensorTransport::transact(const QString& command) {
   if (!sensor_) throw std::runtime_error("Sensor is not connected");
   emit traffic("TX", command);
-  const QString response = QString::fromStdString(sensor_->transaction(command.toStdString()));
+  const QString framed = command.startsWith('$') ? command : "$" + command;
+  const QString response = QString::fromStdString(sensor_->transaction(framed.toStdString()));
   emit traffic("RX", response.trimmed());
   return response;
 }
@@ -88,6 +95,23 @@ void SensorTransport::readRegister(int id) {
 void SensorTransport::writeRegister(int id, const QString& semicolon_values) {
   if (demo_) { emit operationFailed("Write register", "Writes are disabled in demo mode"); return; }
   try {
+    if (id == 5) {
+      const QStringList values = semicolon_values.split(';');
+      bool ok = false;
+      const uint32_t active_rate = values.front().toUInt(&ok);
+      if (!ok || values.size() > 2) throw std::runtime_error("Invalid baud register value");
+      if (values.size() == 2) {
+        const uint32_t inactive_rate = values[1].toUInt(&ok);
+        if (!ok) throw std::runtime_error("Invalid inactive-port baud value");
+        sensor_->writeSerialBaudRate(inactive_rate, static_cast<uint8_t>(2));
+      }
+      sensor_->changeBaudRate(active_rate);
+      connected_baud_ = static_cast<int>(active_rate);
+      const QString verified = QString::number(sensor_->readSerialBaudRate(1));
+      if (verified != values.front()) throw std::runtime_error("Baud readback differs after transition");
+      emit writeVerified(id, values.size() == 2 ? verified + ";" + values[1] : verified);
+      return;
+    }
     const QString wire_values = QString(semicolon_values).replace(';', ',');
     transact(QString("VNWRG,%1,%2").arg(id).arg(wire_values));
     const QString verified = valuesFromResponse(transact(QString("VNRRG,%1").arg(id)), id);
@@ -97,9 +121,30 @@ void SensorTransport::writeRegister(int id, const QString& semicolon_values) {
   } catch (const std::exception& exception) { emit operationFailed("Write register", exception.what()); }
 }
 
-void SensorTransport::writeSettings() {
+void SensorTransport::writeSettings(const QString& expected_json) {
   if (demo_) { emit operationFailed("Save settings", "Writes are disabled in demo mode"); return; }
-  try { transact("VNWNV"); }
+  try {
+    const QJsonObject expected = QJsonDocument::fromJson(expected_json.toUtf8()).object();
+    if (expected.isEmpty()) throw std::runtime_error("No verified register snapshot supplied");
+    poll_timer_->stop();
+    sensor_->writeSettings(false);
+    QThread::msleep(500);
+    sensor_->reset(false);
+    QThread::msleep(1500);
+    connectSensor(connected_port_, connected_baud_);
+    if (!sensor_) throw std::runtime_error("Sensor did not reconnect after persistent save");
+    QStringList mismatches;
+    for (auto entry = expected.begin(); entry != expected.end(); ++entry) {
+      QStringList values;
+      for (const auto value : entry.value().toArray()) values.push_back(value.toVariant().toString());
+      const int id = entry.key().toInt();
+      if (valuesFromResponse(transact(QString("VNRRG,%1").arg(id)), id) != values.join(';'))
+        mismatches.push_back(entry.key());
+    }
+    if (!mismatches.isEmpty())
+      throw std::runtime_error(("Post-reset mismatch in registers " + mismatches.join(',')).toStdString());
+    emit operationSucceeded("Save settings", "Saved, reset, reconnected, and verified");
+  }
   catch (const std::exception& exception) { emit operationFailed("Save settings", exception.what()); }
 }
 
@@ -111,7 +156,14 @@ void SensorTransport::tare() {
 
 void SensorTransport::reset() {
   if (demo_) return;
-  try { transact("VNRST"); }
+  try {
+    poll_timer_->stop();
+    sensor_->reset(false);
+    QThread::msleep(1500);
+    connectSensor(connected_port_, connected_baud_);
+    if (!sensor_) throw std::runtime_error("Sensor did not reconnect after reset");
+    emit operationSucceeded("Reset", "Reset and reconnect verified");
+  }
   catch (const std::exception& exception) { emit operationFailed("Reset", exception.what()); }
 }
 
@@ -134,6 +186,7 @@ void SensorTransport::poll() {
     output.mx = 0.3 * std::cos(demo_time_); output.my = 0.3 * std::sin(demo_time_); output.mz = 0.4;
     output.temperature_c = 24.5; output.pressure_kpa = 101.3;
     emit telemetryReceived(output);
+    emit calibrationSampleReceived(output);
     return;
   }
   if (!sensor_) return;
@@ -146,6 +199,7 @@ void SensorTransport::poll() {
     output.gx = imu.gyro[0]; output.gy = imu.gyro[1]; output.gz = imu.gyro[2];
     output.temperature_c = imu.temp; output.pressure_kpa = imu.pressure;
     emit telemetryReceived(output);
+    emit calibrationSampleReceived(output);
   } catch (const std::exception& exception) {
     poll_timer_->stop();
     emit connectionChanged(false, "Connection lost; reconnect explicitly after checking port ownership");

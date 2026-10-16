@@ -13,6 +13,7 @@
   <depend>eigen</depend>
   <depend>qtbase5-dev</depend>
   <depend>libqt5-charts-dev</depend>
+  <depend>nlohmann-json3-dev</depend>
 
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
@@ -23,6 +24,7 @@
   <depend>rclcpp_action</depend>
 
   <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rclpy</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

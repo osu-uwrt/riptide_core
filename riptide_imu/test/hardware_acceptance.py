@@ -9,6 +9,7 @@ from pathlib import Path
 import select
 import termios
 import time
+import uuid
 
 
 BAUDS = {
@@ -34,15 +35,17 @@ class Sensor:
     """Exclusive ASCII protocol connection used only by hardware acceptance."""
 
     def __init__(self, port, baud):
-        self.fd = os.open(port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
+        self.fd = os.open(port, os.O_RDWR | os.O_NOCTTY)
         fcntl.flock(self.fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         attrs = termios.tcgetattr(self.fd)
-        attrs[0] = 0
+        attrs[0] = termios.IGNPAR
         attrs[1] = 0
         attrs[2] = termios.CS8 | termios.CREAD | termios.CLOCAL
         attrs[3] = 0
         attrs[4] = BAUDS[baud]
         attrs[5] = BAUDS[baud]
+        attrs[6][termios.VMIN] = 0
+        attrs[6][termios.VTIME] = 0
         termios.tcsetattr(self.fd, termios.TCSANOW, attrs)
         termios.tcflush(self.fd, termios.TCIOFLUSH)
         self.buffer = b""
@@ -52,9 +55,13 @@ class Sensor:
 
     def command(self, payload, expected, timeout=1.5):
         wire = f"${payload}*{checksum(payload)}\r\n".encode("ascii")
-        os.write(self.fd, wire)
         deadline = time.monotonic() + timeout
+        next_send = 0.0
         while time.monotonic() < deadline:
+            now = time.monotonic()
+            if now >= next_send:
+                os.write(self.fd, wire)
+                next_send = now + 0.2
             readable, _, _ = select.select([self.fd], [], [], 0.1)
             if not readable:
                 continue
@@ -62,11 +69,23 @@ class Sensor:
             while b"\n" in self.buffer:
                 line, self.buffer = self.buffer.split(b"\n", 1)
                 text = line.decode("ascii", errors="replace").strip()
-                if text.startswith(f"${expected}"):
+                if self._matches(text, expected):
                     return text
                 if text.startswith("$VNERR"):
                     raise RuntimeError(text)
         raise TimeoutError(f"No {expected} response to {payload}")
+
+    @staticmethod
+    def _matches(response, expected):
+        """Match register replies even when firmware zero-pads the ID."""
+        if response.startswith(f"${expected}"):
+            return True
+        expected_fields = expected.split(",")
+        response_fields = response.removeprefix("$").split("*")[0].split(",")
+        return (len(expected_fields) == 2 and len(response_fields) >= 2 and
+                expected_fields[0] == "VNRRG" and
+                response_fields[0] == "VNRRG" and
+                int(expected_fields[1]) == int(response_fields[1]))
 
     def read(self, register_id):
         response = self.command(f"VNRRG,{register_id}", f"VNRRG,{register_id}")
@@ -88,6 +107,84 @@ class Sensor:
         self.command("VNRST", "VNRST")
         time.sleep(2.0)
         termios.tcflush(self.fd, termios.TCIOFLUSH)
+
+
+class RosSensor:
+    """Configuration access through the running robot driver."""
+
+    def __init__(self, namespace):
+        import rclpy
+        from riptide_msgs2.srv import QueryImuSerial
+
+        self.rclpy = rclpy
+        self.query_type = QueryImuSerial
+        rclpy.init(args=None)
+        self.node = rclpy.create_node(f"vn_acceptance_{uuid.uuid4().hex[:8]}")
+        prefix = namespace.strip("/")
+        service = f"/{prefix}/vectornav/config" if prefix else "/vectornav/config"
+        self.client = self.node.create_client(QueryImuSerial, service)
+        if not self.client.wait_for_service(timeout_sec=5.0):
+            raise RuntimeError(f"Configuration service unavailable: {service}")
+        self.session = ""
+        self.pending_expected = {}
+        self.save_already_reset = False
+
+    def request(self, operation, payload=None, maintenance=False, timeout=15.0):
+        if maintenance and not self.session:
+            opened = self.request("open", {"client_id": self.node.get_name()})
+            self.session = opened["data"]["session"]
+        document = {"version": 1, "operation": operation,
+                    "payload": payload or {}}
+        if self.session:
+            document["session"] = self.session
+        if operation in {"write", "reset", "save_reset", "tare"}:
+            document["operation_id"] = str(uuid.uuid4())
+        request = self.query_type.Request()
+        request.request = json.dumps(document, separators=(",", ":"))
+        future = self.client.call_async(request)
+        self.rclpy.spin_until_future_complete(self.node, future,
+                                              timeout_sec=timeout)
+        if not future.done():
+            raise TimeoutError(f"ROS operation timed out: {operation}")
+        response = json.loads(future.result().response)
+        if not response.get("ok"):
+            raise RuntimeError(f"{response.get('code')}: {response.get('message')}")
+        return response
+
+    def read(self, register_id):
+        response = self.request("read", {"register": register_id})
+        return [str(value) for value in response["data"]["values"]]
+
+    def write(self, register_id, values):
+        payload = {"register": register_id, "values": values}
+        response = self.request("write", payload,
+                                maintenance=register_id in
+                                {5, 6, 7, 26, 30, 32, 75, 76, 77, 82})
+        actual = [str(value) for value in response["data"]["values"]]
+        if actual != values:
+            raise AssertionError(
+                f"Register {register_id} readback differs: {actual} != {values}")
+        self.pending_expected[str(register_id)] = values
+
+    def save(self):
+        self.request("save_reset", {"expected": self.pending_expected},
+                     maintenance=True, timeout=20.0)
+        self.pending_expected = {}
+        self.save_already_reset = True
+
+    def reset(self):
+        if self.save_already_reset:
+            self.save_already_reset = False
+            return
+        self.request("reset", maintenance=True, timeout=15.0)
+
+    def close(self):
+        try:
+            if self.session:
+                self.request("close")
+        finally:
+            self.node.destroy_node()
+            self.rclpy.shutdown()
 
 
 def load_schema(path):
@@ -126,11 +223,16 @@ def write_journal(path, phase, active, saved=None, detail=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--imu-port", required=True)
+    connection = parser.add_mutually_exclusive_group(required=True)
+    connection.add_argument("--imu-port")
+    connection.add_argument("--remote-namespace",
+                            help="Use the running driver in this ROS namespace")
     parser.add_argument("--baud", type=int, default=460800, choices=BAUDS)
     parser.add_argument("--schema", type=Path)
     parser.add_argument("--journal", type=Path,
                         default=Path("vn_hardware_recovery.json"))
+    parser.add_argument("--snapshot-only", action="store_true",
+                        help="Read active configuration and exit without writes")
     parser.add_argument("--flash-persistence", action="store_true",
                         help="Opt in to reset/save cycles and temporary tag change")
     args = parser.parse_args()
@@ -140,7 +242,8 @@ def main():
                             "config/registers.json").resolve()
         args.schema = source_schema if source_schema.exists() else installed_schema
     schema = load_schema(args.schema)
-    sensor = Sensor(args.imu_port, args.baud)
+    sensor = (RosSensor(args.remote_namespace) if args.remote_namespace is not None
+              else Sensor(args.imu_port, args.baud))
     try:
         active, failures = snapshot(sensor, schema)
         required = {"1", "2", "3", "4", "23", "25", "26", "43", "84"}
@@ -149,6 +252,12 @@ def main():
             raise RuntimeError(f"Required recovery snapshot incomplete: {sorted(missing)}")
         write_journal(args.journal, "active_snapshot_complete", active,
                       detail={"unsupported_or_skipped": failures})
+
+        if args.snapshot_only:
+            print(json.dumps({"passed": True, "snapshot_only": True,
+                              "registers_read": len(active),
+                              "journal": str(args.journal)}, indent=2))
+            return
 
         # Exercise supported writes without changing values or flash.
         for register_id in (23, 25, 43, 84):
@@ -162,7 +271,8 @@ def main():
             if required - saved.keys():
                 raise RuntimeError("Saved-state snapshot incomplete; flash test aborted")
             writable_ids = {str(item["id"]) for item in schema
-                            if item.get("writable")}
+                            if item.get("writable") and
+                            item.get("persistent", True)}
             active_differences = {key for key in writable_ids
                                   if key in active and key in saved
                                   and active[key] != saved[key]}

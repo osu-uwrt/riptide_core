@@ -1,4 +1,5 @@
 #include "riptide_imu/config_tool/main_window.hpp"
+#include "riptide_imu/config_tool/ros_sensor_transport.hpp"
 
 #include <QAction>
 #include <QApplication>
@@ -54,8 +55,9 @@ QString vectorText(const Eigen::Vector3d& value, int precision = 7) {
 
 MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool demo,
                        QString share_directory, QWidget* parent,
-                       SensorInterface* injected_sensor)
-    : QMainWindow(parent), share_directory_(std::move(share_directory)) {
+                       SensorInterface* injected_sensor, QString connection_mode)
+    : QMainWindow(parent), share_directory_(std::move(share_directory)),
+      connection_mode_(demo ? "demo" : connection_mode.toLower()) {
   qRegisterMetaType<Telemetry>();
   setWindowTitle("VectorNav Workbench");
   setObjectName("vectorNavWorkbench");
@@ -116,20 +118,27 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
   if (injected_sensor) {
     transport_ = injected_sensor;
   } else {
-    transport_ = new SensorTransport;
+    transport_ = new SensorTransportRouter;
     owns_transport_ = true;
     transport_->moveToThread(&sensor_thread_);
     connect(&sensor_thread_, &QThread::finished, transport_, &QObject::deleteLater);
   }
   connect(this, &MainWindow::requestConnect, transport_, &SensorInterface::connectSensor);
   connect(this, &MainWindow::requestDisconnect, transport_, &SensorInterface::disconnectSensor);
+  connect(this, &MainWindow::requestConnectionMode, transport_, &SensorInterface::setConnectionMode);
+  connect(this, &MainWindow::requestEndpointDiscovery, transport_, &SensorInterface::discoverEndpoints);
   connect(this, &MainWindow::requestDemo, transport_, &SensorInterface::setDemoMode);
+  connect(this, &MainWindow::requestCalibrationCapture, transport_, &SensorInterface::setCalibrationCapture);
+  connect(this, &MainWindow::requestOpenMaintenance, transport_, &SensorInterface::openMaintenance);
+  connect(this, &MainWindow::requestCloseMaintenance, transport_, &SensorInterface::closeMaintenance);
   connect(this, &MainWindow::requestRead, transport_, &SensorInterface::readRegister);
   connect(this, &MainWindow::requestWrite, transport_, &SensorInterface::writeRegister);
   connect(this, &MainWindow::requestSaveSettings, transport_, &SensorInterface::writeSettings);
   connect(this, &MainWindow::requestTare, transport_, &SensorInterface::tare);
   connect(this, &MainWindow::requestReset, transport_, &SensorInterface::reset);
   connect(transport_, &SensorInterface::telemetryReceived, this, &MainWindow::onTelemetry);
+  connect(transport_, &SensorInterface::calibrationSampleReceived,
+          this, &MainWindow::onCalibrationSample);
   connect(transport_, &SensorInterface::registerRead, this, &MainWindow::onRegisterRead);
   connect(transport_, &SensorInterface::writeVerified, this, &MainWindow::onRegisterRead);
   connect(transport_, &SensorInterface::connectionChanged, this,
@@ -141,19 +150,53 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
             }
             if (port_selector_) port_selector_->setEnabled(!ok);
             if (baud_selector_) baud_selector_->setEnabled(!ok);
+            if (connection_mode_selector_) connection_mode_selector_->setEnabled(!ok);
             setStatus(detail, !ok && detail != "Disconnected");
           });
   connect(transport_, &SensorInterface::operationFailed, this,
           [this](const QString& op, const QString& detail) { setStatus(op + ": " + detail, true); });
+  connect(transport_, &SensorInterface::operationSucceeded, this,
+          [this](const QString& op, const QString& detail) { setStatus(op + ": " + detail); });
+  connect(transport_, &SensorInterface::maintenanceChanged, this,
+          [this](bool active, const QString& detail) {
+            maintenance_active_ = active;
+            if (maintenance_button_)
+              maintenance_button_->setText(active ? "Leave maintenance" : "Enter maintenance");
+            setStatus(detail);
+          });
+  connect(transport_, &SensorInterface::endpointsDiscovered, this,
+          [this, baud](const QStringList& endpoints) {
+            if (connection_mode_ != "ros") return;
+            const QString selected = port_selector_->currentText();
+            port_selector_->clear();
+            port_selector_->addItems(endpoints);
+            if (!selected.isEmpty()) port_selector_->setCurrentText(selected);
+            if (endpoints.size() == 1 && !connected_) {
+              port_selector_->setCurrentIndex(0);
+              connection_button_->setEnabled(false);
+              emit requestConnect(endpoints.front(), baud);
+            } else {
+              connection_button_->setEnabled(true);
+              setStatus(endpoints.isEmpty() ? "No VectorNav drivers discovered" :
+                                             "Select a robot endpoint");
+            }
+          });
   connect(transport_, &SensorInterface::traffic, this,
           [this](const QString& direction, const QString& packet) {
             if (traffic_log_) traffic_log_->appendPlainText(direction + "  " + packet);
           });
   if (owns_transport_) sensor_thread_.start();
+  emit requestConnectionMode(connection_mode_ == "ros" ? "ros" : "serial");
   emit requestDemo(demo);
-  connection_button_->setEnabled(false);
-  setStatus(demo ? "Starting demo data…" : QString("Connecting to %1…").arg(imu_port));
-  emit requestConnect(imu_port, baud);
+  if (demo || connection_mode_ == "serial" || !imu_port.trimmed().isEmpty()) {
+    connection_button_->setEnabled(false);
+    setStatus(demo ? "Starting demo data…" : QString("Connecting to %1…").arg(imu_port));
+    emit requestConnect(imu_port, baud);
+  } else {
+    connection_button_->setEnabled(true);
+    setStatus("Discovering VectorNav drivers on the ROS network…");
+    emit requestEndpointDiscovery();
+  }
   if (!config_file.isEmpty()) {
     QString error; configuration_metadata_ = loadControlCenterXml(config_file, &error);
     for (const auto& reg : configuration_metadata_.registers) staged_values_[reg.id] = reg.values;
@@ -291,6 +334,7 @@ void MainWindow::resetDashboardLayout() {
   QSettings settings;
   settings.remove("dashboard/geometry");
   settings.remove("dashboard/state");
+  settings.remove("dashboard/docks");
   resize(1440, 900);
   applyDefaultDashboardLayout();
   setStatus("Dashboard layout reset");
@@ -301,7 +345,18 @@ QWidget* MainWindow::buildConnectionBar(const QString& initial_port, int initial
   bar->setObjectName("connectionBar");
   auto* layout = new QHBoxLayout(bar);
   layout->setContentsMargins(10, 6, 10, 6);
-  layout->addWidget(new QLabel("Sensor port"));
+
+  connection_mode_selector_ = new QComboBox;
+  connection_mode_selector_->setObjectName("connectionModeSelector");
+  connection_mode_selector_->addItem("Robot over ROS", "ros");
+  connection_mode_selector_->addItem("Local serial", "serial");
+  connection_mode_selector_->addItem("Demo", "demo");
+  const int initial_mode = connection_mode_selector_->findData(connection_mode_);
+  connection_mode_selector_->setCurrentIndex(initial_mode >= 0 ? initial_mode : 0);
+  layout->addWidget(connection_mode_selector_);
+
+  connection_target_label_ = new QLabel(connection_mode_ == "ros" ? "Robot" : "Sensor port");
+  layout->addWidget(connection_target_label_);
 
   port_selector_ = new QComboBox;
   port_selector_->setObjectName("sensorPortSelector");
@@ -309,20 +364,20 @@ QWidget* MainWindow::buildConnectionBar(const QString& initial_port, int initial
   port_selector_->setEditable(true);
   port_selector_->setInsertPolicy(QComboBox::NoInsert);
   port_selector_->setMinimumContentsLength(24);
-  port_selector_->setToolTip(
-      "The imu_port launch parameter supplies the initial value. Select a detected device or enter any serial path.");
+  port_selector_->setToolTip("Select a discovered robot or enter a local serial device path.");
   if (!initial_port.trimmed().isEmpty()) port_selector_->addItem(initial_port.trimmed());
-  refreshSerialPorts();
+  if (connection_mode_ != "ros") refreshSerialPorts();
   port_selector_->setCurrentText(initial_port);
   layout->addWidget(port_selector_, 1);
 
   auto* refresh = new QPushButton("Refresh");
   refresh->setObjectName("refreshSerialPortsButton");
-  refresh->setToolTip("Rescan common Linux serial device paths");
-  connect(refresh, &QPushButton::clicked, this, &MainWindow::refreshSerialPorts);
+  refresh->setToolTip("Rediscover ROS drivers or rescan Linux serial devices");
+  connect(refresh, &QPushButton::clicked, this, &MainWindow::refreshConnectionTargets);
   layout->addWidget(refresh);
 
-  layout->addWidget(new QLabel("Baud"));
+  baud_label_ = new QLabel("Baud");
+  layout->addWidget(baud_label_);
   baud_selector_ = new QComboBox;
   baud_selector_->setObjectName("sensorBaudSelector");
   baud_selector_->setAccessibleName("Sensor baud rate");
@@ -332,12 +387,54 @@ QWidget* MainWindow::buildConnectionBar(const QString& initial_port, int initial
   baud_selector_->setCurrentText(QString::number(initial_baud));
   layout->addWidget(baud_selector_);
 
+  maintenance_button_ = new QPushButton("Enter maintenance");
+  maintenance_button_->setObjectName("maintenanceButton");
+  maintenance_button_->setToolTip("Required for settings that can interrupt the live driver");
+  connect(maintenance_button_, &QPushButton::clicked, this, [this] {
+    if (maintenance_active_) {
+      emit requestCloseMaintenance();
+      return;
+    }
+    if (QMessageBox::warning(
+            this, "Enter sensor maintenance",
+            "Driver-critical writes, reset, and persistent save can briefly interrupt IMU data. "
+            "The driver process will remain running. Enter maintenance mode?",
+            QMessageBox::Yes | QMessageBox::Cancel) == QMessageBox::Yes)
+      emit requestOpenMaintenance();
+  });
+  layout->addWidget(maintenance_button_);
+
   connection_button_ = new QPushButton("Connect");
   connection_button_->setAccessibleName("Connect or disconnect sensor");
   connection_button_->setObjectName("primaryButton");
   connect(connection_button_, &QPushButton::clicked, this, &MainWindow::toggleConnection);
   layout->addWidget(connection_button_);
+  connect(connection_mode_selector_, qOverload<int>(&QComboBox::currentIndexChanged),
+          this, [this](int index) {
+    connection_mode_ = connection_mode_selector_->itemData(index).toString();
+    maintenance_active_ = false;
+    maintenance_button_->setText("Enter maintenance");
+    connection_target_label_->setText(connection_mode_ == "ros" ? "Robot" : "Sensor port");
+    baud_selector_->setVisible(connection_mode_ != "ros");
+    baud_label_->setVisible(connection_mode_ != "ros");
+    emit requestConnectionMode(connection_mode_ == "ros" ? "ros" : "serial");
+    emit requestDemo(connection_mode_ == "demo");
+    port_selector_->clear();
+    refreshConnectionTargets();
+    connection_button_->setText("Connect");
+    connection_button_->setEnabled(true);
+  });
+  baud_selector_->setVisible(connection_mode_ != "ros");
+  baud_label_->setVisible(connection_mode_ != "ros");
   return bar;
+}
+
+void MainWindow::refreshConnectionTargets() {
+  if (connection_mode_ == "ros") {
+    emit requestEndpointDiscovery();
+  } else {
+    refreshSerialPorts();
+  }
 }
 
 void MainWindow::refreshSerialPorts() {
@@ -372,7 +469,9 @@ void MainWindow::toggleConnection() {
     return;
   }
 
-  const QString port = port_selector_->currentText().trimmed();
+  QString port = port_selector_->currentText().trimmed();
+  if (connection_mode_ == "ros" && port.isEmpty()) port = "/";
+  if (connection_mode_ == "demo") port = "demo";
   bool valid_baud = false;
   const int baud = baud_selector_->currentText().trimmed().toInt(&valid_baud);
   if (port.isEmpty()) {
@@ -380,7 +479,7 @@ void MainWindow::toggleConnection() {
     port_selector_->setFocus();
     return;
   }
-  if (!valid_baud || baud <= 0) {
+  if (connection_mode_ != "ros" && (!valid_baud || baud <= 0)) {
     setStatus("Enter a valid positive baud rate", true);
     baud_selector_->setFocus();
     return;
@@ -781,21 +880,23 @@ void MainWindow::onTelemetry(const Telemetry& sample) {
     if (recorded_telemetry_.size() > 500000)
       recorded_telemetry_.erase(recorded_telemetry_.begin(), recorded_telemetry_.begin() + 10000);
   }
-  if (capturing_) {
-    const double t = capture_clock_.elapsed()/1000.0;
-    if (calibration_step_ == 0)
-      gyro_samples_.push_back({t, {sample.gx, sample.gy, sample.gz}, sample.temperature_c});
-    else if (calibration_step_ == 1 || calibration_step_ == 3)
-      accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
-    else {
-      mag_samples_.push_back({t, {sample.mx, sample.my, sample.mz}, sample.temperature_c});
-      mag_accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
-    }
-  }
   if (monitor_paused_) return;
   attitude_->setQuaternion(sample.qx, sample.qy, sample.qz, sample.qw);
   plot_->append(sample);
   telemetry_summary_->updateSample(sample);
+}
+
+void MainWindow::onCalibrationSample(const Telemetry& sample) {
+  if (!capturing_) return;
+  const double t = capture_clock_.elapsed() / 1000.0;
+  if (calibration_step_ == 0)
+    gyro_samples_.push_back({t, {sample.gx, sample.gy, sample.gz}, sample.temperature_c});
+  else if (calibration_step_ == 1 || calibration_step_ == 3)
+    accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
+  else {
+    mag_samples_.push_back({t, {sample.mx, sample.my, sample.mz}, sample.temperature_c});
+    mag_accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
+  }
 }
 
 void MainWindow::onRegisterRead(int id, const QString& values) {
@@ -817,6 +918,10 @@ void MainWindow::applyStagedRegisters() {
     QString error; const auto definition = definitionForId(iterator.key());
     if (definition.id < 0) { setStatus(QString("Register %1 is unsupported by this schema").arg(iterator.key()), true); return; }
     if (!validateRegisterValue(definition, iterator.value(), &error)) { setStatus(definition.name + ": " + error, true); return; }
+    if (connection_mode_ == "ros" && definition.driver_critical && !maintenance_active_) {
+      setStatus(definition.name + " requires an active maintenance session", true);
+      return;
+    }
     if (definition.dangerous && QMessageBox::question(this, "Connection-affecting register", definition.name + " can interrupt the connection. Apply it?") != QMessageBox::Yes) return;
   }
   for (auto iterator = pending.cbegin(); iterator != pending.cend(); ++iterator)
@@ -843,11 +948,29 @@ void MainWindow::exportConfiguration() {
 
 void MainWindow::savePersistently() {
   if (!staged_values_.isEmpty()) { QMessageBox::warning(this, "Unsaved staged values", "Apply and verify staged changes before saving persistent sensor state."); return; }
-  if (QMessageBox::question(this, "Save all active settings", "The sensor save command persists its complete active configuration, not only registers shown here. Save to flash?") == QMessageBox::Yes) emit requestSaveSettings();
+  if (connection_mode_ == "ros" && !maintenance_active_) {
+    setStatus("Enter maintenance mode before persistent save", true);
+    return;
+  }
+  if (QMessageBox::question(
+          this, "Save, reset, and verify",
+          "Persist the complete active configuration, reset the sensor, reconnect the driver, "
+          "and verify all values read by this dashboard? IMU output will be stale briefly.") !=
+      QMessageBox::Yes) return;
+  QJsonObject expected;
+  for (const auto& definition : definitions_) {
+    if (!definition.writable || !definition.persistent ||
+        !device_values_.contains(definition.id)) continue;
+    QJsonArray fields;
+    for (const auto& value : device_values_.value(definition.id).split(';')) fields.push_back(value);
+    expected[QString::number(definition.id)] = fields;
+  }
+  emit requestSaveSettings(QString::fromUtf8(QJsonDocument(expected).toJson(QJsonDocument::Compact)));
 }
 
 void MainWindow::toggleCapture() {
   capturing_ = !capturing_; if (capturing_) capture_clock_.restart();
+  emit requestCalibrationCapture(capturing_);
   capture_button_->setText(capturing_ ? "Stop capture" : "Start capture");
   calibration_result_->appendPlainText(capturing_ ? "Capture started. Keep each requested pose stationary; stop between motions." : "Capture stopped; no sensor values changed.");
 }

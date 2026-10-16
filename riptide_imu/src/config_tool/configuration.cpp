@@ -33,6 +33,8 @@ QVector<RegisterDefinition> loadRegisterDefinitions(const QString& path,
     definition.value_count = object.value("value_count").toInt(-1);
     definition.writable = object.value("writable").toBool(false);
     definition.dangerous = object.value("dangerous").toBool(false);
+    definition.driver_critical = object.value("driver_critical").toBool(false);
+    definition.persistent = object.value("persistent").toBool(true);
     definition.editor = object.value("editor").toString("raw");
     definition.firmware = object.value("firmware").toString();
     for (const auto field_value : object.value("fields").toArray()) {

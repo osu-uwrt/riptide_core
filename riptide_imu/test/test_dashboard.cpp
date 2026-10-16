@@ -18,6 +18,8 @@ class FakeSensor : public SensorInterface {
   int connected_baud{0};
   int connect_count{0};
   int disconnect_count{0};
+  QString connection_mode;
+  int discovery_count{0};
   QVector<QPair<int, QString>> writes;
 
  public slots:
@@ -31,13 +33,18 @@ class FakeSensor : public SensorInterface {
     ++disconnect_count;
     emit connectionChanged(false, "Disconnected");
   }
+  void setConnectionMode(const QString& mode) override { connection_mode = mode; }
+  void discoverEndpoints() override {
+    ++discovery_count;
+    emit endpointsDiscovered(QStringList{"/talos"});
+  }
   void setDemoMode(bool) override {}
   void readRegister(int id) override { emit registerRead(id, QString()); }
   void writeRegister(int id, const QString& values) override {
     writes.push_back({id, values});
     emit writeVerified(id, values);
   }
-  void writeSettings() override {}
+  void writeSettings(const QString&) override {}
   void tare() override {}
   void reset() override {}
 
@@ -98,6 +105,19 @@ class DashboardTest : public QObject {
     QCOMPARE(sensor.connect_count, 2);
     QCOMPARE(sensor.connected_port, QString("/dev/manual"));
     QCOMPARE(sensor.connected_baud, 115200);
+  }
+
+  void rosModeIsDefaultCapableAndUsesDiscoveredRobotEndpoint() {
+    FakeSensor sensor;
+    MainWindow window(QString(), 460800, QString(), false,
+                      QStringLiteral(TEST_SHARE_DIRECTORY), nullptr, &sensor, "ros");
+    QCOMPARE(sensor.connection_mode, QString("ros"));
+    QCOMPARE(sensor.discovery_count, 1);
+    QCOMPARE(sensor.connected_port, QString("/talos"));
+    QCOMPARE(window.findChild<QComboBox*>("connectionModeSelector")->currentData().toString(),
+             QString("ros"));
+    QCOMPARE(window.findChild<QComboBox*>("sensorPortSelector")->currentText(),
+             QString("/talos"));
   }
 
   void structuredRegisterEditStagesAndApplies() {

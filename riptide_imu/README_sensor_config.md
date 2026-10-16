@@ -1,23 +1,38 @@
 # VectorNav Workshop
 
 `sensor_config` is a Linux Qt application for inspecting, configuring, and
-calibrating a VN-100. Stop the normal `imu` node before opening the same serial
-port: configuration mode requires exclusive ownership.
+calibrating a VN-100. It connects to the running robot driver over ROS by
+default, so the dashboard can run on an operator computer while the sensor
+remains wired to the vehicle.
 
 ```bash
-ros2 run riptide_imu sensor_config --ros-args -p imu_port:=/dev/ttyUSB0
-ros2 launch riptide_imu sensor_config.launch.py imu_port:=/dev/ttyUSB0
+ros2 run riptide_imu sensor_config
+ros2 launch riptide_imu sensor_config.launch.py
+ros2 launch riptide_imu sensor_config.launch.py remote_namespace:=/talos
 ros2 launch riptide_imu sensor_config.launch.py demo:=true
 ```
 
-The optional launch arguments are `baud`, `config_file`, and `demo`. An imported
-file only stages values. Register application and flash persistence are separate
-actions, and every volatile write is read back.
+The optional launch arguments are `connection_mode`, `remote_namespace`,
+`baud`, `config_file`, and `demo`. `connection_mode` defaults to `ros` and an
+empty namespace enables discovery. An imported file only stages values.
+Register application and flash persistence are separate actions, and every
+volatile write is read back.
 
-The `imu_port` and `baud` arguments initialize the connection bar. Its port
-field is an editable dropdown populated from `/dev/serial/by-id`,
-`/dev/ttyUSB*`, `/dev/ttyACM*`, and `/dev/ttyTHS*`. Select a detected device or
-enter any serial path, then reconnect without relaunching the application.
+The connection bar switches between **Robot over ROS**, **Local serial**, and
+**Demo** without relaunching. ROS mode discovers each `vectornav/config`
+service and uses the matching `vectornav/imu` topic. Local mode provides an
+editable dropdown populated from `/dev/serial/by-id`, `/dev/ttyUSB*`,
+`/dev/ttyACM*`, and `/dev/ttyTHS*`; stop the robot driver before claiming the
+same physical port locally.
+
+Driver-critical communication, synchronization, binary-output, and reference
+frame registers require an expiring maintenance session in ROS mode. Ordinary
+reads, monitoring, and calibration capture leave the running output
+configuration unchanged. Persistent save sends the flash command without
+depending on its delayed acknowledgement, resets the sensor, reconnects at the
+effective baud, and reports success only after post-reset readback matches the
+dashboard snapshot. This intentionally creates a short IMU-data gap and resets
+sensor estimator history.
 
 ## Dashboard
 
@@ -87,8 +102,10 @@ Control Center files. Connection-affecting changes require confirmation.
 
 Persistent save writes the sensor's complete active state. The application
 requires all staged values to be applied and verified first, then previews this
-scope. Calibration collection never writes the sensor. Skipping or clearing a
-step leaves its registers unchanged.
+scope. In ROS mode the driver performs save, reset, baud-aware reconnect, and
+readback as one idempotent operation. Calibration collection polls register 54
+through the driver and never uses the EKF-facing angular velocity as a bias
+sample. Skipping or clearing a step leaves its registers unchanged.
 
 ## Validation
 
@@ -121,6 +138,27 @@ rate, synchronization, and EKF gravity-removal behavior match the pre-test
 baseline. XML compatibility with the current Windows Control Center must be
 checked using import and export in both directions; the supplied example proves
 the format subset used here but cannot prove every Control Center version.
+
+The opt-in Qt hardware suite uses the same transports as the dashboard. Keep the
+pre-test journal outside version control and run direct mode only while the
+driver is stopped:
+
+```bash
+VN_HARDWARE_PORT=/dev/ttyUSB0 \
+VN_HARDWARE_SNAPSHOT=/path/to/pretest.json \
+test_hardware_integration -platform offscreen
+
+VN_HARDWARE_ROS=1 VN_HARDWARE_NAMESPACE=/talos \
+VN_HARDWARE_SNAPSHOT=/path/to/pretest.json \
+test_hardware_integration -platform offscreen
+```
+
+Add `VN_HARDWARE_SCHEMA=/path/to/registers.json` and either
+`VN_HARDWARE_DIRECT_WRITES=1` or `VN_HARDWARE_WRITES=1` only after the recovery
+snapshot is complete. These modes write each persistent writable register's
+existing value and verify readback. `hardware_acceptance.py --flash-persistence`
+is the separate journaled save/reset/restore test. Bias capture is a later,
+operator-assisted acceptance stage.
 
 ## Feature-to-test matrix
 

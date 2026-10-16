@@ -26,6 +26,8 @@ struct RegisterDefinition {
   int value_count{-1};
   bool writable{false};
   bool dangerous{false};
+  bool driver_critical{false};
+  bool persistent{true};
   QString editor{"raw"};
   QString firmware;
   QVector<RegisterFieldDefinition> fields;

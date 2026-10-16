@@ -7,7 +7,8 @@
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<rclcpp::Node>("vn_sensor_config");
-  const auto imu_port = node->declare_parameter<std::string>("imu_port", "/dev/ttyUSB0");
+  const auto connection_mode = node->declare_parameter<std::string>("connection_mode", "ros");
+  const auto remote_namespace = node->declare_parameter<std::string>("remote_namespace", "");
   const auto baud = node->declare_parameter<int>("baud", 460800);
   const auto config_file = node->declare_parameter<std::string>("config_file", "");
   const auto demo = node->declare_parameter<bool>("demo", false);
@@ -20,9 +21,12 @@ int main(int argc, char** argv) {
   application.setApplicationName("VectorNav Workshop");
   application.setOrganizationName("OSU Underwater Robotics");
   riptide_imu::applyDarkTheme(&application);
-  riptide_imu::MainWindow window(QString::fromStdString(imu_port), baud,
+  const QString initial_target = connection_mode == "ros" ?
+      QString::fromStdString(remote_namespace) : QString();
+  riptide_imu::MainWindow window(initial_target, baud,
                                 QString::fromStdString(config_file), demo,
-                                QString::fromStdString(ament_index_cpp::get_package_share_directory("riptide_imu")));
+                                QString::fromStdString(ament_index_cpp::get_package_share_directory("riptide_imu")),
+                                nullptr, nullptr, QString::fromStdString(connection_mode));
   window.show();
   const int result = application.exec();
   rclcpp::shutdown();
