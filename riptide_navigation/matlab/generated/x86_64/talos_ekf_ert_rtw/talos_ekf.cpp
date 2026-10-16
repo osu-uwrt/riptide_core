@@ -7,9 +7,9 @@
 //
 // Code generated for Simulink model 'talos_ekf'.
 //
-// Model version                  : 1.6
+// Model version                  : 1.11
 // Simulink Coder version         : 9.9 (R2023a) 19-Nov-2022
-// C/C++ source code generated on : Fri Oct  2 20:28:33 2026
+// C/C++ source code generated on : Thu Oct 15 01:29:23 2026
 //
 // Target selection: ert.tlc
 // Embedded hardware selection: Intel->x86-64 (Linux 64)
@@ -670,6 +670,46 @@ void talos_ekf::svd(const real_T A[81], real_T U[81], real_T s[9], real_T V[81])
       break;
     }
   }
+}
+
+// Function for MATLAB Function: '<S2>/Correct'
+real_T talos_ekf::norm(const real_T x[3])
+{
+  real_T absxk;
+  real_T scale;
+  real_T t;
+  real_T y;
+  scale = 3.3121686421112381E-170;
+  absxk = std::abs(x[0]);
+  if (absxk > 3.3121686421112381E-170) {
+    y = 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / 3.3121686421112381E-170;
+    y = t * t;
+  }
+
+  absxk = std::abs(x[1]);
+  if (absxk > scale) {
+    t = scale / absxk;
+    y = y * t * t + 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    y += t * t;
+  }
+
+  absxk = std::abs(x[2]);
+  if (absxk > scale) {
+    t = scale / absxk;
+    y = y * t * t + 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    y += t * t;
+  }
+
+  return scale * std::sqrt(y);
 }
 
 // Function for MATLAB Function: '<S2>/Correct'
@@ -3530,34 +3570,95 @@ void talos_ekf::trisolve_jl(const real_T A[256], real_T B_d[256])
 }
 
 // Function for MATLAB Function: '<S8>/Predict'
-real_T talos_ekf::xnrm2_d(int32_T n, const real_T x[256], int32_T ix0)
+real_T talos_ekf::norm_g(const real_T x[4])
+{
+  real_T absxk;
+  real_T scale;
+  real_T t;
+  real_T y;
+  scale = 3.3121686421112381E-170;
+  absxk = std::abs(x[0]);
+  if (absxk > 3.3121686421112381E-170) {
+    y = 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / 3.3121686421112381E-170;
+    y = t * t;
+  }
+
+  absxk = std::abs(x[1]);
+  if (absxk > scale) {
+    t = scale / absxk;
+    y = y * t * t + 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    y += t * t;
+  }
+
+  absxk = std::abs(x[2]);
+  if (absxk > scale) {
+    t = scale / absxk;
+    y = y * t * t + 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    y += t * t;
+  }
+
+  absxk = std::abs(x[3]);
+  if (absxk > scale) {
+    t = scale / absxk;
+    y = y * t * t + 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    y += t * t;
+  }
+
+  return scale * std::sqrt(y);
+}
+
+real_T rt_powd_snf(real_T u0, real_T u1)
 {
   real_T y;
-  y = 0.0;
-  if (n >= 1) {
-    if (n == 1) {
-      y = std::abs(x[ix0 - 1]);
-    } else {
-      real_T scale;
-      int32_T kend;
-      scale = 3.3121686421112381E-170;
-      kend = (ix0 + n) - 1;
-      for (int32_T k{ix0}; k <= kend; k++) {
-        real_T absxk;
-        absxk = std::abs(x[k - 1]);
-        if (absxk > scale) {
-          real_T t;
-          t = scale / absxk;
-          y = y * t * t + 1.0;
-          scale = absxk;
+  if (std::isnan(u0) || std::isnan(u1)) {
+    y = (rtNaN);
+  } else {
+    real_T tmp;
+    real_T tmp_0;
+    tmp = std::abs(u0);
+    tmp_0 = std::abs(u1);
+    if (std::isinf(u1)) {
+      if (tmp == 1.0) {
+        y = 1.0;
+      } else if (tmp > 1.0) {
+        if (u1 > 0.0) {
+          y = (rtInf);
         } else {
-          real_T t;
-          t = absxk / scale;
-          y += t * t;
+          y = 0.0;
         }
+      } else if (u1 > 0.0) {
+        y = 0.0;
+      } else {
+        y = (rtInf);
       }
-
-      y = scale * std::sqrt(y);
+    } else if (tmp_0 == 0.0) {
+      y = 1.0;
+    } else if (tmp_0 == 1.0) {
+      if (u1 > 0.0) {
+        y = u0;
+      } else {
+        y = 1.0 / u0;
+      }
+    } else if (u1 == 2.0) {
+      y = u0 * u0;
+    } else if ((u1 == 0.5) && (u0 >= 0.0)) {
+      y = std::sqrt(u0);
+    } else if ((u0 < 0.0) && (u1 > std::floor(u1))) {
+      y = (rtNaN);
+    } else {
+      y = std::pow(u0, u1);
     }
   }
 
@@ -3565,545 +3666,512 @@ real_T talos_ekf::xnrm2_d(int32_T n, const real_T x[256], int32_T ix0)
 }
 
 // Function for MATLAB Function: '<S8>/Predict'
-real_T talos_ekf::xdotc_e(int32_T n, const real_T x[256], int32_T ix0, const
-  real_T y[256], int32_T iy0)
+void talos_ekf::talos_state_transition_jacobian(const real_T x[16], real_T dt,
+  real_T F[256])
 {
-  real_T d;
-  d = 0.0;
-  if (n >= 1) {
-    for (int32_T k{0}; k < n; k++) {
-      d += x[(ix0 + k) - 1] * y[(iy0 + k) - 1];
-    }
-  }
+  static const real_T e_b[12]{ 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0,
+    0.0, 0.5 };
 
-  return d;
-}
+  static const int8_T d_b[9]{ 1, 0, 0, 0, 1, 0, 0, 0, 1 };
 
-// Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xaxpy_d2(int32_T n, real_T a, int32_T ix0, real_T y[256],
-  int32_T iy0)
-{
-  if ((n >= 1) && (!(a == 0.0))) {
-    for (int32_T k{0}; k < n; k++) {
-      int32_T tmp;
-      tmp = (iy0 + k) - 1;
-      y[tmp] += y[(ix0 + k) - 1] * a;
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S8>/Predict'
-real_T talos_ekf::xnrm2_dz(int32_T n, const real_T x[16], int32_T ix0)
-{
-  real_T y;
-  y = 0.0;
-  if (n >= 1) {
-    if (n == 1) {
-      y = std::abs(x[ix0 - 1]);
-    } else {
-      real_T scale;
-      int32_T kend;
-      scale = 3.3121686421112381E-170;
-      kend = (ix0 + n) - 1;
-      for (int32_T k{ix0}; k <= kend; k++) {
-        real_T absxk;
-        absxk = std::abs(x[k - 1]);
-        if (absxk > scale) {
-          real_T t;
-          t = scale / absxk;
-          y = y * t * t + 1.0;
-          scale = absxk;
-        } else {
-          real_T t;
-          t = absxk / scale;
-          y += t * t;
-        }
-      }
-
-      y = scale * std::sqrt(y);
-    }
-  }
-
-  return y;
-}
-
-// Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xaxpy_d2s(int32_T n, real_T a, const real_T x[256], int32_T ix0,
-  real_T y[16], int32_T iy0)
-{
-  if ((n >= 1) && (!(a == 0.0))) {
-    int32_T scalarLB;
-    int32_T tmp_0;
-    int32_T vectorUB;
-    scalarLB = (n / 2) << 1;
-    vectorUB = scalarLB - 2;
-    for (int32_T k{0}; k <= vectorUB; k += 2) {
-      __m128d tmp;
-      tmp_0 = (iy0 + k) - 1;
-      tmp = _mm_loadu_pd(&y[tmp_0]);
-      _mm_storeu_pd(&y[tmp_0], _mm_add_pd(_mm_mul_pd(_mm_loadu_pd(&x[(ix0 + k) -
-        1]), _mm_set1_pd(a)), tmp));
-    }
-
-    for (int32_T k{scalarLB}; k < n; k++) {
-      tmp_0 = (iy0 + k) - 1;
-      y[tmp_0] += x[(ix0 + k) - 1] * a;
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xaxpy_d2sz(int32_T n, real_T a, const real_T x[16], int32_T ix0,
-  real_T y[256], int32_T iy0)
-{
-  if ((n >= 1) && (!(a == 0.0))) {
-    int32_T scalarLB;
-    int32_T tmp_0;
-    int32_T vectorUB;
-    scalarLB = (n / 2) << 1;
-    vectorUB = scalarLB - 2;
-    for (int32_T k{0}; k <= vectorUB; k += 2) {
-      __m128d tmp;
-      tmp_0 = (iy0 + k) - 1;
-      tmp = _mm_loadu_pd(&y[tmp_0]);
-      _mm_storeu_pd(&y[tmp_0], _mm_add_pd(_mm_mul_pd(_mm_loadu_pd(&x[(ix0 + k) -
-        1]), _mm_set1_pd(a)), tmp));
-    }
-
-    for (int32_T k{scalarLB}; k < n; k++) {
-      tmp_0 = (iy0 + k) - 1;
-      y[tmp_0] += x[(ix0 + k) - 1] * a;
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::svd_n(const real_T A[256], real_T U[256], real_T s[16], real_T
-                      V[256])
-{
   __m128d tmp;
-  real_T b_A[256];
-  real_T e[16];
-  real_T work[16];
-  real_T emm1;
-  real_T nrm;
-  real_T rt;
-  real_T shift;
-  real_T smm1;
-  real_T sqds;
-  real_T ztest;
-  int32_T exitg1;
-  int32_T i;
-  int32_T qjj;
-  int32_T qp1;
-  int32_T qp1jj;
-  int32_T qq;
-  int32_T qq_tmp;
-  int32_T qq_tmp_tmp;
-  int32_T scalarLB;
-  int32_T vectorUB;
-  boolean_T apply_transform;
-  boolean_T exitg2;
-  std::memcpy(&b_A[0], &A[0], sizeof(real_T) << 8U);
-  std::memset(&s[0], 0, sizeof(real_T) << 4U);
-  std::memset(&e[0], 0, sizeof(real_T) << 4U);
-  std::memset(&work[0], 0, sizeof(real_T) << 4U);
-  std::memset(&U[0], 0, sizeof(real_T) << 8U);
-  std::memset(&V[0], 0, sizeof(real_T) << 8U);
-  for (i = 0; i < 15; i++) {
-    qp1 = i + 2;
-    qq_tmp_tmp = i << 4;
-    qq_tmp = qq_tmp_tmp + i;
-    qq = qq_tmp + 1;
-    apply_transform = false;
-    nrm = xnrm2_d(16 - i, b_A, qq_tmp + 1);
-    if (nrm > 0.0) {
-      apply_transform = true;
-      if (b_A[qq_tmp] < 0.0) {
-        nrm = -nrm;
+  __m128d tmp_0;
+  __m128d tmp_1;
+  __m128d tmp_2;
+  real_T L[16];
+  real_T N[16];
+  real_T Nnext[16];
+  real_T Nnext_0[16];
+  real_T inc_0[16];
+  real_T Nnext_1[12];
+  real_T b_b[12];
+  real_T R[9];
+  real_T inc[4];
+  real_T nextQ[4];
+  real_T raw[4];
+  real_T r[3];
+  real_T x_0[3];
+  real_T x_1[3];
+  real_T R_tmp;
+  real_T R_tmp_0;
+  real_T R_tmp_1;
+  real_T R_tmp_2;
+  real_T R_tmp_3;
+  real_T R_tmp_4;
+  real_T absxk;
+  real_T n;
+  real_T n_tmp;
+  real_T scale;
+  real_T t;
+  real_T tmp_3;
+  real_T tmp_4;
+  real_T tmp_5;
+  real_T tmp_6;
+  real_T u_idx_0;
+  real_T u_idx_1;
+  real_T u_idx_2;
+  int32_T F_tmp;
+  int32_T N_tmp;
+  int32_T e_b_tmp;
+  int32_T k;
+  int8_T b_I[16];
+  dt = std::fmin(std::fmax(dt, 0.0), 0.1);
+  n = norm_g(&x[3]);
+  if (n < 1.0E-12) {
+    raw[0] = 1.0;
+    raw[1] = 0.0;
+    raw[2] = 0.0;
+    raw[3] = 0.0;
+    std::memset(&N[0], 0, sizeof(real_T) << 4U);
+  } else {
+    raw[0] = x[3] / n;
+    raw[1] = x[4] / n;
+    raw[2] = x[5] / n;
+    raw[3] = x[6] / n;
+    for (k = 0; k < 16; k++) {
+      b_I[k] = 0;
+    }
+
+    b_I[0] = 1;
+    b_I[5] = 1;
+    b_I[10] = 1;
+    b_I[15] = 1;
+    for (k = 0; k < 4; k++) {
+      N_tmp = k << 2;
+      N[N_tmp] = (static_cast<real_T>(b_I[N_tmp]) - raw[0] * raw[k]) / n;
+      N[N_tmp + 1] = (static_cast<real_T>(b_I[N_tmp + 1]) - raw[1] * raw[k]) / n;
+      N[N_tmp + 2] = (static_cast<real_T>(b_I[N_tmp + 2]) - raw[2] * raw[k]) / n;
+      N[N_tmp + 3] = (static_cast<real_T>(b_I[N_tmp + 3]) - raw[3] * raw[k]) / n;
+    }
+  }
+
+  R_tmp_1 = raw[3] * raw[3];
+  R_tmp_4 = raw[2] * raw[2];
+  R[0] = 1.0 - (R_tmp_4 + R_tmp_1) * 2.0;
+  R_tmp = raw[1] * raw[2];
+  R_tmp_0 = raw[0] * raw[3];
+  R[3] = (R_tmp - R_tmp_0) * 2.0;
+  R_tmp_2 = raw[1] * raw[3];
+  R_tmp_3 = raw[0] * raw[2];
+  R[6] = (R_tmp_2 + R_tmp_3) * 2.0;
+  R[1] = (R_tmp + R_tmp_0) * 2.0;
+  R_tmp = raw[1] * raw[1];
+  R[4] = 1.0 - (R_tmp + R_tmp_1) * 2.0;
+  R_tmp_1 = raw[2] * raw[3];
+  R_tmp_0 = raw[0] * raw[1];
+  R[7] = (R_tmp_1 - R_tmp_0) * 2.0;
+  R[2] = (R_tmp_2 - R_tmp_3) * 2.0;
+  R[5] = (R_tmp_1 + R_tmp_0) * 2.0;
+  R[8] = 1.0 - (R_tmp + R_tmp_4) * 2.0;
+  n_tmp = 0.5 * dt * dt;
+  R_tmp_1 = x[7] * dt;
+  u_idx_0 = x[13] * n_tmp + R_tmp_1;
+  R_tmp_4 = x[10] * dt;
+  r[0] = R_tmp_4;
+  R_tmp = x[8] * dt;
+  u_idx_1 = x[14] * n_tmp + R_tmp;
+  R_tmp_0 = x[11] * dt;
+  r[1] = R_tmp_0;
+  R_tmp_2 = x[9] * dt;
+  u_idx_2 = x[15] * n_tmp + R_tmp_2;
+  R_tmp_3 = x[12] * dt;
+  r[2] = R_tmp_3;
+  scale = 3.3121686421112381E-170;
+  absxk = std::abs(R_tmp_4);
+  if (absxk > 3.3121686421112381E-170) {
+    n = 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / 3.3121686421112381E-170;
+    n = t * t;
+  }
+
+  absxk = std::abs(R_tmp_0);
+  if (absxk > scale) {
+    t = scale / absxk;
+    n = n * t * t + 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    n += t * t;
+  }
+
+  absxk = std::abs(R_tmp_3);
+  if (absxk > scale) {
+    t = scale / absxk;
+    n = n * t * t + 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    n += t * t;
+  }
+
+  n = scale * std::sqrt(n);
+  if (n < 1.0E-9) {
+    inc[0] = 1.0;
+    inc[1] = 0.5 * R_tmp_4;
+    inc[2] = 0.5 * R_tmp_0;
+    inc[3] = 0.5 * R_tmp_3;
+    n = norm_g(inc);
+    inc[0] = 1.0 / n;
+    inc[1] /= n;
+    inc[2] /= n;
+    inc[3] /= n;
+    for (k = 0; k < 16; k++) {
+      b_I[k] = 0;
+    }
+
+    b_I[0] = 1;
+    b_I[5] = 1;
+    b_I[10] = 1;
+    b_I[15] = 1;
+    for (k = 0; k < 4; k++) {
+      N_tmp = k << 2;
+      L[N_tmp] = (static_cast<real_T>(b_I[N_tmp]) - inc[0] * inc[k]) / n;
+      L[N_tmp + 1] = (static_cast<real_T>(b_I[N_tmp + 1]) - inc[1] * inc[k]) / n;
+      L[N_tmp + 2] = (static_cast<real_T>(b_I[N_tmp + 2]) - inc[2] * inc[k]) / n;
+      L[N_tmp + 3] = (static_cast<real_T>(b_I[N_tmp + 3]) - inc[3] * inc[k]) / n;
+    }
+
+    for (k = 0; k < 3; k++) {
+      e_b_tmp = k << 2;
+      n = e_b[e_b_tmp + 1];
+      scale = e_b[e_b_tmp];
+      absxk = e_b[e_b_tmp + 2];
+      t = e_b[e_b_tmp + 3];
+      for (N_tmp = 0; N_tmp <= 2; N_tmp += 2) {
+        tmp = _mm_loadu_pd(&L[N_tmp + 4]);
+        tmp_0 = _mm_loadu_pd(&L[N_tmp]);
+        tmp_1 = _mm_loadu_pd(&L[N_tmp + 8]);
+        tmp_2 = _mm_loadu_pd(&L[N_tmp + 12]);
+        _mm_storeu_pd(&b_b[N_tmp + e_b_tmp], _mm_add_pd(_mm_add_pd(_mm_add_pd
+          (_mm_mul_pd(_mm_set1_pd(n), tmp), _mm_mul_pd(_mm_set1_pd(scale), tmp_0)),
+          _mm_mul_pd(_mm_set1_pd(absxk), tmp_1)), _mm_mul_pd(_mm_set1_pd(t),
+          tmp_2)));
       }
-
-      s[i] = nrm;
-      if (std::abs(nrm) >= 1.0020841800044864E-292) {
-        nrm = 1.0 / nrm;
-        qjj = (qq_tmp - i) + 16;
-        scalarLB = ((((qjj - qq_tmp) / 2) << 1) + qq_tmp) + 1;
-        vectorUB = scalarLB - 2;
-        for (qp1jj = qq; qp1jj <= vectorUB; qp1jj += 2) {
-          tmp = _mm_loadu_pd(&b_A[qp1jj - 1]);
-          _mm_storeu_pd(&b_A[qp1jj - 1], _mm_mul_pd(tmp, _mm_set1_pd(nrm)));
-        }
-
-        for (qp1jj = scalarLB; qp1jj <= qjj; qp1jj++) {
-          b_A[qp1jj - 1] *= nrm;
-        }
-      } else {
-        qjj = (qq_tmp - i) + 16;
-        scalarLB = ((((qjj - qq_tmp) / 2) << 1) + qq_tmp) + 1;
-        vectorUB = scalarLB - 2;
-        for (qp1jj = qq; qp1jj <= vectorUB; qp1jj += 2) {
-          tmp = _mm_loadu_pd(&b_A[qp1jj - 1]);
-          _mm_storeu_pd(&b_A[qp1jj - 1], _mm_div_pd(tmp, _mm_set1_pd(s[i])));
-        }
-
-        for (qp1jj = scalarLB; qp1jj <= qjj; qp1jj++) {
-          b_A[qp1jj - 1] /= s[i];
-        }
-      }
-
-      b_A[qq_tmp]++;
-      s[i] = -s[i];
+    }
+  } else {
+    scale = std::sin(0.5 * n) / n;
+    absxk = std::cos(0.5 * n);
+    inc[0] = absxk;
+    inc[1] = scale * R_tmp_4;
+    inc[2] = scale * R_tmp_0;
+    inc[3] = scale * R_tmp_3;
+    if (n < 0.0001) {
+      n = (n * n / 960.0 - 0.041666666666666664) - rt_powd_snf(n, 4.0) /
+        107520.0;
     } else {
-      s[i] = 0.0;
+      n = (absxk * 0.5 - scale) / (n * n);
     }
 
-    for (qp1jj = qp1; qp1jj < 17; qp1jj++) {
-      qjj = ((qp1jj - 1) << 4) + i;
-      if (apply_transform) {
-        xaxpy_d2(16 - i, -(xdotc_e(16 - i, b_A, qq_tmp + 1, b_A, qjj + 1) /
-                           b_A[qq_tmp]), qq_tmp + 1, b_A, qjj + 1);
-      }
-
-      e[qp1jj - 1] = b_A[qjj];
-    }
-
-    for (qq = i + 1; qq < 17; qq++) {
-      qp1jj = (qq_tmp_tmp + qq) - 1;
-      U[qp1jj] = b_A[qp1jj];
-    }
-
-    if (i + 1 <= 14) {
-      nrm = xnrm2_dz(15 - i, e, i + 2);
-      if (nrm == 0.0) {
-        e[i] = 0.0;
-      } else {
-        if (e[i + 1] < 0.0) {
-          e[i] = -nrm;
-        } else {
-          e[i] = nrm;
-        }
-
-        nrm = e[i];
-        if (std::abs(e[i]) >= 1.0020841800044864E-292) {
-          nrm = 1.0 / e[i];
-          scalarLB = ((((15 - i) / 2) << 1) + i) + 2;
-          vectorUB = scalarLB - 2;
-          for (qjj = qp1; qjj <= vectorUB; qjj += 2) {
-            tmp = _mm_loadu_pd(&e[qjj - 1]);
-            _mm_storeu_pd(&e[qjj - 1], _mm_mul_pd(tmp, _mm_set1_pd(nrm)));
-          }
-
-          for (qjj = scalarLB; qjj < 17; qjj++) {
-            e[qjj - 1] *= nrm;
-          }
-        } else {
-          scalarLB = ((((15 - i) / 2) << 1) + i) + 2;
-          vectorUB = scalarLB - 2;
-          for (qjj = qp1; qjj <= vectorUB; qjj += 2) {
-            tmp = _mm_loadu_pd(&e[qjj - 1]);
-            _mm_storeu_pd(&e[qjj - 1], _mm_div_pd(tmp, _mm_set1_pd(nrm)));
-          }
-
-          for (qjj = scalarLB; qjj < 17; qjj++) {
-            e[qjj - 1] /= nrm;
-          }
-        }
-
-        e[i + 1]++;
-        e[i] = -e[i];
-        for (qq = qp1; qq < 17; qq++) {
-          work[qq - 1] = 0.0;
-        }
-
-        for (qq = qp1; qq < 17; qq++) {
-          xaxpy_d2s(15 - i, e[qq - 1], b_A, (i + ((qq - 1) << 4)) + 2, work, i +
-                    2);
-        }
-
-        for (qq = qp1; qq < 17; qq++) {
-          xaxpy_d2sz(15 - i, -e[qq - 1] / e[i + 1], work, i + 2, b_A, (i + ((qq
-            - 1) << 4)) + 2);
-        }
-      }
-
-      for (qq = qp1; qq < 17; qq++) {
-        V[(qq + qq_tmp_tmp) - 1] = e[qq - 1];
-      }
+    absxk = -0.5 * scale;
+    for (k = 0; k < 3; k++) {
+      N_tmp = k << 2;
+      b_b[N_tmp] = absxk * r[k];
+      b_b[N_tmp + 1] = static_cast<real_T>(d_b[3 * k]) * scale + R_tmp_4 * r[k] *
+        n;
+      b_b[N_tmp + 2] = static_cast<real_T>(d_b[3 * k + 1]) * scale + R_tmp_0 *
+        r[k] * n;
+      b_b[N_tmp + 3] = static_cast<real_T>(d_b[3 * k + 2]) * scale + R_tmp_3 *
+        r[k] * n;
     }
   }
 
-  i = 14;
-  s[15] = b_A[255];
-  e[14] = b_A[254];
-  e[15] = 0.0;
-  std::memset(&U[240], 0, sizeof(real_T) << 4U);
-  U[255] = 1.0;
-  for (qp1 = 14; qp1 >= 0; qp1--) {
-    qq_tmp = qp1 << 4;
-    qq = qq_tmp + qp1;
-    if (s[qp1] != 0.0) {
-      for (qp1jj = qp1 + 2; qp1jj < 17; qp1jj++) {
-        qjj = (((qp1jj - 1) << 4) + qp1) + 1;
-        xaxpy_d2(16 - qp1, -(xdotc_e(16 - qp1, U, qq + 1, U, qjj) / U[qq]), qq +
-                 1, U, qjj);
-      }
+  L[0] = raw[0];
+  L[4] = -raw[1];
+  L[8] = -raw[2];
+  L[12] = -raw[3];
+  L[1] = raw[1];
+  L[5] = raw[0];
+  L[9] = -raw[3];
+  L[13] = raw[2];
+  L[2] = raw[2];
+  L[6] = raw[3];
+  L[10] = raw[0];
+  L[14] = -raw[1];
+  L[3] = raw[3];
+  L[7] = -raw[2];
+  L[11] = raw[1];
+  L[15] = raw[0];
+  n = inc[1];
+  scale = inc[0];
+  absxk = inc[2];
+  t = inc[3];
+  for (k = 0; k <= 2; k += 2) {
+    tmp = _mm_loadu_pd(&L[k + 4]);
+    tmp_0 = _mm_loadu_pd(&L[k]);
+    tmp_1 = _mm_loadu_pd(&L[k + 8]);
+    tmp_2 = _mm_loadu_pd(&L[k + 12]);
+    _mm_storeu_pd(&nextQ[k], _mm_add_pd(_mm_add_pd(_mm_add_pd(_mm_mul_pd(tmp,
+      _mm_set1_pd(n)), _mm_mul_pd(tmp_0, _mm_set1_pd(scale))), _mm_mul_pd(tmp_1,
+      _mm_set1_pd(absxk))), _mm_mul_pd(tmp_2, _mm_set1_pd(t))));
+  }
 
-      for (qjj = qp1 + 1; qjj < 17; qjj++) {
-        qp1jj = (qq_tmp + qjj) - 1;
-        U[qp1jj] = -U[qp1jj];
-      }
+  n = norm_g(nextQ);
+  nextQ[0] /= n;
+  nextQ[1] /= n;
+  nextQ[2] /= n;
+  nextQ[3] /= n;
+  for (k = 0; k < 16; k++) {
+    b_I[k] = 0;
+  }
 
-      U[qq]++;
-      for (qjj = 0; qjj < qp1; qjj++) {
-        U[qjj + qq_tmp] = 0.0;
-      }
+  b_I[0] = 1;
+  b_I[5] = 1;
+  b_I[10] = 1;
+  b_I[15] = 1;
+  for (k = 0; k < 4; k++) {
+    e_b_tmp = k << 2;
+    Nnext[e_b_tmp] = (static_cast<real_T>(b_I[e_b_tmp]) - nextQ[0] * nextQ[k]) /
+      n;
+    Nnext[e_b_tmp + 1] = (static_cast<real_T>(b_I[e_b_tmp + 1]) - nextQ[1] *
+                          nextQ[k]) / n;
+    Nnext[e_b_tmp + 2] = (static_cast<real_T>(b_I[e_b_tmp + 2]) - nextQ[2] *
+                          nextQ[k]) / n;
+    Nnext[e_b_tmp + 3] = (static_cast<real_T>(b_I[e_b_tmp + 3]) - nextQ[3] *
+                          nextQ[k]) / n;
+  }
+
+  std::memset(&F[0], 0, sizeof(real_T) << 8U);
+  for (k = 0; k < 16; k++) {
+    F[k + (k << 4)] = 1.0;
+  }
+
+  n = raw[2] * u_idx_2;
+  Nnext_1[0] = (-raw[3] * u_idx_1 + n) * 2.0;
+  scale = u_idx_2 * raw[3];
+  absxk = u_idx_1 * raw[2];
+  Nnext_1[3] = (absxk + scale) * 2.0;
+  t = raw[0] * u_idx_2;
+  tmp_4 = raw[1] * u_idx_1;
+  Nnext_1[6] = ((-2.0 * raw[2] * u_idx_0 + tmp_4) + t) * 2.0;
+  tmp_3 = raw[1] * u_idx_2;
+  tmp_6 = raw[0] * u_idx_1;
+  Nnext_1[9] = ((-2.0 * raw[3] * u_idx_0 - tmp_6) + tmp_3) * 2.0;
+  tmp_5 = u_idx_0 * raw[3];
+  Nnext_1[1] = (tmp_5 - tmp_3) * 2.0;
+  Nnext_1[4] = ((u_idx_0 * raw[2] - 2.0 * raw[1] * u_idx_1) - t) * 2.0;
+  t = u_idx_0 * raw[1];
+  Nnext_1[7] = (t + scale) * 2.0;
+  Nnext_1[10] = ((raw[0] * u_idx_0 - 2.0 * raw[3] * u_idx_1) + n) * 2.0;
+  Nnext_1[2] = (-raw[2] * u_idx_0 + tmp_4) * 2.0;
+  Nnext_1[5] = ((tmp_5 + tmp_6) - 2.0 * raw[1] * u_idx_2) * 2.0;
+  Nnext_1[8] = ((-raw[0] * u_idx_0 + u_idx_1 * raw[3]) - 2.0 * raw[2] * u_idx_2)
+    * 2.0;
+  Nnext_1[11] = (t + absxk) * 2.0;
+  for (k = 0; k < 3; k++) {
+    n = Nnext_1[k + 3];
+    scale = Nnext_1[k];
+    absxk = Nnext_1[k + 6];
+    t = Nnext_1[k + 9];
+    for (N_tmp = 0; N_tmp < 4; N_tmp++) {
+      e_b_tmp = N_tmp << 2;
+      F[k + ((N_tmp + 3) << 4)] = ((N[e_b_tmp + 1] * n + N[e_b_tmp] * scale) +
+        N[e_b_tmp + 2] * absxk) + N[e_b_tmp + 3] * t;
+    }
+  }
+
+  for (k = 0; k < 3; k++) {
+    u_idx_0 = R[3 * k];
+    e_b_tmp = (k + 7) << 4;
+    F[e_b_tmp] = u_idx_0 * dt;
+    N_tmp = (k + 13) << 4;
+    F[N_tmp] = u_idx_0 * n_tmp;
+    u_idx_0 = R[3 * k + 1];
+    F[e_b_tmp + 1] = u_idx_0 * dt;
+    F[N_tmp + 1] = u_idx_0 * n_tmp;
+    u_idx_0 = R[3 * k + 2];
+    F[e_b_tmp + 2] = u_idx_0 * dt;
+    F[N_tmp + 2] = u_idx_0 * n_tmp;
+  }
+
+  inc_0[0] = inc[0];
+  inc_0[4] = -inc[1];
+  inc_0[8] = -inc[2];
+  inc_0[12] = -inc[3];
+  inc_0[1] = inc[1];
+  inc_0[5] = inc[0];
+  inc_0[9] = inc[3];
+  inc_0[13] = -inc[2];
+  inc_0[2] = inc[2];
+  inc_0[6] = -inc[3];
+  inc_0[10] = inc[0];
+  inc_0[14] = inc[1];
+  inc_0[3] = inc[3];
+  inc_0[7] = inc[2];
+  inc_0[11] = -inc[1];
+  inc_0[15] = inc[0];
+  for (k = 0; k < 4; k++) {
+    n_tmp = Nnext[k + 4];
+    u_idx_0 = Nnext[k];
+    u_idx_1 = Nnext[k + 8];
+    u_idx_2 = Nnext[k + 12];
+    for (N_tmp = 0; N_tmp < 4; N_tmp++) {
+      e_b_tmp = N_tmp << 2;
+      Nnext_0[k + e_b_tmp] = ((inc_0[e_b_tmp + 1] * n_tmp + inc_0[e_b_tmp] *
+        u_idx_0) + inc_0[e_b_tmp + 2] * u_idx_1) + inc_0[e_b_tmp + 3] * u_idx_2;
+    }
+
+    n_tmp = Nnext_0[k + 4];
+    u_idx_0 = Nnext_0[k];
+    u_idx_1 = Nnext_0[k + 8];
+    u_idx_2 = Nnext_0[k + 12];
+    for (N_tmp = 0; N_tmp < 4; N_tmp++) {
+      e_b_tmp = N_tmp << 2;
+      F[(k + ((N_tmp + 3) << 4)) + 3] = ((N[e_b_tmp + 1] * n_tmp + N[e_b_tmp] *
+        u_idx_0) + N[e_b_tmp + 2] * u_idx_1) + N[e_b_tmp + 3] * u_idx_2;
+    }
+  }
+
+  for (k = 0; k < 4; k++) {
+    n_tmp = Nnext[k + 4];
+    u_idx_0 = Nnext[k];
+    u_idx_1 = Nnext[k + 8];
+    u_idx_2 = Nnext[k + 12];
+    for (N_tmp = 0; N_tmp < 4; N_tmp++) {
+      e_b_tmp = N_tmp << 2;
+      Nnext_0[k + e_b_tmp] = ((L[e_b_tmp + 1] * n_tmp + L[e_b_tmp] * u_idx_0) +
+        L[e_b_tmp + 2] * u_idx_1) + L[e_b_tmp + 3] * u_idx_2;
+    }
+
+    n_tmp = Nnext_0[k + 4];
+    u_idx_0 = Nnext_0[k];
+    u_idx_1 = Nnext_0[k + 8];
+    u_idx_2 = Nnext_0[k + 12];
+    for (N_tmp = 0; N_tmp < 3; N_tmp++) {
+      e_b_tmp = N_tmp << 2;
+      Nnext_1[k + e_b_tmp] = ((b_b[e_b_tmp + 1] * n_tmp + b_b[e_b_tmp] * u_idx_0)
+        + b_b[e_b_tmp + 2] * u_idx_1) + b_b[e_b_tmp + 3] * u_idx_2;
+    }
+  }
+
+  for (k = 0; k < 3; k++) {
+    e_b_tmp = k << 2;
+    N_tmp = (k + 10) << 4;
+    F[N_tmp + 3] = Nnext_1[e_b_tmp] * dt;
+    F[N_tmp + 4] = Nnext_1[e_b_tmp + 1] * dt;
+    F[N_tmp + 5] = Nnext_1[e_b_tmp + 2] * dt;
+    F[N_tmp + 6] = Nnext_1[e_b_tmp + 3] * dt;
+  }
+
+  std::memset(&R[0], 0, 9U * sizeof(real_T));
+  R[0] = 1.0;
+  R[4] = 1.0;
+  R[8] = 1.0;
+  r[0] = 0.0;
+  r[1] = -x[12] * dt;
+  r[2] = R_tmp_0;
+  x_0[0] = R_tmp_3;
+  x_0[1] = 0.0;
+  x_0[2] = -x[10] * dt;
+  x_1[0] = -x[11] * dt;
+  x_1[1] = R_tmp_4;
+  x_1[2] = 0.0;
+  F[167] = 0.0;
+  F[183] = -x[9] * dt;
+  F[199] = R_tmp;
+  F[168] = R_tmp_2;
+  F[184] = 0.0;
+  F[200] = -x[7] * dt;
+  F[169] = -x[8] * dt;
+  F[185] = R_tmp_1;
+  F[201] = 0.0;
+  for (k = 0; k < 3; k++) {
+    e_b_tmp = (k + 7) << 4;
+    F[e_b_tmp + 7] = R[3 * k] - r[k];
+    N_tmp = 3 * k + 1;
+    F[e_b_tmp + 8] = R[N_tmp] - x_0[k];
+    F_tmp = 3 * k + 2;
+    F[e_b_tmp + 9] = R[F_tmp] - x_1[k];
+    e_b_tmp = (k + 13) << 4;
+    F[e_b_tmp + 7] = static_cast<real_T>(d_b[3 * k]) * dt;
+    F[e_b_tmp + 8] = static_cast<real_T>(d_b[N_tmp]) * dt;
+    F[e_b_tmp + 9] = static_cast<real_T>(d_b[F_tmp]) * dt;
+  }
+}
+
+// Function for MATLAB Function: '<S8>/Predict'
+real_T talos_ekf::xnrm2_d(int32_T n, const real_T x[512], int32_T ix0)
+{
+  real_T y;
+  y = 0.0;
+  if (n >= 1) {
+    if (n == 1) {
+      y = std::abs(x[ix0 - 1]);
     } else {
-      std::memset(&U[qq_tmp], 0, sizeof(real_T) << 4U);
-      U[qq] = 1.0;
-    }
-  }
-
-  for (qp1 = 15; qp1 >= 0; qp1--) {
-    if ((qp1 + 1 <= 14) && (e[qp1] != 0.0)) {
-      qq = ((qp1 << 4) + qp1) + 2;
-      for (qjj = qp1 + 2; qjj < 17; qjj++) {
-        qp1jj = (((qjj - 1) << 4) + qp1) + 2;
-        xaxpy_d2(15 - qp1, -(xdotc_e(15 - qp1, V, qq, V, qp1jj) / V[qq - 1]), qq,
-                 V, qp1jj);
-      }
-    }
-
-    std::memset(&V[qp1 << 4], 0, sizeof(real_T) << 4U);
-    V[qp1 + (qp1 << 4)] = 1.0;
-  }
-
-  for (qp1 = 0; qp1 < 16; qp1++) {
-    nrm = s[qp1];
-    if (nrm != 0.0) {
-      rt = std::abs(nrm);
-      nrm /= rt;
-      s[qp1] = rt;
-      if (qp1 + 1 < 16) {
-        e[qp1] /= nrm;
-      }
-
-      qq = (qp1 << 4) + 1;
-      scalarLB = 16 + qq;
-      vectorUB = qq + 14;
-      for (qjj = qq; qjj <= vectorUB; qjj += 2) {
-        tmp = _mm_loadu_pd(&U[qjj - 1]);
-        _mm_storeu_pd(&U[qjj - 1], _mm_mul_pd(tmp, _mm_set1_pd(nrm)));
-      }
-
-      for (qjj = scalarLB; qjj <= qq + 15; qjj++) {
-        U[qjj - 1] *= nrm;
-      }
-    }
-
-    if (qp1 + 1 < 16) {
-      smm1 = e[qp1];
-      if (smm1 != 0.0) {
-        rt = std::abs(smm1);
-        nrm = rt / smm1;
-        e[qp1] = rt;
-        s[qp1 + 1] *= nrm;
-        qq = ((qp1 + 1) << 4) + 1;
-        scalarLB = 16 + qq;
-        vectorUB = qq + 14;
-        for (qjj = qq; qjj <= vectorUB; qjj += 2) {
-          tmp = _mm_loadu_pd(&V[qjj - 1]);
-          _mm_storeu_pd(&V[qjj - 1], _mm_mul_pd(tmp, _mm_set1_pd(nrm)));
-        }
-
-        for (qjj = scalarLB; qjj <= qq + 15; qjj++) {
-          V[qjj - 1] *= nrm;
-        }
-      }
-    }
-  }
-
-  qp1 = 0;
-  nrm = 0.0;
-  for (qq = 0; qq < 16; qq++) {
-    nrm = std::fmax(nrm, std::fmax(std::abs(s[qq]), std::abs(e[qq])));
-  }
-
-  while ((i + 2 > 0) && (qp1 < 75)) {
-    qp1jj = i + 1;
-    do {
-      exitg1 = 0;
-      qq = qp1jj;
-      if (qp1jj == 0) {
-        exitg1 = 1;
-      } else {
-        rt = std::abs(e[qp1jj - 1]);
-        if (rt <= (std::abs(s[qp1jj - 1]) + std::abs(s[qp1jj])) *
-            2.2204460492503131E-16) {
-          e[qp1jj - 1] = 0.0;
-          exitg1 = 1;
-        } else if ((rt <= 1.0020841800044864E-292) || ((qp1 > 20) && (rt <=
-                     2.2204460492503131E-16 * nrm))) {
-          e[qp1jj - 1] = 0.0;
-          exitg1 = 1;
+      real_T scale;
+      int32_T kend;
+      scale = 3.3121686421112381E-170;
+      kend = (ix0 + n) - 1;
+      for (int32_T k{ix0}; k <= kend; k++) {
+        real_T absxk;
+        absxk = std::abs(x[k - 1]);
+        if (absxk > scale) {
+          real_T t;
+          t = scale / absxk;
+          y = y * t * t + 1.0;
+          scale = absxk;
         } else {
-          qp1jj--;
-        }
-      }
-    } while (exitg1 == 0);
-
-    if (i + 1 == qp1jj) {
-      qp1jj = 4;
-    } else {
-      qjj = i + 2;
-      qq_tmp_tmp = i + 2;
-      exitg2 = false;
-      while ((!exitg2) && (qq_tmp_tmp >= qp1jj)) {
-        qjj = qq_tmp_tmp;
-        if (qq_tmp_tmp == qp1jj) {
-          exitg2 = true;
-        } else {
-          rt = 0.0;
-          if (qq_tmp_tmp < i + 2) {
-            rt = std::abs(e[qq_tmp_tmp - 1]);
-          }
-
-          if (qq_tmp_tmp > qp1jj + 1) {
-            rt += std::abs(e[qq_tmp_tmp - 2]);
-          }
-
-          ztest = std::abs(s[qq_tmp_tmp - 1]);
-          if ((ztest <= 2.2204460492503131E-16 * rt) || (ztest <=
-               1.0020841800044864E-292)) {
-            s[qq_tmp_tmp - 1] = 0.0;
-            exitg2 = true;
-          } else {
-            qq_tmp_tmp--;
-          }
+          real_T t;
+          t = absxk / scale;
+          y += t * t;
         }
       }
 
-      if (qjj == qp1jj) {
-        qp1jj = 3;
-      } else if (i + 2 == qjj) {
-        qp1jj = 1;
-      } else {
-        qp1jj = 2;
-        qq = qjj;
-      }
+      y = scale * std::sqrt(y);
+    }
+  }
+
+  return y;
+}
+
+// Function for MATLAB Function: '<S8>/Predict'
+void talos_ekf::xgemv_j(int32_T m, int32_T n, const real_T A[512], int32_T ia0,
+  const real_T x[512], int32_T ix0, real_T y[16])
+{
+  if ((m != 0) && (n != 0)) {
+    int32_T b;
+    if (n - 1 >= 0) {
+      std::memset(&y[0], 0, static_cast<uint32_T>(n) * sizeof(real_T));
     }
 
-    switch (qp1jj) {
-     case 1:
-      rt = e[i];
-      e[i] = 0.0;
-      for (qjj = i + 1; qjj >= qq + 1; qjj--) {
-        xrotg(&s[qjj - 1], &rt, &ztest, &sqds);
-        if (qjj > qq + 1) {
-          smm1 = e[qjj - 2];
-          rt = -sqds * smm1;
-          e[qjj - 2] = smm1 * ztest;
-        }
-
-        xrot_g(V, ((qjj - 1) << 4) + 1, ((i + 1) << 4) + 1, ztest, sqds);
-      }
-      break;
-
-     case 2:
-      rt = e[qq - 1];
-      e[qq - 1] = 0.0;
-      for (qjj = qq + 1; qjj <= i + 2; qjj++) {
-        xrotg(&s[qjj - 1], &rt, &ztest, &sqds);
-        smm1 = e[qjj - 1];
-        rt = -sqds * smm1;
-        e[qjj - 1] = smm1 * ztest;
-        xrot_g(U, ((qjj - 1) << 4) + 1, ((qq - 1) << 4) + 1, ztest, sqds);
-      }
-      break;
-
-     case 3:
-      rt = s[i + 1];
-      ztest = std::fmax(std::fmax(std::fmax(std::fmax(std::abs(rt), std::abs(s[i])),
-        std::abs(e[i])), std::abs(s[qq])), std::abs(e[qq]));
-      rt /= ztest;
-      smm1 = s[i] / ztest;
-      emm1 = e[i] / ztest;
-      sqds = s[qq] / ztest;
-      smm1 = ((smm1 + rt) * (smm1 - rt) + emm1 * emm1) / 2.0;
-      emm1 *= rt;
-      emm1 *= emm1;
-      if ((smm1 != 0.0) || (emm1 != 0.0)) {
-        shift = std::sqrt(smm1 * smm1 + emm1);
-        if (smm1 < 0.0) {
-          shift = -shift;
-        }
-
-        shift = emm1 / (smm1 + shift);
-      } else {
-        shift = 0.0;
+    b = ((n - 1) << 5) + ia0;
+    for (int32_T b_iy{ia0}; b_iy <= b; b_iy += 32) {
+      real_T c;
+      int32_T d;
+      int32_T iyend;
+      c = 0.0;
+      d = (b_iy + m) - 1;
+      for (iyend = b_iy; iyend <= d; iyend++) {
+        c += x[((ix0 + iyend) - b_iy) - 1] * A[iyend - 1];
       }
 
-      rt = (sqds + rt) * (sqds - rt) + shift;
-      ztest = e[qq] / ztest * sqds;
-      for (qjj = qq + 1; qjj <= i + 1; qjj++) {
-        xrotg(&rt, &ztest, &sqds, &smm1);
-        if (qjj > qq + 1) {
-          e[qjj - 2] = rt;
-        }
+      iyend = (b_iy - ia0) >> 5;
+      y[iyend] += c;
+    }
+  }
+}
 
-        emm1 = e[qjj - 1];
-        rt = s[qjj - 1];
-        e[qjj - 1] = emm1 * sqds - rt * smm1;
-        ztest = smm1 * s[qjj];
-        s[qjj] *= sqds;
-        qq_tmp_tmp = ((qjj - 1) << 4) + 1;
-        qq_tmp = (qjj << 4) + 1;
-        xrot_g(V, qq_tmp_tmp, qq_tmp, sqds, smm1);
-        s[qjj - 1] = rt * sqds + emm1 * smm1;
-        xrotg(&s[qjj - 1], &ztest, &sqds, &smm1);
-        ztest = e[qjj - 1];
-        rt = ztest * sqds + smm1 * s[qjj];
-        s[qjj] = ztest * -smm1 + sqds * s[qjj];
-        ztest = smm1 * e[qjj];
-        e[qjj] *= sqds;
-        xrot_g(U, qq_tmp_tmp, qq_tmp, sqds, smm1);
-      }
-
-      e[i] = rt;
-      qp1++;
-      break;
-
-     default:
-      if (s[qq] < 0.0) {
-        s[qq] = -s[qq];
-        qp1 = (qq << 4) + 1;
-        scalarLB = 16 + qp1;
-        vectorUB = qp1 + 14;
-        for (qjj = qp1; qjj <= vectorUB; qjj += 2) {
-          tmp = _mm_loadu_pd(&V[qjj - 1]);
-          _mm_storeu_pd(&V[qjj - 1], _mm_mul_pd(tmp, _mm_set1_pd(-1.0)));
-        }
-
-        for (qjj = scalarLB; qjj <= qp1 + 15; qjj++) {
-          V[qjj - 1] = -V[qjj - 1];
+// Function for MATLAB Function: '<S8>/Predict'
+void talos_ekf::xgerc_e(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
+  real_T y[16], real_T A[512], int32_T ia0)
+{
+  if (!(alpha1 == 0.0)) {
+    int32_T jA;
+    jA = ia0;
+    for (int32_T j{0}; j < n; j++) {
+      real_T temp;
+      temp = y[j];
+      if (temp != 0.0) {
+        int32_T b;
+        temp *= alpha1;
+        b = m + jA;
+        for (int32_T ijA{jA}; ijA < b; ijA++) {
+          A[ijA - 1] += A[((ix0 + ijA) - jA) - 1] * temp;
         }
       }
 
-      qp1 = qq + 1;
-      while ((qq + 1 < 16) && (s[qq] < s[qp1])) {
-        rt = s[qq];
-        s[qq] = s[qp1];
-        s[qp1] = rt;
-        qq_tmp_tmp = (qq << 4) + 1;
-        qq_tmp = ((qq + 1) << 4) + 1;
-        xswap_d(V, qq_tmp_tmp, qq_tmp);
-        xswap_d(U, qq_tmp_tmp, qq_tmp);
-        qq = qp1;
-        qp1++;
-      }
-
-      qp1 = 0;
-      i--;
-      break;
+      jA += 32;
     }
   }
 }
@@ -4251,92 +4319,6 @@ void talos_ekf::talos_state_transition(const real_T x[16], real_T dt, real_T
   next[9] = (x[15] - (x[8] * x[10] - x[7] * x[11])) * dt + x[9];
 }
 
-// Function for MATLAB Function: '<S8>/Predict'
-real_T talos_ekf::xnrm2_dzn(int32_T n, const real_T x[512], int32_T ix0)
-{
-  real_T y;
-  y = 0.0;
-  if (n >= 1) {
-    if (n == 1) {
-      y = std::abs(x[ix0 - 1]);
-    } else {
-      real_T scale;
-      int32_T kend;
-      scale = 3.3121686421112381E-170;
-      kend = (ix0 + n) - 1;
-      for (int32_T k{ix0}; k <= kend; k++) {
-        real_T absxk;
-        absxk = std::abs(x[k - 1]);
-        if (absxk > scale) {
-          real_T t;
-          t = scale / absxk;
-          y = y * t * t + 1.0;
-          scale = absxk;
-        } else {
-          real_T t;
-          t = absxk / scale;
-          y += t * t;
-        }
-      }
-
-      y = scale * std::sqrt(y);
-    }
-  }
-
-  return y;
-}
-
-// Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xgemv_j(int32_T m, int32_T n, const real_T A[512], int32_T ia0,
-  const real_T x[512], int32_T ix0, real_T y[16])
-{
-  if ((m != 0) && (n != 0)) {
-    int32_T b;
-    if (n - 1 >= 0) {
-      std::memset(&y[0], 0, static_cast<uint32_T>(n) * sizeof(real_T));
-    }
-
-    b = ((n - 1) << 5) + ia0;
-    for (int32_T b_iy{ia0}; b_iy <= b; b_iy += 32) {
-      real_T c;
-      int32_T d;
-      int32_T iyend;
-      c = 0.0;
-      d = (b_iy + m) - 1;
-      for (iyend = b_iy; iyend <= d; iyend++) {
-        c += x[((ix0 + iyend) - b_iy) - 1] * A[iyend - 1];
-      }
-
-      iyend = (b_iy - ia0) >> 5;
-      y[iyend] += c;
-    }
-  }
-}
-
-// Function for MATLAB Function: '<S8>/Predict'
-void talos_ekf::xgerc_e(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const
-  real_T y[16], real_T A[512], int32_T ia0)
-{
-  if (!(alpha1 == 0.0)) {
-    int32_T jA;
-    jA = ia0;
-    for (int32_T j{0}; j < n; j++) {
-      real_T temp;
-      temp = y[j];
-      if (temp != 0.0) {
-        int32_T b;
-        temp *= alpha1;
-        b = m + jA;
-        for (int32_T ijA{jA}; ijA < b; ijA++) {
-          A[ijA - 1] += A[((ix0 + ijA) - jA) - 1] * temp;
-        }
-      }
-
-      jA += 32;
-    }
-  }
-}
-
 // Model step function
 void talos_ekf::step()
 {
@@ -4359,9 +4341,9 @@ void talos_ekf::step()
     0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0, 0.0, 1.0 };
 
+  __m128d tmp_0;
+  __m128d tmp_1;
   __m128d tmp_2;
-  __m128d tmp_3;
-  __m128d tmp_4;
   real_T A_1[512];
   real_T C[256];
   real_T K[256];
@@ -4370,38 +4352,39 @@ void talos_ekf::step()
   real_T Ss_0[256];
   real_T A[225];
   real_T dHdx[144];
-  real_T tmp_1[144];
+  real_T tmp[144];
   real_T Rsqrt[81];
   real_T Ss[81];
   real_T a[81];
   real_T A_0[57];
   real_T dHdx_0[48];
   real_T y[48];
-  real_T rtb_xNew_k[16];
-  real_T tmp_0[16];
-  real_T xm[16];
-  real_T s_2[12];
-  real_T tmp[12];
+  real_T b_x[16];
+  real_T normalizationJacobian[16];
+  real_T gravityQuaternionJacobian[12];
+  real_T s_1[12];
   real_T s[9];
-  real_T s_1[9];
+  real_T s_0[9];
   real_T work[9];
   real_T qRaw[4];
-  real_T x_tmp[4];
-  real_T s_0[3];
-  real_T work_0[3];
-  real_T Vf;
+  real_T gravityBody[3];
+  real_T gravityMeasurement[3];
+  real_T h;
   real_T qNorm;
+  real_T qNorm_tmp;
+  real_T qRaw_tmp;
+  real_T qRaw_tmp_0;
+  real_T qRaw_tmp_1;
+  real_T s_2;
   real_T s_3;
   real_T s_4;
-  real_T s_5;
   int32_T aoffset;
+  int32_T c_k;
   int32_T coffset;
   int32_T exitg1;
   int32_T i;
-  int32_T i_k;
-  int32_T lastv;
+  int32_T knt;
   int32_T m;
-  int32_T scalarLB;
   int32_T vectorUB;
   int32_T vectorUB_tmp;
   int8_T b_I[16];
@@ -4419,8 +4402,8 @@ void talos_ekf::step()
 
     rtDW.blockOrdering_k = true;
     p = true;
-    for (m = 0; m < 81; m++) {
-      if (p && (std::isinf(rtU.R_imu[m]) || std::isnan(rtU.R_imu[m]))) {
+    for (c_k = 0; c_k < 81; c_k++) {
+      if (p && (std::isinf(rtU.R_imu[c_k]) || std::isnan(rtU.R_imu[c_k]))) {
         p = false;
       }
     }
@@ -4432,20 +4415,20 @@ void talos_ekf::step()
         s[i] = (rtNaN);
       }
 
-      for (lastv = 0; lastv < 81; lastv++) {
-        a[lastv] = (rtNaN);
+      for (coffset = 0; coffset < 81; coffset++) {
+        a[coffset] = (rtNaN);
       }
     }
 
     std::memset(&Ss[0], 0, 81U * sizeof(real_T));
-    for (m = 0; m < 9; m++) {
-      Ss[m + 9 * m] = s[m];
+    for (knt = 0; knt < 9; knt++) {
+      Ss[knt + 9 * knt] = s[knt];
     }
 
-    for (m = 0; m <= 78; m += 2) {
+    for (i = 0; i <= 78; i += 2) {
       // MATLAB Function: '<S2>/Correct'
-      tmp_4 = _mm_loadu_pd(&Ss[m]);
-      _mm_storeu_pd(&Ss[m], _mm_sqrt_pd(tmp_4));
+      tmp_2 = _mm_loadu_pd(&Ss[i]);
+      _mm_storeu_pd(&Ss[i], _mm_sqrt_pd(tmp_2));
     }
 
     // MATLAB Function: '<S2>/Correct' incorporates:
@@ -4454,136 +4437,163 @@ void talos_ekf::step()
     //   Inport: '<Root>/imu_context'
     //   Inport: '<Root>/imu_measurement'
 
-    for (m = 80; m < 81; m++) {
-      Ss[m] = std::sqrt(Ss[m]);
+    for (i = 80; i < 81; i++) {
+      Ss[i] = std::sqrt(Ss[i]);
     }
 
-    for (lastv = 0; lastv < 9; lastv++) {
+    for (coffset = 0; coffset < 9; coffset++) {
       for (m = 0; m < 9; m++) {
-        qNorm = 0.0;
+        h = 0.0;
         for (i = 0; i < 9; i++) {
-          qNorm += a[9 * i + m] * Ss[9 * lastv + i];
+          h += a[9 * i + m] * Ss[9 * coffset + i];
         }
 
-        Rsqrt[m + 9 * lastv] = qNorm;
+        Rsqrt[m + 9 * coffset] = h;
       }
     }
 
-    x_tmp[0] = rtDW.x[3] * rtDW.x[3];
-    x_tmp[1] = rtDW.x[4] * rtDW.x[4];
-    x_tmp[2] = rtDW.x[5] * rtDW.x[5];
-    x_tmp[3] = rtDW.x[6] * rtDW.x[6];
-    qNorm = std::fmax(std::sqrt(((x_tmp[0] + x_tmp[1]) + x_tmp[2]) + x_tmp[3]),
-                      1.0E-12);
-    qRaw[0] = rtDW.x[3] / qNorm;
-    qRaw[1] = rtDW.x[4] / qNorm;
-    qRaw[2] = rtDW.x[5] / qNorm;
-    qRaw[3] = rtDW.x[6] / qNorm;
-    for (lastv = 0; lastv < 16; lastv++) {
-      b_I[lastv] = 0;
+    h = std::fmax(norm(&rtU.imu_context[0]), 1.0E-12);
+    gravityMeasurement[0] = rtU.imu_context[0] / h;
+    gravityMeasurement[1] = rtU.imu_context[1] / h;
+    gravityMeasurement[2] = rtU.imu_context[2] / h;
+    qNorm_tmp = std::fmax(std::sqrt(((rtDW.x[3] * rtDW.x[3] + rtDW.x[4] *
+      rtDW.x[4]) + rtDW.x[5] * rtDW.x[5]) + rtDW.x[6] * rtDW.x[6]), 1.0E-12);
+    qRaw_tmp = rtDW.x[3] / qNorm_tmp;
+    qRaw[0] = qRaw_tmp;
+    qRaw_tmp_0 = rtDW.x[4] / qNorm_tmp;
+    qRaw[1] = qRaw_tmp_0;
+    qNorm = rtDW.x[5] / qNorm_tmp;
+    qRaw[2] = qNorm;
+    qRaw_tmp_1 = rtDW.x[6] / qNorm_tmp;
+    qRaw[3] = qRaw_tmp_1;
+    gravityQuaternionJacobian[0] = -2.0 * qNorm;
+    gravityQuaternionJacobian[3] = 2.0 * qRaw_tmp_1;
+    gravityQuaternionJacobian[6] = -2.0 * qRaw_tmp;
+    gravityQuaternionJacobian[9] = 2.0 * qRaw_tmp_0;
+    gravityQuaternionJacobian[1] = 2.0 * qRaw_tmp_0;
+    gravityQuaternionJacobian[4] = 2.0 * qRaw_tmp;
+    gravityQuaternionJacobian[7] = 2.0 * qRaw_tmp_1;
+    gravityQuaternionJacobian[10] = 2.0 * qNorm;
+    gravityQuaternionJacobian[2] = 0.0;
+    gravityQuaternionJacobian[5] = -4.0 * qRaw_tmp_0;
+    gravityQuaternionJacobian[8] = -4.0 * qNorm;
+    gravityQuaternionJacobian[11] = 0.0;
+    for (coffset = 0; coffset < 16; coffset++) {
+      b_I[coffset] = 0;
     }
 
     b_I[0] = 1;
     b_I[5] = 1;
     b_I[10] = 1;
     b_I[15] = 1;
+    for (coffset = 0; coffset < 4; coffset++) {
+      i = coffset << 2;
+      normalizationJacobian[i] = (static_cast<real_T>(b_I[i]) - qRaw_tmp *
+        qRaw[coffset]) / qNorm_tmp;
+      normalizationJacobian[i + 1] = (static_cast<real_T>(b_I[i + 1]) -
+        qRaw_tmp_0 * qRaw[coffset]) / qNorm_tmp;
+      normalizationJacobian[i + 2] = (static_cast<real_T>(b_I[i + 2]) - qNorm *
+        qRaw[coffset]) / qNorm_tmp;
+      normalizationJacobian[i + 3] = (static_cast<real_T>(b_I[i + 3]) -
+        qRaw_tmp_1 * qRaw[coffset]) / qNorm_tmp;
+    }
+
     std::memset(&dHdx[0], 0, 144U * sizeof(real_T));
     std::memset(&s[0], 0, 9U * sizeof(real_T));
     s[0] = rtU.imu_context[3];
     s[4] = rtU.imu_context[4];
     s[8] = rtU.imu_context[5];
     work[0] = 0.0;
-    work[3] = -rtU.imu_context[2];
-    work[6] = rtU.imu_context[1];
-    work[1] = rtU.imu_context[2];
+    work[3] = -gravityMeasurement[2];
+    work[6] = gravityMeasurement[1];
+    work[1] = gravityMeasurement[2];
     work[4] = 0.0;
-    work[7] = -rtU.imu_context[0];
-    work[2] = -rtU.imu_context[1];
-    work[5] = rtU.imu_context[0];
+    work[7] = -gravityMeasurement[0];
+    work[2] = -gravityMeasurement[1];
+    work[5] = gravityMeasurement[0];
     work[8] = 0.0;
-    tmp[0] = -2.0 * qRaw[2];
-    tmp[3] = 2.0 * qRaw[3];
-    tmp[6] = -2.0 * qRaw[0];
-    tmp[9] = 2.0 * qRaw[1];
-    tmp[1] = 2.0 * qRaw[1];
-    tmp[4] = 2.0 * qRaw[0];
-    tmp[7] = 2.0 * qRaw[3];
-    tmp[10] = 2.0 * qRaw[2];
-    tmp[2] = 0.0;
-    tmp[5] = -4.0 * qRaw[1];
-    tmp[8] = -4.0 * qRaw[2];
-    tmp[11] = 0.0;
-    for (lastv = 0; lastv < 3; lastv++) {
-      Vf = s[lastv + 3];
-      s_4 = s[lastv];
-      s_5 = s[lastv + 6];
+    for (coffset = 0; coffset < 3; coffset++) {
+      qNorm_tmp = s[coffset + 3];
+      s_3 = s[coffset];
+      s_4 = s[coffset + 6];
       for (m = 0; m < 3; m++) {
-        s_1[lastv + 3 * m] = (work[3 * m + 1] * Vf + work[3 * m] * s_4) + work[3
-          * m + 2] * s_5;
+        s_0[coffset + 3 * m] = (work[3 * m + 1] * qNorm_tmp + work[3 * m] * s_3)
+          + work[3 * m + 2] * s_4;
       }
 
-      Vf = s_1[lastv + 3];
-      s_4 = s_1[lastv];
-      s_5 = s_1[lastv + 6];
+      qNorm_tmp = s_0[coffset + 3];
+      s_3 = s_0[coffset];
+      s_4 = s_0[coffset + 6];
       for (m = 0; m < 4; m++) {
-        s_2[lastv + 3 * m] = (tmp[3 * m + 1] * Vf + tmp[3 * m] * s_4) + tmp[3 *
-          m + 2] * s_5;
+        s_1[coffset + 3 * m] = (gravityQuaternionJacobian[3 * m + 1] * qNorm_tmp
+          + gravityQuaternionJacobian[3 * m] * s_3) + gravityQuaternionJacobian
+          [3 * m + 2] * s_4;
       }
-    }
 
-    for (lastv = 0; lastv < 4; lastv++) {
-      m = lastv << 2;
-      xm[m] = (static_cast<real_T>(b_I[m]) - qRaw[0] * qRaw[lastv]) / qNorm;
-      xm[m + 1] = (static_cast<real_T>(b_I[m + 1]) - qRaw[1] * qRaw[lastv]) /
-        qNorm;
-      xm[m + 2] = (static_cast<real_T>(b_I[m + 2]) - qRaw[2] * qRaw[lastv]) /
-        qNorm;
-      xm[m + 3] = (static_cast<real_T>(b_I[m + 3]) - qRaw[3] * qRaw[lastv]) /
-        qNorm;
+      qNorm_tmp = s_1[coffset + 3];
+      s_3 = s_1[coffset];
+      s_4 = s_1[coffset + 6];
+      s_2 = s_1[coffset + 9];
+      for (m = 0; m < 4; m++) {
+        knt = m << 2;
+        dHdx[coffset + 9 * (m + 3)] = ((normalizationJacobian[knt + 1] *
+          qNorm_tmp + normalizationJacobian[knt] * s_3) +
+          normalizationJacobian[knt + 2] * s_4) + normalizationJacobian[knt + 3]
+          * s_2;
+      }
     }
 
     dHdx[93] = rtU.imu_context[6];
     dHdx[103] = rtU.imu_context[7];
     dHdx[113] = rtU.imu_context[8];
+    std::memset(&s[0], 0, 9U * sizeof(real_T));
+    s[0] = rtU.imu_context[9];
+    s[4] = rtU.imu_context[10];
+    s[8] = rtU.imu_context[11];
     dHdx[123] = rtU.imu_context[9];
     dHdx[133] = rtU.imu_context[10];
     dHdx[143] = rtU.imu_context[11];
-    qNorm = x_tmp[0];
-    for (m = 0; m < 3; m++) {
-      Vf = s_2[m + 3];
-      s_4 = s_2[m];
-      s_5 = s_2[m + 6];
-      s_3 = s_2[m + 9];
-      for (lastv = 0; lastv < 4; lastv++) {
-        i = lastv << 2;
-        dHdx[m + 9 * (lastv + 3)] = ((xm[i + 1] * Vf + xm[i] * s_4) + xm[i + 2] *
-          s_5) + xm[i + 3] * s_3;
+    for (i = 0; i < 3; i++) {
+      qNorm_tmp = s[i + 3];
+      s_3 = s[i];
+      s_4 = s[i + 6];
+      for (coffset = 0; coffset < 4; coffset++) {
+        s_1[i + 3 * coffset] = (gravityQuaternionJacobian[3 * coffset + 1] *
+          (qNorm_tmp * h) + s_3 * h * gravityQuaternionJacobian[3 * coffset]) +
+          gravityQuaternionJacobian[3 * coffset + 2] * (s_4 * h);
       }
 
-      qNorm += x_tmp[m + 1];
+      qNorm_tmp = s_1[i + 3];
+      s_3 = s_1[i];
+      s_4 = s_1[i + 6];
+      s_2 = s_1[i + 9];
+      for (coffset = 0; coffset < 4; coffset++) {
+        knt = coffset << 2;
+        dHdx[(i + 9 * (coffset + 3)) + 6] = ((normalizationJacobian[knt + 1] *
+          qNorm_tmp + normalizationJacobian[knt] * s_3) +
+          normalizationJacobian[knt + 2] * s_4) + normalizationJacobian[knt + 3]
+          * s_2;
+      }
+
+      gravityMeasurement[i] = rtU.imu_context[i] / h;
     }
 
-    qNorm = std::fmax(std::sqrt(qNorm), 1.0E-12);
-    qRaw[0] = rtDW.x[3] / qNorm;
-    qRaw[1] = rtDW.x[4] / qNorm;
-    qRaw[2] = rtDW.x[5] / qNorm;
-    qRaw[3] = rtDW.x[6] / qNorm;
-    work_0[0] = (qRaw[1] * qRaw[3] - qRaw[0] * qRaw[2]) * 2.0;
-    work_0[1] = (qRaw[2] * qRaw[3] + qRaw[0] * qRaw[1]) * 2.0;
-    work_0[2] = 1.0 - (qRaw[1] * qRaw[1] + qRaw[2] * qRaw[2]) * 2.0;
+    gravityBody[0] = (qRaw_tmp_0 * qRaw_tmp_1 - qRaw_tmp * qNorm) * 2.0;
+    gravityBody[1] = (qNorm * qRaw_tmp_1 + qRaw_tmp * qRaw_tmp_0) * 2.0;
+    gravityBody[2] = 1.0 - (qRaw_tmp_0 * qRaw_tmp_0 + qNorm * qNorm) * 2.0;
     for (m = 0; m < 9; m++) {
       for (i = 0; i < 16; i++) {
         aoffset = i << 4;
         qNorm = 0.0;
-        for (lastv = 0; lastv < 16; lastv++) {
-          qNorm += dHdx[lastv * 9 + m] * rtDW.P_i[aoffset + lastv];
+        for (knt = 0; knt < 16; knt++) {
+          qNorm += dHdx[knt * 9 + m] * rtDW.P_i[aoffset + knt];
         }
 
         A[i + 25 * m] = qNorm;
       }
 
-      for (lastv = 0; lastv < 9; lastv++) {
-        A[(lastv + 25 * m) + 16] = Rsqrt[9 * lastv + m];
+      for (coffset = 0; coffset < 9; coffset++) {
+        A[(coffset + 25 * m) + 16] = Rsqrt[9 * coffset + m];
       }
 
       work[m] = 0.0;
@@ -4591,104 +4601,104 @@ void talos_ekf::step()
 
     for (m = 0; m < 9; m++) {
       coffset = m * 25 + m;
-      Vf = A[coffset];
-      lastv = coffset + 2;
+      qRaw_tmp = A[coffset];
+      i = coffset + 2;
       s[m] = 0.0;
-      qNorm = xnrm2_ln(24 - m, A, coffset + 2);
-      if (qNorm != 0.0) {
-        s_4 = A[coffset];
-        qNorm = rt_hypotd_snf(s_4, qNorm);
-        if (s_4 >= 0.0) {
+      qNorm_tmp = xnrm2_ln(24 - m, A, coffset + 2);
+      if (qNorm_tmp != 0.0) {
+        qRaw_tmp_0 = A[coffset];
+        qNorm = rt_hypotd_snf(qRaw_tmp_0, qNorm_tmp);
+        if (qRaw_tmp_0 >= 0.0) {
           qNorm = -qNorm;
         }
 
         if (std::abs(qNorm) < 1.0020841800044864E-292) {
-          i = 0;
-          scalarLB = (coffset - m) + 25;
+          knt = 0;
+          aoffset = (coffset - m) + 25;
           do {
-            i++;
-            vectorUB = (((((scalarLB - coffset) - 1) / 2) << 1) + coffset) + 2;
+            knt++;
+            vectorUB = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
             vectorUB_tmp = vectorUB - 2;
-            for (aoffset = lastv; aoffset <= vectorUB_tmp; aoffset += 2) {
-              tmp_4 = _mm_loadu_pd(&A[aoffset - 1]);
-              _mm_storeu_pd(&A[aoffset - 1], _mm_mul_pd(tmp_4, _mm_set1_pd
+            for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+              tmp_2 = _mm_loadu_pd(&A[c_k - 1]);
+              _mm_storeu_pd(&A[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd
                 (9.9792015476736E+291)));
             }
 
-            for (aoffset = vectorUB; aoffset <= scalarLB; aoffset++) {
-              A[aoffset - 1] *= 9.9792015476736E+291;
+            for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+              A[c_k - 1] *= 9.9792015476736E+291;
             }
 
             qNorm *= 9.9792015476736E+291;
-            Vf *= 9.9792015476736E+291;
-          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
+            qRaw_tmp *= 9.9792015476736E+291;
+          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (knt < 20));
 
-          qNorm = rt_hypotd_snf(Vf, xnrm2_ln(24 - m, A, coffset + 2));
-          if (Vf >= 0.0) {
+          qNorm = rt_hypotd_snf(qRaw_tmp, xnrm2_ln(24 - m, A, coffset + 2));
+          if (qRaw_tmp >= 0.0) {
             qNorm = -qNorm;
           }
 
-          s[m] = (qNorm - Vf) / qNorm;
-          Vf = 1.0 / (Vf - qNorm);
-          for (i_k = lastv; i_k <= vectorUB_tmp; i_k += 2) {
-            tmp_4 = _mm_loadu_pd(&A[i_k - 1]);
-            _mm_storeu_pd(&A[i_k - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+          s[m] = (qNorm - qRaw_tmp) / qNorm;
+          qRaw_tmp = 1.0 / (qRaw_tmp - qNorm);
+          for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+            tmp_2 = _mm_loadu_pd(&A[c_k - 1]);
+            _mm_storeu_pd(&A[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(qRaw_tmp)));
           }
 
-          for (i_k = vectorUB; i_k <= scalarLB; i_k++) {
-            A[i_k - 1] *= Vf;
+          for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+            A[c_k - 1] *= qRaw_tmp;
           }
 
-          for (lastv = 0; lastv < i; lastv++) {
+          for (c_k = 0; c_k < knt; c_k++) {
             qNorm *= 1.0020841800044864E-292;
           }
 
-          Vf = qNorm;
+          qRaw_tmp = qNorm;
         } else {
-          s[m] = (qNorm - s_4) / qNorm;
-          Vf = 1.0 / (s_4 - qNorm);
-          i = (coffset - m) + 25;
-          scalarLB = (((((i - coffset) - 1) / 2) << 1) + coffset) + 2;
-          vectorUB = scalarLB - 2;
-          for (aoffset = lastv; aoffset <= vectorUB; aoffset += 2) {
-            tmp_4 = _mm_loadu_pd(&A[aoffset - 1]);
-            _mm_storeu_pd(&A[aoffset - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+          s[m] = (qNorm - qRaw_tmp_0) / qNorm;
+          qRaw_tmp = 1.0 / (qRaw_tmp_0 - qNorm);
+          aoffset = (coffset - m) + 25;
+          c_k = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
+          vectorUB = c_k - 2;
+          for (knt = i; knt <= vectorUB; knt += 2) {
+            tmp_2 = _mm_loadu_pd(&A[knt - 1]);
+            _mm_storeu_pd(&A[knt - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(qRaw_tmp)));
           }
 
-          for (aoffset = scalarLB; aoffset <= i; aoffset++) {
-            A[aoffset - 1] *= Vf;
+          for (knt = c_k; knt <= aoffset; knt++) {
+            A[knt - 1] *= qRaw_tmp;
           }
 
-          Vf = qNorm;
+          qRaw_tmp = qNorm;
         }
       }
 
-      A[coffset] = Vf;
+      A[coffset] = qRaw_tmp;
       if (m + 1 < 9) {
         A[coffset] = 1.0;
         if (s[m] != 0.0) {
-          lastv = 25 - m;
-          i = (coffset - m) + 24;
-          while ((lastv > 0) && (A[i] == 0.0)) {
-            lastv--;
+          i = 25 - m;
+          knt = (coffset - m) + 24;
+          while ((i > 0) && (A[knt] == 0.0)) {
             i--;
+            knt--;
           }
 
-          i = 8 - m;
+          knt = 8 - m;
           exitg2 = false;
-          while ((!exitg2) && (i > 0)) {
-            aoffset = ((i - 1) * 25 + coffset) + 25;
-            i_k = aoffset;
+          while ((!exitg2) && (knt > 0)) {
+            aoffset = ((knt - 1) * 25 + coffset) + 25;
+            c_k = aoffset;
             do {
               exitg1 = 0;
-              if (i_k + 1 <= aoffset + lastv) {
-                if (A[i_k] != 0.0) {
+              if (c_k + 1 <= aoffset + i) {
+                if (A[c_k] != 0.0) {
                   exitg1 = 1;
                 } else {
-                  i_k++;
+                  c_k++;
                 }
               } else {
-                i--;
+                knt--;
                 exitg1 = 2;
               }
             } while (exitg1 == 0);
@@ -4698,16 +4708,16 @@ void talos_ekf::step()
             }
           }
         } else {
-          lastv = 0;
           i = 0;
+          knt = 0;
         }
 
-        if (lastv > 0) {
-          xgemv(lastv, i, A, coffset + 26, A, coffset + 1, work);
-          xgerc(lastv, i, -s[m], coffset + 1, work, A, coffset + 26);
+        if (i > 0) {
+          xgemv(i, knt, A, coffset + 26, A, coffset + 1, work);
+          xgerc(i, knt, -s[m], coffset + 1, work, A, coffset + 26);
         }
 
-        A[coffset] = Vf;
+        A[coffset] = qRaw_tmp;
       }
     }
 
@@ -4721,55 +4731,58 @@ void talos_ekf::step()
       }
     }
 
-    std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
-    for (lastv = 0; lastv < 16; lastv++) {
+    std::memcpy(&normalizationJacobian[0], &rtDW.x[0], sizeof(real_T) << 4U);
+    std::memcpy(&K[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        qNorm = 0.0;
+        qRaw_tmp = 0.0;
         for (i = 0; i < 16; i++) {
-          coffset = i << 4;
-          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
+          knt = i << 4;
+          qRaw_tmp += rtDW.P_i[knt + coffset] * rtDW.P_i[knt + m];
         }
 
-        C[lastv + (m << 4)] = qNorm;
+        C[coffset + (m << 4)] = qRaw_tmp;
       }
     }
 
-    work[0] = rtU.imu_measurement[0] - (rtU.imu_context[1] * work_0[2] - work_0
-      [1] * rtU.imu_context[2]) * rtU.imu_context[3];
-    work[1] = rtU.imu_measurement[1] - (work_0[0] * rtU.imu_context[2] -
-      rtU.imu_context[0] * work_0[2]) * rtU.imu_context[4];
-    work[2] = rtU.imu_measurement[2] - (rtU.imu_context[0] * work_0[1] - work_0
-      [0] * rtU.imu_context[1]) * rtU.imu_context[5];
+    work[0] = rtU.imu_measurement[0] - (gravityMeasurement[1] * gravityBody[2] -
+      gravityBody[1] * gravityMeasurement[2]) * rtU.imu_context[3];
+    work[1] = rtU.imu_measurement[1] - (gravityBody[0] * gravityMeasurement[2] -
+      gravityMeasurement[0] * gravityBody[2]) * rtU.imu_context[4];
+    work[2] = rtU.imu_measurement[2] - (gravityMeasurement[0] * gravityBody[1] -
+      gravityBody[0] * gravityMeasurement[1]) * rtU.imu_context[5];
     work[3] = rtU.imu_measurement[3] - rtU.imu_context[6] * rtDW.x[10];
-    work[6] = rtU.imu_measurement[6] - rtU.imu_context[9] * rtDW.x[13];
+    work[6] = rtU.imu_measurement[6] - (h * gravityBody[0] + rtDW.x[13]) *
+      rtU.imu_context[9];
     work[4] = rtU.imu_measurement[4] - rtU.imu_context[7] * rtDW.x[11];
-    work[7] = rtU.imu_measurement[7] - rtU.imu_context[10] * rtDW.x[14];
+    work[7] = rtU.imu_measurement[7] - (h * gravityBody[1] + rtDW.x[14]) *
+      rtU.imu_context[10];
     work[5] = rtU.imu_measurement[5] - rtU.imu_context[8] * rtDW.x[12];
-    work[8] = rtU.imu_measurement[8] - rtU.imu_context[11] * rtDW.x[15];
-    for (lastv = 0; lastv < 16; lastv++) {
+    work[8] = rtU.imu_measurement[8] - (h * gravityBody[2] + rtDW.x[15]) *
+      rtU.imu_context[11];
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 9; m++) {
-        qNorm = 0.0;
+        qRaw_tmp = 0.0;
         for (i = 0; i < 16; i++) {
-          qNorm += C[(i << 4) + lastv] * dHdx[9 * i + m];
+          qRaw_tmp += C[(i << 4) + coffset] * dHdx[9 * i + m];
         }
 
-        tmp_1[lastv + (m << 4)] = qNorm;
+        tmp[coffset + (m << 4)] = qRaw_tmp;
       }
     }
 
-    for (lastv = 0; lastv < 9; lastv++) {
+    for (coffset = 0; coffset < 9; coffset++) {
       for (m = 0; m < 9; m++) {
-        a[m + 9 * lastv] = Ss[9 * m + lastv];
+        a[m + 9 * coffset] = Ss[9 * m + coffset];
       }
     }
 
-    EKFCorrector_correctStateAndSqr(rtb_xNew_k, Ss_0, work, tmp_1, a, dHdx,
+    EKFCorrector_correctStateAndSqr(normalizationJacobian, K, work, tmp, a, dHdx,
       Rsqrt);
-    std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
+    std::memcpy(&rtDW.P_i[0], &K[0], sizeof(real_T) << 8U);
 
     // DataStoreWrite: '<S2>/Data Store WriteX'
-    std::memcpy(&rtDW.x[0], &rtb_xNew_k[0], sizeof(real_T) << 4U);
+    std::memcpy(&rtDW.x[0], &normalizationJacobian[0], sizeof(real_T) << 4U);
   }
 
   // End of Inport: '<Root>/enable_imu'
@@ -4785,31 +4798,31 @@ void talos_ekf::step()
 
     rtDW.blockOrdering_n = rtDW.blockOrdering_k;
     p = true;
-    for (m = 0; m < 9; m++) {
-      if (p && (std::isinf(rtU.R_fog[m]) || std::isnan(rtU.R_fog[m]))) {
+    for (c_k = 0; c_k < 9; c_k++) {
+      if (p && (std::isinf(rtU.R_fog[c_k]) || std::isnan(rtU.R_fog[c_k]))) {
         p = false;
       }
     }
 
     if (p) {
-      svd_a(rtU.R_fog, work, s_0, s);
+      svd_a(rtU.R_fog, work, gravityBody, s);
     } else {
-      s_0[0] = (rtNaN);
-      s_0[1] = (rtNaN);
-      s_0[2] = (rtNaN);
+      gravityBody[0] = (rtNaN);
+      gravityBody[1] = (rtNaN);
+      gravityBody[2] = (rtNaN);
       for (i = 0; i < 9; i++) {
         s[i] = (rtNaN);
       }
     }
 
     std::memset(&work[0], 0, 9U * sizeof(real_T));
-    work[0] = s_0[0];
-    work[4] = s_0[1];
-    work[8] = s_0[2];
-    for (m = 0; m <= 6; m += 2) {
+    work[0] = gravityBody[0];
+    work[4] = gravityBody[1];
+    work[8] = gravityBody[2];
+    for (i = 0; i <= 6; i += 2) {
       // MATLAB Function: '<S3>/Correct'
-      tmp_4 = _mm_loadu_pd(&work[m]);
-      _mm_storeu_pd(&work[m], _mm_sqrt_pd(tmp_4));
+      tmp_2 = _mm_loadu_pd(&work[i]);
+      _mm_storeu_pd(&work[i], _mm_sqrt_pd(tmp_2));
     }
 
     // MATLAB Function: '<S3>/Correct' incorporates:
@@ -4818,42 +4831,43 @@ void talos_ekf::step()
     //   Inport: '<Root>/fog_mask'
     //   Inport: '<Root>/fog_measurement'
 
-    for (m = 8; m < 9; m++) {
-      work[m] = std::sqrt(work[m]);
+    for (i = 8; i < 9; i++) {
+      work[i] = std::sqrt(work[i]);
     }
 
-    for (lastv = 0; lastv < 3; lastv++) {
-      qNorm = work[3 * lastv + 1];
-      Vf = work[3 * lastv];
-      s_4 = work[3 * lastv + 2];
+    for (coffset = 0; coffset < 3; coffset++) {
+      h = work[3 * coffset + 1];
+      qRaw_tmp = work[3 * coffset];
+      qRaw_tmp_0 = work[3 * coffset + 2];
       for (m = 0; m <= 0; m += 2) {
-        tmp_4 = _mm_loadu_pd(&s[m + 3]);
-        tmp_2 = _mm_loadu_pd(&s[m]);
-        tmp_3 = _mm_loadu_pd(&s[m + 6]);
-        _mm_storeu_pd(&s_1[m + 3 * lastv], _mm_add_pd(_mm_add_pd(_mm_mul_pd
-          (_mm_set1_pd(qNorm), tmp_4), _mm_mul_pd(_mm_set1_pd(Vf), tmp_2)),
-          _mm_mul_pd(_mm_set1_pd(s_4), tmp_3)));
+        tmp_2 = _mm_loadu_pd(&s[m + 3]);
+        tmp_0 = _mm_loadu_pd(&s[m]);
+        tmp_1 = _mm_loadu_pd(&s[m + 6]);
+        _mm_storeu_pd(&s_0[m + 3 * coffset], _mm_add_pd(_mm_add_pd(_mm_mul_pd
+          (_mm_set1_pd(h), tmp_2), _mm_mul_pd(_mm_set1_pd(qRaw_tmp), tmp_0)),
+          _mm_mul_pd(_mm_set1_pd(qRaw_tmp_0), tmp_1)));
       }
 
       for (m = 2; m < 3; m++) {
-        s_1[m + 3 * lastv] = (s[m + 3] * qNorm + Vf * s[m]) + s[m + 6] * s_4;
+        s_0[m + 3 * coffset] = (s[m + 3] * h + qRaw_tmp * s[m]) + s[m + 6] *
+          qRaw_tmp_0;
       }
     }
 
-    for (i_k = 0; i_k < 16; i_k++) {
-      qNorm = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[i_k]));
-      std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-      std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
-      Vf = rtDW.x[i_k];
-      rtb_xNew_k[i_k] = Vf + qNorm;
-      xm[i_k] = Vf - qNorm;
-      qNorm *= 2.0;
-      dHdx_0[3 * i_k] = (rtU.fog_mask[0] * rtb_xNew_k[10] - rtU.fog_mask[0] *
-                         xm[10]) / qNorm;
-      dHdx_0[3 * i_k + 1] = (rtU.fog_mask[1] * rtb_xNew_k[11] - rtU.fog_mask[1] *
-        xm[11]) / qNorm;
-      dHdx_0[3 * i_k + 2] = (rtU.fog_mask[2] * rtb_xNew_k[12] - rtU.fog_mask[2] *
-        xm[12]) / qNorm;
+    for (m = 0; m < 16; m++) {
+      h = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[m]));
+      std::memcpy(&normalizationJacobian[0], &rtDW.x[0], sizeof(real_T) << 4U);
+      std::memcpy(&b_x[0], &rtDW.x[0], sizeof(real_T) << 4U);
+      qRaw_tmp = rtDW.x[m];
+      normalizationJacobian[m] = qRaw_tmp + h;
+      b_x[m] = qRaw_tmp - h;
+      qRaw_tmp = 2.0 * h;
+      dHdx_0[3 * m] = (rtU.fog_mask[0] * normalizationJacobian[10] -
+                       rtU.fog_mask[0] * b_x[10]) / qRaw_tmp;
+      dHdx_0[3 * m + 1] = (rtU.fog_mask[1] * normalizationJacobian[11] -
+                           rtU.fog_mask[1] * b_x[11]) / qRaw_tmp;
+      dHdx_0[3 * m + 2] = (rtU.fog_mask[2] * normalizationJacobian[12] -
+                           rtU.fog_mask[2] * b_x[12]) / qRaw_tmp;
     }
 
     for (m = 0; m < 3; m++) {
@@ -4861,127 +4875,127 @@ void talos_ekf::step()
       for (i = 0; i < 16; i++) {
         aoffset = i << 4;
         qNorm = 0.0;
-        for (lastv = 0; lastv < 16; lastv++) {
-          qNorm += dHdx_0[lastv * 3 + m] * rtDW.P_i[aoffset + lastv];
+        for (knt = 0; knt < 16; knt++) {
+          qNorm += dHdx_0[knt * 3 + m] * rtDW.P_i[aoffset + knt];
         }
 
         y[coffset + i] = qNorm;
       }
     }
 
-    for (lastv = 0; lastv < 16; lastv++) {
-      A_0[lastv] = y[lastv];
-      A_0[lastv + 19] = y[lastv + 16];
-      A_0[lastv + 38] = y[lastv + 32];
+    for (coffset = 0; coffset < 16; coffset++) {
+      A_0[coffset] = y[coffset];
+      A_0[coffset + 19] = y[coffset + 16];
+      A_0[coffset + 38] = y[coffset + 32];
     }
 
     for (i = 0; i < 3; i++) {
-      A_0[19 * i + 16] = s_1[i];
-      A_0[19 * i + 17] = s_1[i + 3];
-      A_0[19 * i + 18] = s_1[i + 6];
-      work_0[i] = 0.0;
+      A_0[19 * i + 16] = s_0[i];
+      A_0[19 * i + 17] = s_0[i + 3];
+      A_0[19 * i + 18] = s_0[i + 6];
+      gravityMeasurement[i] = 0.0;
     }
 
     for (m = 0; m < 3; m++) {
       coffset = m * 19 + m;
-      Vf = A_0[coffset];
-      lastv = coffset + 2;
-      s_0[m] = 0.0;
+      qRaw_tmp = A_0[coffset];
+      i = coffset + 2;
+      gravityBody[m] = 0.0;
       qNorm = xnrm2_hmd(18 - m, A_0, coffset + 2);
       if (qNorm != 0.0) {
-        s_4 = A_0[coffset];
-        qNorm = rt_hypotd_snf(s_4, qNorm);
-        if (s_4 >= 0.0) {
+        qRaw_tmp_0 = A_0[coffset];
+        qNorm = rt_hypotd_snf(qRaw_tmp_0, qNorm);
+        if (qRaw_tmp_0 >= 0.0) {
           qNorm = -qNorm;
         }
 
         if (std::abs(qNorm) < 1.0020841800044864E-292) {
-          i = 0;
-          scalarLB = (coffset - m) + 19;
+          knt = 0;
+          aoffset = (coffset - m) + 19;
           do {
-            i++;
-            vectorUB = (((((scalarLB - coffset) - 1) / 2) << 1) + coffset) + 2;
+            knt++;
+            vectorUB = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
             vectorUB_tmp = vectorUB - 2;
-            for (aoffset = lastv; aoffset <= vectorUB_tmp; aoffset += 2) {
-              tmp_4 = _mm_loadu_pd(&A_0[aoffset - 1]);
-              _mm_storeu_pd(&A_0[aoffset - 1], _mm_mul_pd(tmp_4, _mm_set1_pd
+            for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+              tmp_2 = _mm_loadu_pd(&A_0[c_k - 1]);
+              _mm_storeu_pd(&A_0[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd
                 (9.9792015476736E+291)));
             }
 
-            for (aoffset = vectorUB; aoffset <= scalarLB; aoffset++) {
-              A_0[aoffset - 1] *= 9.9792015476736E+291;
+            for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+              A_0[c_k - 1] *= 9.9792015476736E+291;
             }
 
             qNorm *= 9.9792015476736E+291;
-            Vf *= 9.9792015476736E+291;
-          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
+            qRaw_tmp *= 9.9792015476736E+291;
+          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (knt < 20));
 
-          qNorm = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
-          if (Vf >= 0.0) {
+          qNorm = rt_hypotd_snf(qRaw_tmp, xnrm2_hmd(18 - m, A_0, coffset + 2));
+          if (qRaw_tmp >= 0.0) {
             qNorm = -qNorm;
           }
 
-          s_0[m] = (qNorm - Vf) / qNorm;
-          Vf = 1.0 / (Vf - qNorm);
-          for (i_k = lastv; i_k <= vectorUB_tmp; i_k += 2) {
-            tmp_4 = _mm_loadu_pd(&A_0[i_k - 1]);
-            _mm_storeu_pd(&A_0[i_k - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+          gravityBody[m] = (qNorm - qRaw_tmp) / qNorm;
+          qRaw_tmp = 1.0 / (qRaw_tmp - qNorm);
+          for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+            tmp_2 = _mm_loadu_pd(&A_0[c_k - 1]);
+            _mm_storeu_pd(&A_0[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(qRaw_tmp)));
           }
 
-          for (i_k = vectorUB; i_k <= scalarLB; i_k++) {
-            A_0[i_k - 1] *= Vf;
+          for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+            A_0[c_k - 1] *= qRaw_tmp;
           }
 
-          for (lastv = 0; lastv < i; lastv++) {
+          for (c_k = 0; c_k < knt; c_k++) {
             qNorm *= 1.0020841800044864E-292;
           }
 
-          Vf = qNorm;
+          qRaw_tmp = qNorm;
         } else {
-          s_0[m] = (qNorm - s_4) / qNorm;
-          Vf = 1.0 / (s_4 - qNorm);
-          i = (coffset - m) + 19;
-          scalarLB = (((((i - coffset) - 1) / 2) << 1) + coffset) + 2;
-          vectorUB = scalarLB - 2;
-          for (aoffset = lastv; aoffset <= vectorUB; aoffset += 2) {
-            tmp_4 = _mm_loadu_pd(&A_0[aoffset - 1]);
-            _mm_storeu_pd(&A_0[aoffset - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+          gravityBody[m] = (qNorm - qRaw_tmp_0) / qNorm;
+          qRaw_tmp = 1.0 / (qRaw_tmp_0 - qNorm);
+          aoffset = (coffset - m) + 19;
+          c_k = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
+          vectorUB = c_k - 2;
+          for (knt = i; knt <= vectorUB; knt += 2) {
+            tmp_2 = _mm_loadu_pd(&A_0[knt - 1]);
+            _mm_storeu_pd(&A_0[knt - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(qRaw_tmp)));
           }
 
-          for (aoffset = scalarLB; aoffset <= i; aoffset++) {
-            A_0[aoffset - 1] *= Vf;
+          for (knt = c_k; knt <= aoffset; knt++) {
+            A_0[knt - 1] *= qRaw_tmp;
           }
 
-          Vf = qNorm;
+          qRaw_tmp = qNorm;
         }
       }
 
-      A_0[coffset] = Vf;
+      A_0[coffset] = qRaw_tmp;
       if (m + 1 < 3) {
         A_0[coffset] = 1.0;
-        if (s_0[m] != 0.0) {
-          lastv = 19 - m;
-          i = (coffset - m) + 18;
-          while ((lastv > 0) && (A_0[i] == 0.0)) {
-            lastv--;
+        if (gravityBody[m] != 0.0) {
+          i = 19 - m;
+          knt = (coffset - m) + 18;
+          while ((i > 0) && (A_0[knt] == 0.0)) {
             i--;
+            knt--;
           }
 
-          i = 2 - m;
+          knt = 2 - m;
           exitg2 = false;
-          while ((!exitg2) && (i > 0)) {
-            aoffset = ((i - 1) * 19 + coffset) + 19;
-            i_k = aoffset;
+          while ((!exitg2) && (knt > 0)) {
+            aoffset = ((knt - 1) * 19 + coffset) + 19;
+            c_k = aoffset;
             do {
               exitg1 = 0;
-              if (i_k + 1 <= aoffset + lastv) {
-                if (A_0[i_k] != 0.0) {
+              if (c_k + 1 <= aoffset + i) {
+                if (A_0[c_k] != 0.0) {
                   exitg1 = 1;
                 } else {
-                  i_k++;
+                  c_k++;
                 }
               } else {
-                i--;
+                knt--;
                 exitg1 = 2;
               }
             } while (exitg1 == 0);
@@ -4991,16 +5005,18 @@ void talos_ekf::step()
             }
           }
         } else {
-          lastv = 0;
           i = 0;
+          knt = 0;
         }
 
-        if (lastv > 0) {
-          xgemv_h(lastv, i, A_0, coffset + 20, A_0, coffset + 1, work_0);
-          xgerc_f(lastv, i, -s_0[m], coffset + 1, work_0, A_0, coffset + 20);
+        if (i > 0) {
+          xgemv_h(i, knt, A_0, coffset + 20, A_0, coffset + 1,
+                  gravityMeasurement);
+          xgerc_f(i, knt, -gravityBody[m], coffset + 1, gravityMeasurement, A_0,
+                  coffset + 20);
         }
 
-        A_0[coffset] = Vf;
+        A_0[coffset] = qRaw_tmp;
       }
     }
 
@@ -5014,45 +5030,46 @@ void talos_ekf::step()
       }
     }
 
-    std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
-    for (lastv = 0; lastv < 16; lastv++) {
+    std::memcpy(&normalizationJacobian[0], &rtDW.x[0], sizeof(real_T) << 4U);
+    std::memcpy(&K[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        qNorm = 0.0;
+        qRaw_tmp = 0.0;
         for (i = 0; i < 16; i++) {
-          coffset = i << 4;
-          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
+          knt = i << 4;
+          qRaw_tmp += rtDW.P_i[knt + coffset] * rtDW.P_i[knt + m];
         }
 
-        C[lastv + (m << 4)] = qNorm;
+        C[coffset + (m << 4)] = qRaw_tmp;
       }
     }
 
-    work_0[0] = rtU.fog_measurement[0] - rtU.fog_mask[0] * rtDW.x[10];
-    work_0[1] = rtU.fog_measurement[1] - rtU.fog_mask[1] * rtDW.x[11];
-    work_0[2] = rtU.fog_measurement[2] - rtU.fog_mask[2] * rtDW.x[12];
-    for (lastv = 0; lastv < 16; lastv++) {
+    gravityMeasurement[0] = rtU.fog_measurement[0] - rtU.fog_mask[0] * rtDW.x[10];
+    gravityMeasurement[1] = rtU.fog_measurement[1] - rtU.fog_mask[1] * rtDW.x[11];
+    gravityMeasurement[2] = rtU.fog_measurement[2] - rtU.fog_mask[2] * rtDW.x[12];
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 3; m++) {
-        qNorm = 0.0;
+        qRaw_tmp = 0.0;
         for (i = 0; i < 16; i++) {
-          qNorm += C[(i << 4) + lastv] * dHdx_0[3 * i + m];
+          qRaw_tmp += C[(i << 4) + coffset] * dHdx_0[3 * i + m];
         }
 
-        y[lastv + (m << 4)] = qNorm;
+        y[coffset + (m << 4)] = qRaw_tmp;
       }
     }
 
-    for (lastv = 0; lastv < 3; lastv++) {
-      s[3 * lastv] = work[lastv];
-      s[3 * lastv + 1] = work[lastv + 3];
-      s[3 * lastv + 2] = work[lastv + 6];
+    for (coffset = 0; coffset < 3; coffset++) {
+      s[3 * coffset] = work[coffset];
+      s[3 * coffset + 1] = work[coffset + 3];
+      s[3 * coffset + 2] = work[coffset + 6];
     }
 
-    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0, s_1);
-    std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
+    EKFCorrector_correctStateAndS_n(normalizationJacobian, K, gravityMeasurement,
+      y, s, dHdx_0, s_0);
+    std::memcpy(&rtDW.P_i[0], &K[0], sizeof(real_T) << 8U);
 
     // DataStoreWrite: '<S3>/Data Store WriteX'
-    std::memcpy(&rtDW.x[0], &rtb_xNew_k[0], sizeof(real_T) << 4U);
+    std::memcpy(&rtDW.x[0], &normalizationJacobian[0], sizeof(real_T) << 4U);
   }
 
   // End of Inport: '<Root>/enable_fog'
@@ -5068,31 +5085,31 @@ void talos_ekf::step()
 
     rtDW.blockOrdering_p = rtDW.blockOrdering_n;
     p = true;
-    for (m = 0; m < 9; m++) {
-      if (p && (std::isinf(rtU.R_dvl[m]) || std::isnan(rtU.R_dvl[m]))) {
+    for (c_k = 0; c_k < 9; c_k++) {
+      if (p && (std::isinf(rtU.R_dvl[c_k]) || std::isnan(rtU.R_dvl[c_k]))) {
         p = false;
       }
     }
 
     if (p) {
-      svd_a(rtU.R_dvl, work, s_0, s);
+      svd_a(rtU.R_dvl, work, gravityBody, s);
     } else {
-      s_0[0] = (rtNaN);
-      s_0[1] = (rtNaN);
-      s_0[2] = (rtNaN);
+      gravityBody[0] = (rtNaN);
+      gravityBody[1] = (rtNaN);
+      gravityBody[2] = (rtNaN);
       for (i = 0; i < 9; i++) {
         s[i] = (rtNaN);
       }
     }
 
     std::memset(&work[0], 0, 9U * sizeof(real_T));
-    work[0] = s_0[0];
-    work[4] = s_0[1];
-    work[8] = s_0[2];
-    for (m = 0; m <= 6; m += 2) {
+    work[0] = gravityBody[0];
+    work[4] = gravityBody[1];
+    work[8] = gravityBody[2];
+    for (i = 0; i <= 6; i += 2) {
       // MATLAB Function: '<S4>/Correct'
-      tmp_4 = _mm_loadu_pd(&work[m]);
-      _mm_storeu_pd(&work[m], _mm_sqrt_pd(tmp_4));
+      tmp_2 = _mm_loadu_pd(&work[i]);
+      _mm_storeu_pd(&work[i], _mm_sqrt_pd(tmp_2));
     }
 
     // MATLAB Function: '<S4>/Correct' incorporates:
@@ -5101,34 +5118,35 @@ void talos_ekf::step()
     //   Inport: '<Root>/dvl_context'
     //   Inport: '<Root>/dvl_measurement'
 
-    for (m = 8; m < 9; m++) {
-      work[m] = std::sqrt(work[m]);
+    for (i = 8; i < 9; i++) {
+      work[i] = std::sqrt(work[i]);
     }
 
-    for (lastv = 0; lastv < 3; lastv++) {
-      qNorm = work[3 * lastv + 1];
-      Vf = work[3 * lastv];
-      s_4 = work[3 * lastv + 2];
+    for (coffset = 0; coffset < 3; coffset++) {
+      h = work[3 * coffset + 1];
+      qRaw_tmp = work[3 * coffset];
+      qRaw_tmp_0 = work[3 * coffset + 2];
       for (m = 0; m <= 0; m += 2) {
-        tmp_4 = _mm_loadu_pd(&s[m + 3]);
-        tmp_2 = _mm_loadu_pd(&s[m]);
-        tmp_3 = _mm_loadu_pd(&s[m + 6]);
-        _mm_storeu_pd(&s_1[m + 3 * lastv], _mm_add_pd(_mm_add_pd(_mm_mul_pd
-          (_mm_set1_pd(qNorm), tmp_4), _mm_mul_pd(_mm_set1_pd(Vf), tmp_2)),
-          _mm_mul_pd(_mm_set1_pd(s_4), tmp_3)));
+        tmp_2 = _mm_loadu_pd(&s[m + 3]);
+        tmp_0 = _mm_loadu_pd(&s[m]);
+        tmp_1 = _mm_loadu_pd(&s[m + 6]);
+        _mm_storeu_pd(&s_0[m + 3 * coffset], _mm_add_pd(_mm_add_pd(_mm_mul_pd
+          (_mm_set1_pd(h), tmp_2), _mm_mul_pd(_mm_set1_pd(qRaw_tmp), tmp_0)),
+          _mm_mul_pd(_mm_set1_pd(qRaw_tmp_0), tmp_1)));
       }
 
       for (m = 2; m < 3; m++) {
-        s_1[m + 3 * lastv] = (s[m + 3] * qNorm + Vf * s[m]) + s[m + 6] * s_4;
+        s_0[m + 3 * coffset] = (s[m + 3] * h + qRaw_tmp * s[m]) + s[m + 6] *
+          qRaw_tmp_0;
       }
     }
 
     std::memset(&dHdx_0[0], 0, 48U * sizeof(real_T));
-    for (lastv = 0; lastv < 3; lastv++) {
-      i = (lastv + 7) * 3;
-      dHdx_0[i] = 0.0;
-      dHdx_0[i + 1] = 0.0;
-      dHdx_0[i + 2] = 0.0;
+    for (coffset = 0; coffset < 3; coffset++) {
+      knt = (coffset + 7) * 3;
+      dHdx_0[knt] = 0.0;
+      dHdx_0[knt + 1] = 0.0;
+      dHdx_0[knt + 2] = 0.0;
     }
 
     dHdx_0[21] = rtU.dvl_context[3];
@@ -5147,13 +5165,13 @@ void talos_ekf::step()
     work[2] = rtU.dvl_context[1];
     work[5] = -rtU.dvl_context[0];
     work[8] = 0.0;
-    for (lastv = 0; lastv < 3; lastv++) {
-      Vf = s[lastv + 3];
-      s_4 = s[lastv];
-      s_5 = s[lastv + 6];
+    for (coffset = 0; coffset < 3; coffset++) {
+      qNorm_tmp = s[coffset + 3];
+      s_3 = s[coffset];
+      s_4 = s[coffset + 6];
       for (m = 0; m < 3; m++) {
-        dHdx_0[lastv + 3 * (m + 10)] = (work[3 * m + 1] * Vf + work[3 * m] * s_4)
-          + work[3 * m + 2] * s_5;
+        dHdx_0[coffset + 3 * (m + 10)] = (work[3 * m + 1] * qNorm_tmp + work[3 *
+          m] * s_3) + work[3 * m + 2] * s_4;
       }
     }
 
@@ -5162,127 +5180,127 @@ void talos_ekf::step()
       for (i = 0; i < 16; i++) {
         aoffset = i << 4;
         qNorm = 0.0;
-        for (lastv = 0; lastv < 16; lastv++) {
-          qNorm += dHdx_0[lastv * 3 + m] * rtDW.P_i[aoffset + lastv];
+        for (knt = 0; knt < 16; knt++) {
+          qNorm += dHdx_0[knt * 3 + m] * rtDW.P_i[aoffset + knt];
         }
 
         y[coffset + i] = qNorm;
       }
     }
 
-    for (lastv = 0; lastv < 16; lastv++) {
-      A_0[lastv] = y[lastv];
-      A_0[lastv + 19] = y[lastv + 16];
-      A_0[lastv + 38] = y[lastv + 32];
+    for (coffset = 0; coffset < 16; coffset++) {
+      A_0[coffset] = y[coffset];
+      A_0[coffset + 19] = y[coffset + 16];
+      A_0[coffset + 38] = y[coffset + 32];
     }
 
     for (i = 0; i < 3; i++) {
-      A_0[19 * i + 16] = s_1[i];
-      A_0[19 * i + 17] = s_1[i + 3];
-      A_0[19 * i + 18] = s_1[i + 6];
-      work_0[i] = 0.0;
+      A_0[19 * i + 16] = s_0[i];
+      A_0[19 * i + 17] = s_0[i + 3];
+      A_0[19 * i + 18] = s_0[i + 6];
+      gravityMeasurement[i] = 0.0;
     }
 
     for (m = 0; m < 3; m++) {
       coffset = m * 19 + m;
-      Vf = A_0[coffset];
-      lastv = coffset + 2;
-      s_0[m] = 0.0;
-      qNorm = xnrm2_hmd(18 - m, A_0, coffset + 2);
-      if (qNorm != 0.0) {
-        s_4 = A_0[coffset];
-        qNorm = rt_hypotd_snf(s_4, qNorm);
-        if (s_4 >= 0.0) {
+      qRaw_tmp = A_0[coffset];
+      i = coffset + 2;
+      gravityBody[m] = 0.0;
+      qNorm_tmp = xnrm2_hmd(18 - m, A_0, coffset + 2);
+      if (qNorm_tmp != 0.0) {
+        qRaw_tmp_0 = A_0[coffset];
+        qNorm = rt_hypotd_snf(qRaw_tmp_0, qNorm_tmp);
+        if (qRaw_tmp_0 >= 0.0) {
           qNorm = -qNorm;
         }
 
         if (std::abs(qNorm) < 1.0020841800044864E-292) {
-          i = 0;
-          scalarLB = (coffset - m) + 19;
+          knt = 0;
+          aoffset = (coffset - m) + 19;
           do {
-            i++;
-            vectorUB = (((((scalarLB - coffset) - 1) / 2) << 1) + coffset) + 2;
+            knt++;
+            vectorUB = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
             vectorUB_tmp = vectorUB - 2;
-            for (aoffset = lastv; aoffset <= vectorUB_tmp; aoffset += 2) {
-              tmp_4 = _mm_loadu_pd(&A_0[aoffset - 1]);
-              _mm_storeu_pd(&A_0[aoffset - 1], _mm_mul_pd(tmp_4, _mm_set1_pd
+            for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+              tmp_2 = _mm_loadu_pd(&A_0[c_k - 1]);
+              _mm_storeu_pd(&A_0[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd
                 (9.9792015476736E+291)));
             }
 
-            for (aoffset = vectorUB; aoffset <= scalarLB; aoffset++) {
-              A_0[aoffset - 1] *= 9.9792015476736E+291;
+            for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+              A_0[c_k - 1] *= 9.9792015476736E+291;
             }
 
             qNorm *= 9.9792015476736E+291;
-            Vf *= 9.9792015476736E+291;
-          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
+            qRaw_tmp *= 9.9792015476736E+291;
+          } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (knt < 20));
 
-          qNorm = rt_hypotd_snf(Vf, xnrm2_hmd(18 - m, A_0, coffset + 2));
-          if (Vf >= 0.0) {
+          qNorm = rt_hypotd_snf(qRaw_tmp, xnrm2_hmd(18 - m, A_0, coffset + 2));
+          if (qRaw_tmp >= 0.0) {
             qNorm = -qNorm;
           }
 
-          s_0[m] = (qNorm - Vf) / qNorm;
-          Vf = 1.0 / (Vf - qNorm);
-          for (i_k = lastv; i_k <= vectorUB_tmp; i_k += 2) {
-            tmp_4 = _mm_loadu_pd(&A_0[i_k - 1]);
-            _mm_storeu_pd(&A_0[i_k - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+          gravityBody[m] = (qNorm - qRaw_tmp) / qNorm;
+          qRaw_tmp = 1.0 / (qRaw_tmp - qNorm);
+          for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+            tmp_2 = _mm_loadu_pd(&A_0[c_k - 1]);
+            _mm_storeu_pd(&A_0[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(qRaw_tmp)));
           }
 
-          for (i_k = vectorUB; i_k <= scalarLB; i_k++) {
-            A_0[i_k - 1] *= Vf;
+          for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+            A_0[c_k - 1] *= qRaw_tmp;
           }
 
-          for (lastv = 0; lastv < i; lastv++) {
+          for (c_k = 0; c_k < knt; c_k++) {
             qNorm *= 1.0020841800044864E-292;
           }
 
-          Vf = qNorm;
+          qRaw_tmp = qNorm;
         } else {
-          s_0[m] = (qNorm - s_4) / qNorm;
-          Vf = 1.0 / (s_4 - qNorm);
-          i = (coffset - m) + 19;
-          scalarLB = (((((i - coffset) - 1) / 2) << 1) + coffset) + 2;
-          vectorUB = scalarLB - 2;
-          for (aoffset = lastv; aoffset <= vectorUB; aoffset += 2) {
-            tmp_4 = _mm_loadu_pd(&A_0[aoffset - 1]);
-            _mm_storeu_pd(&A_0[aoffset - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+          gravityBody[m] = (qNorm - qRaw_tmp_0) / qNorm;
+          qRaw_tmp = 1.0 / (qRaw_tmp_0 - qNorm);
+          aoffset = (coffset - m) + 19;
+          c_k = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
+          vectorUB = c_k - 2;
+          for (knt = i; knt <= vectorUB; knt += 2) {
+            tmp_2 = _mm_loadu_pd(&A_0[knt - 1]);
+            _mm_storeu_pd(&A_0[knt - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(qRaw_tmp)));
           }
 
-          for (aoffset = scalarLB; aoffset <= i; aoffset++) {
-            A_0[aoffset - 1] *= Vf;
+          for (knt = c_k; knt <= aoffset; knt++) {
+            A_0[knt - 1] *= qRaw_tmp;
           }
 
-          Vf = qNorm;
+          qRaw_tmp = qNorm;
         }
       }
 
-      A_0[coffset] = Vf;
+      A_0[coffset] = qRaw_tmp;
       if (m + 1 < 3) {
         A_0[coffset] = 1.0;
-        if (s_0[m] != 0.0) {
-          lastv = 19 - m;
-          i = (coffset - m) + 18;
-          while ((lastv > 0) && (A_0[i] == 0.0)) {
-            lastv--;
+        if (gravityBody[m] != 0.0) {
+          i = 19 - m;
+          knt = (coffset - m) + 18;
+          while ((i > 0) && (A_0[knt] == 0.0)) {
             i--;
+            knt--;
           }
 
-          i = 2 - m;
+          knt = 2 - m;
           exitg2 = false;
-          while ((!exitg2) && (i > 0)) {
-            aoffset = ((i - 1) * 19 + coffset) + 19;
-            i_k = aoffset;
+          while ((!exitg2) && (knt > 0)) {
+            aoffset = ((knt - 1) * 19 + coffset) + 19;
+            c_k = aoffset;
             do {
               exitg1 = 0;
-              if (i_k + 1 <= aoffset + lastv) {
-                if (A_0[i_k] != 0.0) {
+              if (c_k + 1 <= aoffset + i) {
+                if (A_0[c_k] != 0.0) {
                   exitg1 = 1;
                 } else {
-                  i_k++;
+                  c_k++;
                 }
               } else {
-                i--;
+                knt--;
                 exitg1 = 2;
               }
             } while (exitg1 == 0);
@@ -5292,16 +5310,18 @@ void talos_ekf::step()
             }
           }
         } else {
-          lastv = 0;
           i = 0;
+          knt = 0;
         }
 
-        if (lastv > 0) {
-          xgemv_h(lastv, i, A_0, coffset + 20, A_0, coffset + 1, work_0);
-          xgerc_f(lastv, i, -s_0[m], coffset + 1, work_0, A_0, coffset + 20);
+        if (i > 0) {
+          xgemv_h(i, knt, A_0, coffset + 20, A_0, coffset + 1,
+                  gravityMeasurement);
+          xgerc_f(i, knt, -gravityBody[m], coffset + 1, gravityMeasurement, A_0,
+                  coffset + 20);
         }
 
-        A_0[coffset] = Vf;
+        A_0[coffset] = qRaw_tmp;
       }
     }
 
@@ -5315,46 +5335,50 @@ void talos_ekf::step()
       }
     }
 
-    std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    std::memcpy(&Ss_0[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
-    work_0[0] = rtU.dvl_measurement[0] - ((rtU.dvl_context[2] * rtDW.x[11] -
-      rtU.dvl_context[1] * rtDW.x[12]) + rtDW.x[7]) * rtU.dvl_context[3];
-    work_0[1] = rtU.dvl_measurement[1] - ((rtU.dvl_context[0] * rtDW.x[12] -
-      rtU.dvl_context[2] * rtDW.x[10]) + rtDW.x[8]) * rtU.dvl_context[4];
-    work_0[2] = rtU.dvl_measurement[2] - ((rtU.dvl_context[1] * rtDW.x[10] -
-      rtU.dvl_context[0] * rtDW.x[11]) + rtDW.x[9]) * rtU.dvl_context[5];
-    for (lastv = 0; lastv < 16; lastv++) {
+    std::memcpy(&normalizationJacobian[0], &rtDW.x[0], sizeof(real_T) << 4U);
+    std::memcpy(&K[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
+    gravityMeasurement[0] = rtU.dvl_measurement[0] - ((rtU.dvl_context[2] *
+      rtDW.x[11] - rtU.dvl_context[1] * rtDW.x[12]) + rtDW.x[7]) *
+      rtU.dvl_context[3];
+    gravityMeasurement[1] = rtU.dvl_measurement[1] - ((rtU.dvl_context[0] *
+      rtDW.x[12] - rtU.dvl_context[2] * rtDW.x[10]) + rtDW.x[8]) *
+      rtU.dvl_context[4];
+    gravityMeasurement[2] = rtU.dvl_measurement[2] - ((rtU.dvl_context[1] *
+      rtDW.x[10] - rtU.dvl_context[0] * rtDW.x[11]) + rtDW.x[9]) *
+      rtU.dvl_context[5];
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        qNorm = 0.0;
+        qRaw_tmp = 0.0;
         for (i = 0; i < 16; i++) {
-          coffset = i << 4;
-          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
+          knt = i << 4;
+          qRaw_tmp += rtDW.P_i[knt + coffset] * rtDW.P_i[knt + m];
         }
 
-        C[lastv + (m << 4)] = qNorm;
+        C[coffset + (m << 4)] = qRaw_tmp;
       }
 
       for (m = 0; m < 3; m++) {
-        qNorm = 0.0;
+        qRaw_tmp = 0.0;
         for (i = 0; i < 16; i++) {
-          qNorm += C[(i << 4) + lastv] * dHdx_0[3 * i + m];
+          qRaw_tmp += C[(i << 4) + coffset] * dHdx_0[3 * i + m];
         }
 
-        y[lastv + (m << 4)] = qNorm;
+        y[coffset + (m << 4)] = qRaw_tmp;
       }
     }
 
-    for (lastv = 0; lastv < 3; lastv++) {
-      s[3 * lastv] = work[lastv];
-      s[3 * lastv + 1] = work[lastv + 3];
-      s[3 * lastv + 2] = work[lastv + 6];
+    for (coffset = 0; coffset < 3; coffset++) {
+      s[3 * coffset] = work[coffset];
+      s[3 * coffset + 1] = work[coffset + 3];
+      s[3 * coffset + 2] = work[coffset + 6];
     }
 
-    EKFCorrector_correctStateAndS_n(rtb_xNew_k, Ss_0, work_0, y, s, dHdx_0, s_1);
-    std::memcpy(&rtDW.P_i[0], &Ss_0[0], sizeof(real_T) << 8U);
+    EKFCorrector_correctStateAndS_n(normalizationJacobian, K, gravityMeasurement,
+      y, s, dHdx_0, s_0);
+    std::memcpy(&rtDW.P_i[0], &K[0], sizeof(real_T) << 8U);
 
     // DataStoreWrite: '<S4>/Data Store WriteX'
-    std::memcpy(&rtDW.x[0], &rtb_xNew_k[0], sizeof(real_T) << 4U);
+    std::memcpy(&rtDW.x[0], &normalizationJacobian[0], sizeof(real_T) << 4U);
   }
 
   // End of Inport: '<Root>/enable_dvl'
@@ -5369,19 +5393,19 @@ void talos_ekf::step()
     //   Inport: '<Root>/R_depth'
 
     if ((!std::isinf(rtU.R_depth)) && (!std::isnan(rtU.R_depth))) {
-      qNorm = rtU.R_depth;
-      Vf = 1.0;
+      h = rtU.R_depth;
+      qNorm = 1.0;
       if (rtU.R_depth != 0.0) {
-        qNorm = std::abs(rtU.R_depth);
+        h = std::abs(rtU.R_depth);
       }
 
-      if (qNorm < 0.0) {
-        qNorm = -qNorm;
-        Vf = -1.0;
+      if (h < 0.0) {
+        h = -h;
+        qNorm = -1.0;
       }
     } else {
+      h = (rtNaN);
       qNorm = (rtNaN);
-      Vf = (rtNaN);
     }
 
     // DataStoreWrite: '<S5>/Data Store WriteX' incorporates:
@@ -5390,7 +5414,7 @@ void talos_ekf::step()
     //   Inport: '<Root>/depth_measurement'
     //   MATLAB Function: '<S5>/Correct'
 
-    EKFCorrector_correct(rtU.depth_measurement, Vf * std::sqrt(qNorm), rtDW.x,
+    EKFCorrector_correct(rtU.depth_measurement, qNorm * std::sqrt(h), rtDW.x,
                          rtDW.P_i, rtU.depth_mask);
   }
 
@@ -5406,71 +5430,71 @@ void talos_ekf::step()
     //   Inport: '<Root>/R_reset'
 
     p = true;
-    for (m = 0; m < 256; m++) {
-      if (p && (std::isinf(rtU.R_reset[m]) || std::isnan(rtU.R_reset[m]))) {
+    for (c_k = 0; c_k < 256; c_k++) {
+      if (p && (std::isinf(rtU.R_reset[c_k]) || std::isnan(rtU.R_reset[c_k]))) {
         p = false;
       }
     }
 
     if (p) {
-      svd_d(rtU.R_reset, Ss_0, rtb_xNew_k, K);
+      svd_d(rtU.R_reset, Ss_0, normalizationJacobian, K);
     } else {
-      for (i = 0; i < 16; i++) {
-        rtb_xNew_k[i] = (rtNaN);
+      for (coffset = 0; coffset < 16; coffset++) {
+        normalizationJacobian[coffset] = (rtNaN);
       }
 
-      for (lastv = 0; lastv < 256; lastv++) {
-        K[lastv] = (rtNaN);
+      for (coffset = 0; coffset < 256; coffset++) {
+        K[coffset] = (rtNaN);
       }
     }
 
     std::memset(&Ss_0[0], 0, sizeof(real_T) << 8U);
-    for (m = 0; m < 16; m++) {
-      Ss_0[m + (m << 4)] = rtb_xNew_k[m];
+    for (knt = 0; knt < 16; knt++) {
+      Ss_0[knt + (knt << 4)] = normalizationJacobian[knt];
     }
 
-    for (m = 0; m <= 254; m += 2) {
+    for (i = 0; i <= 254; i += 2) {
       // MATLAB Function: '<S6>/Correct'
-      tmp_4 = _mm_loadu_pd(&Ss_0[m]);
-      _mm_storeu_pd(&Ss_0[m], _mm_sqrt_pd(tmp_4));
+      tmp_2 = _mm_loadu_pd(&Ss_0[i]);
+      _mm_storeu_pd(&Ss_0[i], _mm_sqrt_pd(tmp_2));
     }
 
     // MATLAB Function: '<S6>/Correct' incorporates:
     //   DataStoreWrite: '<S6>/Data Store WriteP'
 
-    for (lastv = 0; lastv < 16; lastv++) {
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        qNorm = 0.0;
+        h = 0.0;
         for (i = 0; i < 16; i++) {
-          qNorm += K[(i << 4) + m] * Ss_0[(lastv << 4) + i];
+          h += K[(i << 4) + m] * Ss_0[(coffset << 4) + i];
         }
 
-        Rsqrt_0[m + (lastv << 4)] = qNorm;
+        Rsqrt_0[m + (coffset << 4)] = h;
       }
     }
 
     std::memcpy(&K[0], &rtDW.P_i[0], sizeof(real_T) << 8U);
     qrFactor(b, K, Rsqrt_0);
-    for (lastv = 0; lastv < 16; lastv++) {
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        qNorm = 0.0;
+        qRaw_tmp = 0.0;
         for (i = 0; i < 16; i++) {
-          coffset = i << 4;
-          qNorm += rtDW.P_i[coffset + lastv] * rtDW.P_i[coffset + m];
+          knt = i << 4;
+          qRaw_tmp += rtDW.P_i[knt + coffset] * rtDW.P_i[knt + m];
         }
 
-        C[lastv + (m << 4)] = qNorm;
+        C[coffset + (m << 4)] = qRaw_tmp;
       }
     }
 
-    for (lastv = 0; lastv < 16; lastv++) {
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        qNorm = 0.0;
+        h = 0.0;
         for (i = 0; i < 16; i++) {
-          qNorm += C[(i << 4) + m] * b[(lastv << 4) + i];
+          h += C[(i << 4) + m] * b[(coffset << 4) + i];
         }
 
-        Ss_0[lastv + (m << 4)] = qNorm;
+        Ss_0[coffset + (m << 4)] = h;
       }
     }
 
@@ -5484,67 +5508,67 @@ void talos_ekf::step()
     }
 
     trisolve_jl(K_0, Ss_0);
-    for (lastv = 0; lastv < 16; lastv++) {
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        K[m + (lastv << 4)] = Ss_0[(m << 4) + lastv];
+        K[m + (coffset << 4)] = Ss_0[(m << 4) + coffset];
       }
     }
 
-    for (lastv = 0; lastv <= 254; lastv += 2) {
+    for (coffset = 0; coffset <= 254; coffset += 2) {
       // MATLAB Function: '<S6>/Correct'
-      tmp_4 = _mm_loadu_pd(&K[lastv]);
-      _mm_storeu_pd(&K_0[lastv], _mm_mul_pd(tmp_4, _mm_set1_pd(-1.0)));
+      tmp_2 = _mm_loadu_pd(&K[coffset]);
+      _mm_storeu_pd(&K_0[coffset], _mm_mul_pd(tmp_2, _mm_set1_pd(-1.0)));
     }
 
     // MATLAB Function: '<S6>/Correct' incorporates:
     //   DataStoreWrite: '<S6>/Data Store WriteP'
 
-    for (lastv = 0; lastv < 16; lastv++) {
+    for (coffset = 0; coffset < 16; coffset++) {
       for (m = 0; m < 16; m++) {
-        qNorm = 0.0;
+        h = 0.0;
         for (i = 0; i < 16; i++) {
-          qNorm += K_0[(i << 4) + m] * b[(lastv << 4) + i];
+          h += K_0[(i << 4) + m] * b[(coffset << 4) + i];
         }
 
-        Ss_0[m + (lastv << 4)] = qNorm;
+        Ss_0[m + (coffset << 4)] = h;
       }
     }
 
     for (i = 0; i < 16; i++) {
       m = (i << 4) + i;
       Ss_0[m]++;
-      for (lastv = 0; lastv < 16; lastv++) {
-        Vf = 0.0;
+      for (coffset = 0; coffset < 16; coffset++) {
+        h = 0.0;
         for (m = 0; m < 16; m++) {
-          Vf += K[(m << 4) + i] * Rsqrt_0[(lastv << 4) + m];
+          h += K[(m << 4) + i] * Rsqrt_0[(coffset << 4) + m];
         }
 
-        K_0[i + (lastv << 4)] = Vf;
+        K_0[i + (coffset << 4)] = h;
       }
     }
 
     qrFactor(Ss_0, rtDW.P_i, K_0);
-    for (lastv = 0; lastv <= 14; lastv += 2) {
+    for (coffset = 0; coffset <= 14; coffset += 2) {
       // MATLAB Function: '<S6>/Correct' incorporates:
       //   DataStoreRead: '<S6>/Data Store ReadX'
       //   Inport: '<Root>/reset_state'
 
-      tmp_4 = _mm_loadu_pd(&rtDW.x[lastv]);
-      _mm_storeu_pd(&tmp_0[lastv], _mm_sub_pd(_mm_loadu_pd
-        (&rtU.reset_state[lastv]), tmp_4));
+      tmp_2 = _mm_loadu_pd(&rtDW.x[coffset]);
+      _mm_storeu_pd(&normalizationJacobian[coffset], _mm_sub_pd(_mm_loadu_pd
+        (&rtU.reset_state[coffset]), tmp_2));
     }
 
     // DataStoreWrite: '<S6>/Data Store WriteX' incorporates:
     //   DataStoreRead: '<S6>/Data Store ReadX'
     //   MATLAB Function: '<S6>/Correct'
 
-    for (lastv = 0; lastv < 16; lastv++) {
-      qNorm = 0.0;
+    for (coffset = 0; coffset < 16; coffset++) {
+      qRaw_tmp = 0.0;
       for (m = 0; m < 16; m++) {
-        qNorm += K[(m << 4) + lastv] * tmp_0[m];
+        qRaw_tmp += K[(m << 4) + coffset] * normalizationJacobian[m];
       }
 
-      rtDW.x[lastv] += qNorm;
+      rtDW.x[coffset] += qRaw_tmp;
     }
 
     // End of DataStoreWrite: '<S6>/Data Store WriteX'
@@ -5552,234 +5576,163 @@ void talos_ekf::step()
 
   // End of Inport: '<Root>/enable_reset'
   // End of Outputs for SubSystem: '<S1>/Correct5'
-  for (i = 0; i < 16; i++) {
-    // Outport: '<Root>/state' incorporates:
-    //   DataStoreRead: '<S7>/Data Store Read'
-
-    rtY.state[i] = rtDW.x[i];
-
-    // Outport: '<Root>/covariance' incorporates:
-    //   DataStoreRead: '<S7>/Data Store Read1'
-    //   MATLAB Function: '<S7>/MATLAB Function'
-
-    for (lastv = 0; lastv < 16; lastv++) {
-      // Outputs for Atomic SubSystem: '<S1>/Output'
-      // MATLAB Function: '<S7>/MATLAB Function'
-      qNorm = 0.0;
-
-      // End of Outputs for SubSystem: '<S1>/Output'
-      for (m = 0; m < 16; m++) {
-        // Outputs for Atomic SubSystem: '<S1>/Output'
-        // MATLAB Function: '<S7>/MATLAB Function'
-        coffset = m << 4;
-        qNorm += rtDW.P_i[coffset + i] * rtDW.P_i[coffset + lastv];
-
-        // End of Outputs for SubSystem: '<S1>/Output'
-      }
-
-      // Outputs for Atomic SubSystem: '<S1>/Output'
-      // MATLAB Function: '<S7>/MATLAB Function' incorporates:
-      //   DataStoreRead: '<S7>/Data Store Read1'
-
-      rtY.covariance[i + (lastv << 4)] = qNorm;
-
-      // End of Outputs for SubSystem: '<S1>/Output'
-    }
-
-    // End of Outport: '<Root>/covariance'
-  }
-
-  // Outputs for Atomic SubSystem: '<S1>/Predict'
-  // MATLAB Function: '<S8>/Predict' incorporates:
-  //   Inport: '<Root>/Q'
-
-  p = true;
-  for (lastv = 0; lastv < 256; lastv++) {
-    if (p && (std::isinf(rtU.Q[lastv]) || std::isnan(rtU.Q[lastv]))) {
-      p = false;
-    }
-  }
-
-  if (p) {
-    svd_n(rtU.Q, Ss_0, rtb_xNew_k, K);
-  } else {
-    for (i = 0; i < 16; i++) {
-      rtb_xNew_k[i] = (rtNaN);
-    }
-
-    for (lastv = 0; lastv < 256; lastv++) {
-      K[lastv] = (rtNaN);
-    }
-  }
-
-  std::memset(&Ss_0[0], 0, sizeof(real_T) << 8U);
-  for (m = 0; m < 16; m++) {
-    Ss_0[m + (m << 4)] = rtb_xNew_k[m];
-  }
-
-  // End of Outputs for SubSystem: '<S1>/Predict'
-  for (m = 0; m <= 254; m += 2) {
-    // Outputs for Atomic SubSystem: '<S1>/Predict'
-    // MATLAB Function: '<S8>/Predict'
-    tmp_4 = _mm_loadu_pd(&Ss_0[m]);
-    _mm_storeu_pd(&Ss_0[m], _mm_sqrt_pd(tmp_4));
-
-    // End of Outputs for SubSystem: '<S1>/Predict'
-  }
 
   // Outputs for Atomic SubSystem: '<S1>/Predict'
   // MATLAB Function: '<S8>/Predict' incorporates:
   //   DataStoreRead: '<S8>/Data Store ReadX'
-  //   DataStoreWrite: '<S8>/Data Store WriteP'
-  //   DataStoreWrite: '<S8>/Data Store WriteX'
-  //   Inport: '<Root>/dt'
+  //   Inport: '<Root>/prediction_context'
 
+  talos_state_transition_jacobian(rtDW.x, rtU.prediction_context[0], K);
   for (m = 0; m < 16; m++) {
-    qNorm = 1.0E-6 * std::fmax(1.0, std::abs(rtDW.x[m]));
-    std::memcpy(&rtb_xNew_k[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    std::memcpy(&xm[0], &rtDW.x[0], sizeof(real_T) << 4U);
-    Vf = rtDW.x[m];
-    rtb_xNew_k[m] = Vf + qNorm;
-    xm[m] = Vf - qNorm;
-    talos_state_transition(rtb_xNew_k, rtU.dt, tmp_0);
-    talos_state_transition(xm, rtU.dt, rtb_xNew_k);
-    qNorm *= 2.0;
-    for (lastv = 0; lastv <= 14; lastv += 2) {
-      tmp_4 = _mm_loadu_pd(&tmp_0[lastv]);
-      tmp_2 = _mm_loadu_pd(&rtb_xNew_k[lastv]);
-      _mm_storeu_pd(&Rsqrt_0[lastv + (m << 4)], _mm_div_pd(_mm_sub_pd(tmp_4,
-        tmp_2), _mm_set1_pd(qNorm)));
-    }
-  }
+    // Outport: '<Root>/state' incorporates:
+    //   DataStoreRead: '<S7>/Data Store Read'
 
-  for (m = 0; m < 16; m++) {
+    rtY.state[m] = rtDW.x[m];
+
+    // MATLAB Function: '<S8>/Predict' incorporates:
+    //   DataStoreWrite: '<S8>/Data Store WriteP'
+
     coffset = m << 4;
     for (i = 0; i < 16; i++) {
-      i_k = i << 4;
-      qNorm = 0.0;
-      Vf = 0.0;
-      for (lastv = 0; lastv < 16; lastv++) {
-        aoffset = lastv << 4;
-        qNorm += Rsqrt_0[aoffset + m] * rtDW.P_i[i_k + lastv];
-        Vf += K[aoffset + i] * Ss_0[coffset + lastv];
+      aoffset = i << 4;
+      h = 0.0;
+      for (knt = 0; knt < 16; knt++) {
+        h += K[(knt << 4) + m] * rtDW.P_i[aoffset + knt];
       }
 
-      K_0[m + i_k] = Vf;
-      C[coffset + i] = qNorm;
+      Ss_0[coffset + i] = h;
     }
   }
 
-  for (i = 0; i < 16; i++) {
-    for (lastv = 0; lastv < 16; lastv++) {
-      m = (i << 4) + lastv;
-      coffset = (i << 5) + lastv;
-      A_1[coffset] = C[m];
-      A_1[coffset + 16] = K_0[m];
-    }
+  // Inport: '<Root>/prediction_context' incorporates:
+  //   MATLAB Function: '<S8>/Predict'
 
-    xm[i] = 0.0;
+  std::memcpy(&C[0], &rtU.prediction_context[1], sizeof(real_T) << 8U);
+
+  // MATLAB Function: '<S8>/Predict' incorporates:
+  //   Constant: '<S1>/Q'
+  //   DataStoreRead: '<S8>/Data Store ReadX'
+  //   DataStoreWrite: '<S8>/Data Store WriteP'
+  //   Inport: '<Root>/prediction_context'
+
+  for (coffset = 0; coffset < 16; coffset++) {
+    for (m = 0; m < 16; m++) {
+      qRaw_tmp = 0.0;
+      for (i = 0; i < 16; i++) {
+        qRaw_tmp += C[(i << 4) + m] * rtConstP.Q_Value[(coffset << 4) + i];
+      }
+
+      K[coffset + (m << 4)] = qRaw_tmp;
+      A_1[m + (coffset << 5)] = Ss_0[(coffset << 4) + m];
+    }
+  }
+
+  for (coffset = 0; coffset < 16; coffset++) {
+    std::memcpy(&A_1[(coffset << 5) + 16], &K[coffset << 4], sizeof(real_T) <<
+                4U);
+    normalizationJacobian[coffset] = 0.0;
   }
 
   for (m = 0; m < 16; m++) {
     coffset = (m << 5) + m;
-    Vf = A_1[coffset];
-    lastv = coffset + 2;
-    rtb_xNew_k[m] = 0.0;
-    qNorm = xnrm2_dzn(31 - m, A_1, coffset + 2);
+    qRaw_tmp = A_1[coffset];
+    i = coffset + 2;
+    b_x[m] = 0.0;
+    qNorm = xnrm2_d(31 - m, A_1, coffset + 2);
     if (qNorm != 0.0) {
-      s_4 = A_1[coffset];
-      qNorm = rt_hypotd_snf(s_4, qNorm);
-      if (s_4 >= 0.0) {
+      qRaw_tmp_0 = A_1[coffset];
+      qNorm = rt_hypotd_snf(qRaw_tmp_0, qNorm);
+      if (qRaw_tmp_0 >= 0.0) {
         qNorm = -qNorm;
       }
 
       if (std::abs(qNorm) < 1.0020841800044864E-292) {
-        i = 0;
-        scalarLB = (coffset - m) + 32;
+        knt = 0;
+        aoffset = (coffset - m) + 32;
         do {
-          i++;
-          vectorUB = (((((scalarLB - coffset) - 1) / 2) << 1) + coffset) + 2;
+          knt++;
+          vectorUB = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
           vectorUB_tmp = vectorUB - 2;
-          for (aoffset = lastv; aoffset <= vectorUB_tmp; aoffset += 2) {
-            tmp_4 = _mm_loadu_pd(&A_1[aoffset - 1]);
-            _mm_storeu_pd(&A_1[aoffset - 1], _mm_mul_pd(tmp_4, _mm_set1_pd
+          for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+            tmp_2 = _mm_loadu_pd(&A_1[c_k - 1]);
+            _mm_storeu_pd(&A_1[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd
               (9.9792015476736E+291)));
           }
 
-          for (aoffset = vectorUB; aoffset <= scalarLB; aoffset++) {
-            A_1[aoffset - 1] *= 9.9792015476736E+291;
+          for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+            A_1[c_k - 1] *= 9.9792015476736E+291;
           }
 
           qNorm *= 9.9792015476736E+291;
-          Vf *= 9.9792015476736E+291;
-        } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (i < 20));
+          qRaw_tmp *= 9.9792015476736E+291;
+        } while ((std::abs(qNorm) < 1.0020841800044864E-292) && (knt < 20));
 
-        qNorm = rt_hypotd_snf(Vf, xnrm2_dzn(31 - m, A_1, coffset + 2));
-        if (Vf >= 0.0) {
+        qNorm = rt_hypotd_snf(qRaw_tmp, xnrm2_d(31 - m, A_1, coffset + 2));
+        if (qRaw_tmp >= 0.0) {
           qNorm = -qNorm;
         }
 
-        rtb_xNew_k[m] = (qNorm - Vf) / qNorm;
-        Vf = 1.0 / (Vf - qNorm);
-        for (i_k = lastv; i_k <= vectorUB_tmp; i_k += 2) {
-          tmp_4 = _mm_loadu_pd(&A_1[i_k - 1]);
-          _mm_storeu_pd(&A_1[i_k - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+        b_x[m] = (qNorm - qRaw_tmp) / qNorm;
+        qRaw_tmp = 1.0 / (qRaw_tmp - qNorm);
+        for (c_k = i; c_k <= vectorUB_tmp; c_k += 2) {
+          tmp_2 = _mm_loadu_pd(&A_1[c_k - 1]);
+          _mm_storeu_pd(&A_1[c_k - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(qRaw_tmp)));
         }
 
-        for (i_k = vectorUB; i_k <= scalarLB; i_k++) {
-          A_1[i_k - 1] *= Vf;
+        for (c_k = vectorUB; c_k <= aoffset; c_k++) {
+          A_1[c_k - 1] *= qRaw_tmp;
         }
 
-        for (aoffset = 0; aoffset < i; aoffset++) {
+        for (i = 0; i < knt; i++) {
           qNorm *= 1.0020841800044864E-292;
         }
 
-        Vf = qNorm;
+        qRaw_tmp = qNorm;
       } else {
-        rtb_xNew_k[m] = (qNorm - s_4) / qNorm;
-        Vf = 1.0 / (s_4 - qNorm);
-        i = (coffset - m) + 32;
-        scalarLB = (((((i - coffset) - 1) / 2) << 1) + coffset) + 2;
-        vectorUB = scalarLB - 2;
-        for (i_k = lastv; i_k <= vectorUB; i_k += 2) {
-          tmp_4 = _mm_loadu_pd(&A_1[i_k - 1]);
-          _mm_storeu_pd(&A_1[i_k - 1], _mm_mul_pd(tmp_4, _mm_set1_pd(Vf)));
+        b_x[m] = (qNorm - qRaw_tmp_0) / qNorm;
+        h = 1.0 / (qRaw_tmp_0 - qNorm);
+        aoffset = (coffset - m) + 32;
+        c_k = (((((aoffset - coffset) - 1) / 2) << 1) + coffset) + 2;
+        vectorUB = c_k - 2;
+        for (knt = i; knt <= vectorUB; knt += 2) {
+          tmp_2 = _mm_loadu_pd(&A_1[knt - 1]);
+          _mm_storeu_pd(&A_1[knt - 1], _mm_mul_pd(tmp_2, _mm_set1_pd(h)));
         }
 
-        for (i_k = scalarLB; i_k <= i; i_k++) {
-          A_1[i_k - 1] *= Vf;
+        for (knt = c_k; knt <= aoffset; knt++) {
+          A_1[knt - 1] *= h;
         }
 
-        Vf = qNorm;
+        qRaw_tmp = qNorm;
       }
     }
 
-    A_1[coffset] = Vf;
+    A_1[coffset] = qRaw_tmp;
     if (m + 1 < 16) {
       A_1[coffset] = 1.0;
-      if (rtb_xNew_k[m] != 0.0) {
-        lastv = 32 - m;
-        i = (coffset - m) + 31;
-        while ((lastv > 0) && (A_1[i] == 0.0)) {
-          lastv--;
+      if (b_x[m] != 0.0) {
+        i = 32 - m;
+        knt = (coffset - m) + 31;
+        while ((i > 0) && (A_1[knt] == 0.0)) {
           i--;
+          knt--;
         }
 
-        i = 15 - m;
+        knt = 15 - m;
         exitg2 = false;
-        while ((!exitg2) && (i > 0)) {
-          aoffset = (((i - 1) << 5) + coffset) + 32;
-          i_k = aoffset;
+        while ((!exitg2) && (knt > 0)) {
+          aoffset = (((knt - 1) << 5) + coffset) + 32;
+          c_k = aoffset;
           do {
             exitg1 = 0;
-            if (i_k + 1 <= aoffset + lastv) {
-              if (A_1[i_k] != 0.0) {
+            if (c_k + 1 <= aoffset + i) {
+              if (A_1[c_k] != 0.0) {
                 exitg1 = 1;
               } else {
-                i_k++;
+                c_k++;
               }
             } else {
-              i--;
+              knt--;
               exitg1 = 2;
             }
           } while (exitg1 == 0);
@@ -5789,38 +5742,58 @@ void talos_ekf::step()
           }
         }
       } else {
-        lastv = 0;
         i = 0;
+        knt = 0;
       }
 
-      if (lastv > 0) {
-        xgemv_j(lastv, i, A_1, coffset + 33, A_1, coffset + 1, xm);
-        xgerc_e(lastv, i, -rtb_xNew_k[m], coffset + 1, xm, A_1, coffset + 33);
+      if (i > 0) {
+        xgemv_j(i, knt, A_1, coffset + 33, A_1, coffset + 1,
+                normalizationJacobian);
+        xgerc_e(i, knt, -b_x[m], coffset + 1, normalizationJacobian, A_1,
+                coffset + 33);
       }
 
-      A_1[coffset] = Vf;
+      A_1[coffset] = qRaw_tmp;
     }
   }
 
   for (m = 0; m < 16; m++) {
     for (coffset = 0; coffset <= m; coffset++) {
-      Ss_0[coffset + (m << 4)] = A_1[(m << 5) + coffset];
+      K[coffset + (m << 4)] = A_1[(m << 5) + coffset];
     }
 
     for (coffset = m + 2; coffset < 17; coffset++) {
-      Ss_0[(coffset + (m << 4)) - 1] = 0.0;
+      K[(coffset + (m << 4)) - 1] = 0.0;
     }
   }
 
-  for (lastv = 0; lastv < 16; lastv++) {
+  for (coffset = 0; coffset < 16; coffset++) {
     for (m = 0; m < 16; m++) {
-      rtDW.P_i[m + (lastv << 4)] = Ss_0[(m << 4) + lastv];
+      rtDW.P_i[m + (coffset << 4)] = K[(m << 4) + coffset];
     }
   }
 
-  std::memcpy(&tmp_0[0], &rtDW.x[0], sizeof(real_T) << 4U);
-  talos_state_transition(tmp_0, rtU.dt, rtDW.x);
+  talos_state_transition(rtDW.x, rtU.prediction_context[0],
+    normalizationJacobian);
 
+  // Inport: '<Root>/prediction_context' incorporates:
+  //   MATLAB Function: '<S8>/Predict'
+
+  std::memcpy(&C[0], &rtU.prediction_context[1], sizeof(real_T) << 8U);
+
+  // DataStoreWrite: '<S8>/Data Store WriteX' incorporates:
+  //   MATLAB Function: '<S8>/Predict'
+
+  for (coffset = 0; coffset < 16; coffset++) {
+    qRaw_tmp = 0.0;
+    for (m = 0; m < 16; m++) {
+      qRaw_tmp += C[(m << 4) + coffset] * 0.0;
+    }
+
+    rtDW.x[coffset] = normalizationJacobian[coffset] + qRaw_tmp;
+  }
+
+  // End of DataStoreWrite: '<S8>/Data Store WriteX'
   // End of Outputs for SubSystem: '<S1>/Predict'
 }
 

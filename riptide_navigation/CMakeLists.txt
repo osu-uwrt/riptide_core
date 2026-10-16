@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 project(riptide_navigation LANGUAGES CXX)
 
+# colcon deploy supplies BUILD_DEPLOY. Optimize deployment builds that have no
+# selected configuration, without overriding local builds or explicit choices.
+if(BUILD_DEPLOY AND NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build configuration" FORCE)
+endif()
+
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
@@ -45,6 +51,25 @@ if(NOT GENERATED_SOURCES)
   message(FATAL_ERROR "Missing generated EKF sources. Run matlab/generate_talos_ekf.m")
 endif()
 
+# Keep install checks tied to the built source/configuration, rather than a
+# second hardcoded implementation version or an obsolete tuning frequency.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  src/talos_ekf_node.cpp config/talos_ekf.yaml "${GENERATED_DIR}/talos_ekf.cpp")
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/src/talos_ekf_node.cpp" IMPLEMENTATION_LINE
+  REGEX "constexpr char kImplementationVersion")
+string(REGEX MATCH "\"([^\"]+)\"" IMPLEMENTATION_MATCH "${IMPLEMENTATION_LINE}")
+if(NOT IMPLEMENTATION_MATCH)
+  message(FATAL_ERROR "Cannot identify estimator implementation for install verification")
+endif()
+set(TALOS_IMPLEMENTATION "${CMAKE_MATCH_1}")
+file(SHA256 "${CMAKE_CURRENT_SOURCE_DIR}/config/talos_ekf.yaml" TALOS_CONFIG_SHA256)
+file(SHA256 "${GENERATED_DIR}/talos_ekf.cpp" TALOS_GENERATED_SHA256)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/estimator_manifest.json"
+  "{\n  \"implementation\": \"${TALOS_IMPLEMENTATION}\",\n"
+  "  \"architecture\": \"${TALOS_EKF_CODEGEN_ARCH}\",\n"
+  "  \"config_sha256\": \"${TALOS_CONFIG_SHA256}\",\n"
+  "  \"generated_source_sha256\": \"${TALOS_GENERATED_SHA256}\"\n}\n")
+
 add_library(talos_ekf_generated STATIC ${GENERATED_SOURCES})
 target_include_directories(talos_ekf_generated PUBLIC
   "${GENERATED_DIR}"
@@ -60,6 +85,8 @@ ament_target_dependencies(talos_ekf_node
 
 install(TARGETS talos_ekf_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/estimator_manifest.json"
+  DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY matlab DESTINATION share/${PROJECT_NAME}
   PATTERN "slprj" EXCLUDE
   PATTERN "html" EXCLUDE
@@ -72,5 +99,94 @@ install(DIRECTORY matlab DESTINATION share/${PROJECT_NAME}
   PATTERN "*.mk" EXCLUDE
   PATTERN "rtw_proj.tmw" EXCLUDE
   PATTERN "ert_main.cpp" EXCLUDE)
+set(NAVIGATION_TOOLS
+  scripts/analyze_navigation_bag.py
+  scripts/record_navigation_run.sh
+  scripts/verify_jetson_install.sh)
+foreach(NAVIGATION_TOOL IN LISTS NAVIGATION_TOOLS)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${NAVIGATION_TOOL}")
+    install(PROGRAMS "${NAVIGATION_TOOL}" DESTINATION lib/${PROJECT_NAME})
+  endif()
+endforeach()
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/validation")
+  install(DIRECTORY validation DESTINATION share/${PROJECT_NAME}
+    PATTERN "runs" EXCLUDE)
+endif()
+
+# Development tests and replay tools are optional in a runtime-only checkout.
+if(BUILD_TESTING AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/test"
+    AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/validation")
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  find_package(ament_lint_auto REQUIRED)
+  set(AMENT_LINT_AUTO_EXCLUDE
+    ament_cmake_cppcheck
+    ament_cmake_copyright
+    ament_cmake_cpplint
+    ament_cmake_xmllint
+  )
+  file(GLOB_RECURSE GENERATED_LINT_EXCLUDES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/matlab/generated/*.hpp"
+  )
+  set(AMENT_LINT_AUTO_FILE_EXCLUDE
+    ${GENERATED_LINT_EXCLUDES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/matlab/talos_ekf.slxc
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/riptide_navigation/codegen_compat
+  )
+  ament_lint_auto_find_test_dependencies()
+  add_test(NAME test_paired_statistics
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_paired_statistics.py)
+  add_test(NAME test_cohort_statistics
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_cohort_statistics.py)
+  add_test(NAME test_truth_reference
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_truth_reference.py)
+  add_test(NAME test_covariance_audit
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_covariance_audit.py)
+  add_test(NAME test_truth_probe
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_truth_probe.py)
+  set_tests_properties(test_truth_probe PROPERTIES
+    ENVIRONMENT "MPLCONFIGDIR=${CMAKE_CURRENT_BINARY_DIR}/matplotlib")
+  add_test(NAME test_sensor_outage
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_sensor_outage.py)
+  add_test(NAME test_sensor_covariance
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_sensor_covariance.py)
+  add_test(NAME test_shadow_launch
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_shadow_launch.py)
+  set_tests_properties(test_shadow_launch PROPERTIES
+    ENVIRONMENT "TALOS_TEST_NODE=$<TARGET_FILE:talos_ekf_node>" TIMEOUT 60)
+  add_test(NAME test_record_navigation
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_record_navigation.py)
+  add_test(NAME test_benchmark_initial_pose
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_benchmark_initial_pose.py)
+  set_tests_properties(test_benchmark_initial_pose PROPERTIES
+    ENVIRONMENT "MPLCONFIGDIR=${CMAKE_CURRENT_BINARY_DIR}/matplotlib")
+  add_test(NAME test_quaternion_jitter
+    COMMAND ${Python3_EXECUTABLE} -m unittest discover
+      -s ${CMAKE_CURRENT_SOURCE_DIR}/validation -p test_quaternion_jitter.py)
+  set_tests_properties(test_quaternion_jitter PROPERTIES
+    ENVIRONMENT "MPLCONFIGDIR=${CMAKE_CURRENT_BINARY_DIR}/matplotlib")
+  ament_add_gtest(test_estimator_support test/test_estimator_support.cpp)
+  if(TARGET test_estimator_support)
+    target_include_directories(test_estimator_support PRIVATE include)
+  endif()
+  ament_add_gtest(test_generated_core test/test_generated_core.cpp)
+  if(TARGET test_generated_core)
+    target_include_directories(test_generated_core PRIVATE include)
+    target_link_libraries(test_generated_core talos_ekf_generated)
+  endif()
+endif()
 
 ament_package()

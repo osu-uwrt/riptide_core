@@ -7,9 +7,9 @@
 //
 // Code generated for Simulink model 'talos_ekf'.
 //
-// Model version                  : 1.6
+// Model version                  : 1.11
 // Simulink Coder version         : 9.9 (R2023a) 19-Nov-2022
-// C/C++ source code generated on : Fri Oct  2 20:29:44 2026
+// C/C++ source code generated on : Thu Oct 15 01:30:36 2026
 //
 // Target selection: ert.tlc
 // Embedded hardware selection: ARM Compatible->ARM 64-bit (LP64)
@@ -29,6 +29,13 @@ extern "C"
 {
 
 #include "rt_nonfinite.h"
+
+}
+
+extern "C"
+{
+
+#include "rtGetInf.h"
 
 }
 
@@ -64,6 +71,11 @@ class talos_ekf final
 
   // Constant parameters (default storage)
   struct ConstP {
+    // Expression: p.Q
+    //  Referenced by: '<S1>/Q'
+
+    real_T Q_Value[256];
+
     // Expression: p.InitialCovariance
     //  Referenced by: '<S1>/DataStoreMemory - P'
 
@@ -77,8 +89,7 @@ class talos_ekf final
 
   // External inputs (root inport signals with default storage)
   struct ExtU {
-    real_T Q[256];                     // '<Root>/Q'
-    real_T dt;                         // '<Root>/dt'
+    real_T prediction_context[257];    // '<Root>/prediction_context'
     boolean_T enable_imu;              // '<Root>/enable_imu'
     real_T imu_measurement[9];         // '<Root>/imu_measurement'
     real_T R_imu[81];                  // '<Root>/R_imu'
@@ -103,7 +114,6 @@ class talos_ekf final
   // External outputs (root outports fed by signals with default storage)
   struct ExtY {
     real_T state[16];                  // '<Root>/state'
-    real_T covariance[256];            // '<Root>/covariance'
   };
 
   // Real-time Model Data Structure
@@ -132,6 +142,9 @@ class talos_ekf final
   // External outputs
   ExtY rtY;
 
+  // Block states
+  DW rtDW;
+
   // model initialize function
   void initialize();
 
@@ -146,9 +159,6 @@ class talos_ekf final
 
   // private data and function members
  private:
-  // Block states
-  DW rtDW;
-
   // private member function(s) for subsystem '<Root>'
   real_T xnrm2(int32_T n, const real_T x[81], int32_T ix0);
   real_T xdotc(int32_T n, const real_T x[81], int32_T ix0, const real_T y[81],
@@ -163,6 +173,7 @@ class talos_ekf final
   void xrotg(real_T *a, real_T *b, real_T *c, real_T *s);
   void xrot(real_T x[81], int32_T ix0, int32_T iy0, real_T c, real_T s);
   void svd(const real_T A[81], real_T U[81], real_T s[9], real_T V[81]);
+  real_T norm(const real_T x[3]);
   real_T xnrm2_ln(int32_T n, const real_T x[225], int32_T ix0);
   void xgemv(int32_T m, int32_T n, const real_T A[225], int32_T ia0, const
              real_T x[225], int32_T ix0, real_T y[9]);
@@ -236,22 +247,15 @@ class talos_ekf final
   void qrFactor(const real_T A[256], real_T S[256], const real_T Ns[256]);
   void trisolve_j(const real_T A[256], real_T B_b[256]);
   void trisolve_jl(const real_T A[256], real_T B_d[256]);
-  real_T xnrm2_d(int32_T n, const real_T x[256], int32_T ix0);
-  real_T xdotc_e(int32_T n, const real_T x[256], int32_T ix0, const real_T y[256],
-                 int32_T iy0);
-  void xaxpy_d2(int32_T n, real_T a, int32_T ix0, real_T y[256], int32_T iy0);
-  real_T xnrm2_dz(int32_T n, const real_T x[16], int32_T ix0);
-  void xaxpy_d2s(int32_T n, real_T a, const real_T x[256], int32_T ix0, real_T
-                 y[16], int32_T iy0);
-  void xaxpy_d2sz(int32_T n, real_T a, const real_T x[16], int32_T ix0, real_T
-                  y[256], int32_T iy0);
-  void svd_n(const real_T A[256], real_T U[256], real_T s[16], real_T V[256]);
-  void talos_state_transition(const real_T x[16], real_T dt, real_T next[16]);
-  real_T xnrm2_dzn(int32_T n, const real_T x[512], int32_T ix0);
+  real_T norm_g(const real_T x[4]);
+  void talos_state_transition_jacobian(const real_T x[16], real_T dt, real_T F
+    [256]);
+  real_T xnrm2_d(int32_T n, const real_T x[512], int32_T ix0);
   void xgemv_j(int32_T m, int32_T n, const real_T A[512], int32_T ia0, const
                real_T x[512], int32_T ix0, real_T y[16]);
   void xgerc_e(int32_T m, int32_T n, real_T alpha1, int32_T ix0, const real_T y
                [16], real_T A[512], int32_T ia0);
+  void talos_state_transition(const real_T x[16], real_T dt, real_T next[16]);
 
   // Real-Time Model
   RT_MODEL rtM;

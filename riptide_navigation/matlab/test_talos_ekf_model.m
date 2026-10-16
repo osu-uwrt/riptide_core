@@ -4,6 +4,35 @@
 talos_ekf_init;
 open_system(fullfile(fileparts(mfilename('fullpath')), 'talos_ekf.slx'));
 
+% Independently perturb every state coordinate. Include nonunit quaternions,
+% both quaternion signs, zero rates, full-flip attitudes and clipped time steps.
+rng(20261013);
+maxTransitionJacobianError = 0;
+for sample = 1:100
+    x = randn(16,1);
+    x(4:7) = x(4:7)/norm(x(4:7))*(0.5+2*rand);
+    if mod(sample,4) == 0
+        x(11:13) = 0;
+    end
+    timeSteps = [-0.1, 0, 1e-10, 0.0025, 0.033, 0.1, 0.2];
+    for sampleDt = timeSteps
+        numeric = zeros(16);
+        for column = 1:16
+            plus = x; minus = x;
+            h = 1e-6*max(1,abs(x(column)));
+            plus(column) = plus(column)+h;
+            minus(column) = minus(column)-h;
+            numeric(:,column) = (talos_state_transition(plus,sampleDt)- ...
+                talos_state_transition(minus,sampleDt))/(2*h);
+        end
+        analytic = talos_state_transition_jacobian(x,sampleDt);
+        maxTransitionJacobianError = max(maxTransitionJacobianError, ...
+            max(abs(analytic-numeric),[],'all'));
+    end
+end
+assert(maxTransitionJacobianError < 2e-8);
+fprintf('maximum_transition_jacobian_error=%.12g\n',maxTransitionJacobianError);
+
 % The gravity measurement must be exactly insensitive to global yaw.
 jacobianContext = [0.31; -0.42; 0.851; 1; 1; 0; 1; 1; 0; 1; 1; 1];
 jacobianState = [zeros(3,1); 0.72; -0.21; 0.43; 0.49; zeros(9,1)];
@@ -15,6 +44,20 @@ q = jacobianState(4:7);
 worldYawTangent = [-q(4); -q(3); q(2); q(1)]/2;
 assert(norm(analyticJacobian(1:3,4:7)*worldYawTangent) < 1e-13);
 
+% Three gravity residual coordinates carry two tilt degrees of freedom at
+% every attitude. Masking body Z as if it were world yaw loses one at vertical.
+for angle = linspace(-pi,pi,101)
+    verticalState = zeros(16,1);
+    verticalState(4:7) = [cos(angle/2);0;sin(angle/2);0];
+    gravity = [-sin(angle);0;cos(angle)];
+    fullContext = [9.755455*gravity;ones(3,1);zeros(6,1)];
+    fullH = talos_measure_imu_configured_jacobian(verticalState,fullContext);
+    assert(rank(fullH(1:3,4:7),1e-8) == 2);
+    q = verticalState(4:7);
+    worldYawTangent = [-q(4);-q(3);q(2);q(1)]/2;
+    assert(norm(fullH(1:3,4:7)*worldYawTangent) < 1e-13);
+end
+
 dt = talosEkfCfg.sampleTime;
 t = (0:dt:2)';
 N = numel(t);
@@ -22,7 +65,7 @@ N = numel(t);
 stationaryImu = repmat([0 0 1 0 0 0 0 0], N, 1);
 out = run_case(t, stationaryImu, true(N,1), true(N,1), true(N,1), true(N,1));
 stationaryState = out.yout{1}.Values.Data;
-stationaryCovariance = out.yout{2}.Values.Data;
+stationaryCovariance = logged_covariance(out);
 assert(all(isfinite(stationaryState), 'all'));
 assert(max(vecnorm(stationaryState(:,1:3), 2, 2)) < 1e-8);
 assert_covariance(stationaryCovariance);
@@ -33,7 +76,7 @@ imuEnable = true(N,1);
 imuEnable(t > 1.5) = false; % finish through prediction to exercise dropout
 out = run_case(t, flipImu, imuEnable, false(N,1), false(N,1), false(N,1));
 flipState = out.yout{1}.Values.Data;
-flipCovariance = out.yout{2}.Values.Data;
+flipCovariance = logged_covariance(out);
 quaternionNorm = vecnorm(flipState(:,4:7), 2, 2);
 assert(all(isfinite(flipState), 'all'));
 assert(max(abs(quaternionNorm - 1)) < 5e-3);
@@ -41,7 +84,7 @@ assert_covariance(flipCovariance);
 
 % q and -q describe the same attitude. Gravity-direction measurements are
 % deliberately identical, so no sign discontinuity can enter the innovation.
-imuContext = [0; 0; 1; 1; 1; 0; 1; 1; 0; 1; 1; 1];
+imuContext = [0; 0; 1; 1; 1; 1; 1; 1; 0; 1; 1; 1];
 gPositive = talos_measure_imu_configured([zeros(3,1); 1; 0; 0; 0; zeros(9,1)], imuContext);
 gNegative = talos_measure_imu_configured([zeros(3,1); -1; 0; 0; 0; zeros(9,1)], imuContext);
 assert(norm(gPositive - gNegative) < 1e-12);
@@ -58,6 +101,37 @@ fprintf('flip_samples=%d\n', size(flipState,1));
 fprintf('max_quaternion_norm_error=%.12g\n', max(abs(quaternionNorm-1)));
 fprintf('minimum_covariance_eigenvalue=%.12g\n', minimum_covariance_eigenvalue(flipCovariance));
 
+% Independently perturb process-noise coordinates and states while holding
+% the supplied process factor fixed, as required by the nonadditive EKF.
+rng(20261015);
+maxNoiseJacobianError = 0;
+for sample = 1:32
+    x = randn(16,1);
+    x(4:7) = x(4:7)/norm(x(4:7));
+    noise = randn(16,1);
+    processRoot = randn(16)/1000;
+    context = [0.001+rand/20; processRoot(:)];
+    [analyticState, analyticNoise] = ...
+        talos_state_transition_with_noise_jacobian(x,noise,context);
+    numericState = zeros(16); numericNoise = zeros(16);
+    for axis = 1:16
+        h = 1e-6;
+        plus = x; minus = x;
+        plus(axis) = plus(axis)+h; minus(axis) = minus(axis)-h;
+        numericState(:,axis) = (talos_state_transition_with_noise(plus,noise,context)- ...
+            talos_state_transition_with_noise(minus,noise,context))/(2*h);
+        plus = noise; minus = noise;
+        plus(axis) = plus(axis)+h; minus(axis) = minus(axis)-h;
+        numericNoise(:,axis) = (talos_state_transition_with_noise(x,plus,context)- ...
+            talos_state_transition_with_noise(x,minus,context))/(2*h);
+    end
+    maxNoiseJacobianError = max([maxNoiseJacobianError, ...
+        max(abs(analyticState-numericState),[],'all'), ...
+        max(abs(analyticNoise-numericNoise),[],'all')]);
+end
+assert(maxNoiseJacobianError < 2e-8);
+fprintf('maximum_noise_context_jacobian_error=%.12g\n',maxNoiseJacobianError);
+
 function out = run_case(t, imu, enableImu, enableFog, enableDvl, enableDepth)
 cfg = evalin('base','talosEkfCfg');
 N = numel(t);
@@ -65,10 +139,12 @@ ds = Simulink.SimulationData.Dataset;
 Q = cfg.processNoise * cfg.sampleTime;
 Q(4:7,4:7) = 0;
 Q(5:7,5:7) = 0.25 * cfg.processNoise(4:6,4:6) * cfg.sampleTime;
-ds{1} = timeseries(repmat(Q,1,1,N),t,'IsTimeFirst',false);
+processRoot = diag(sqrt(diag(Q)));
+assert(norm(processRoot*processRoot'-Q,'fro') < 1e-15);
+ds{1} = timeseries(repmat(processRoot,1,1,N),t,'IsTimeFirst',false);
 ds{2} = timeseries(repmat(cfg.sampleTime,N,1),t);
 ds{3} = timeseries(enableImu,t);
-imuMeasurement = [zeros(N,3), imu(:,4:5), zeros(N,1), imu(:,6:8)];
+imuMeasurement = [zeros(N,3), imu(:,4:5), zeros(N,1), imu(:,6:8) + imu(:,1:3)];
 imuNoise = diag([diag(cfg.imuNoise(1:3,1:3)); ...
     diag(cfg.imuNoise(4:5,4:5)); cfg.imuNoise(4,4); diag(cfg.imuNoise(6:8,6:8))]);
 ds{4} = timeseries(imuMeasurement,t);
@@ -86,12 +162,33 @@ ds{15} = timeseries(false(N,1),t);
 ds{16} = timeseries(zeros(N,16),t);
 ds{17} = timeseries(repmat(cfg.resetNoise,1,1,N),t,'IsTimeFirst',false);
 ds{18} = timeseries(repmat([0 0 0 1 1 1],N,1),t);
-ds{19} = timeseries([imu(:,1:3), repmat([1 1 0 1 1 0 1 1 1],N,1)],t);
+ds{19} = timeseries([imu(:,1:3), repmat([1 1 1 1 1 0 1 1 1],N,1)],t);
 ds{20} = timeseries(repmat([0 0 1],N,1),t);
 ds{21} = timeseries(ones(N,1),t);
+context = [repmat(cfg.sampleTime,1,N); repmat(processRoot(:),1,N)];
+ds = ds.removeElement(2);
+ds{1} = timeseries(context,t,'IsTimeFirst',false);
 in = Simulink.SimulationInput('talos_ekf');
 in = in.setExternalInput(ds).setModelParameter('StopTime',num2str(t(end)));
+% Log the block's supported square-root data store only in the test override.
+% Standalone code need not materialize an unused full covariance output.
+dsm = find_system('talos_ekf','LookUnderMasks','all','FollowLinks','on', ...
+    'BlockType','DataStoreMemory','DataStoreName','P');
+assert(numel(dsm) == 1);
+in = in.setBlockParameter(dsm{1},'DataLogging','on');
+in = in.setBlockParameter(dsm{1},'DataLoggingNameMode','Custom');
+in = in.setBlockParameter(dsm{1},'DataLoggingName','covariance_sqrt_for_test');
 out = sim(in);
+end
+
+function covariance = logged_covariance(out)
+root = out.dsmout.get('covariance_sqrt_for_test').Values.Data;
+assert(all(isfinite(root),'all'));
+assert(size(root,1) == 16 && size(root,2) == 16);
+covariance = zeros(size(root));
+for k = 1:size(root,3)
+    covariance(:,:,k) = root(:,:,k)*root(:,:,k)';
+end
 end
 
 function assert_covariance(data)

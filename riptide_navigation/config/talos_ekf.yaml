@@ -3,13 +3,20 @@
     world_frame: odom
     base_link_frame: talos/base_link
     frequency: 30.0
-    # VectorNav orientation samples are correlated at its full sensor rate.
-    # Fuse quaternion-derived tilt at 40 Hz (<=25 ms sampling delay), while
-    # retaining angular velocity and acceleration from every IMU sample.
-    vectornav_tilt_correction_frequency: 40.0
+    # Zero means tilt on every accepted IMU sample. A positive limit needs
+    # separate Q/R tuning; its period does not bound estimator latency.
+    vectornav_tilt_correction_frequency: 0.0
     publish_tf: true
+    # Existing VN covariance contract: sensor-body rotation-vector errors.
+    # Select euler_rpy only for a publisher reporting Euler-coordinate errors.
+    imu_orientation_covariance_coordinates: body_rotvec
+    imu_angular_acceleration_time_constant: 0.05
     gravitational_acceleration: 9.755455
     reorder_delay: 0.02
+    # Promoted from the validated pool_consider profile. Keep acceleration
+    # fusion and reordering; protect attitude and preview fresh queued inputs.
+    imu_acceleration_update: consider
+    publication_mode: queued_updates
     max_queue_size: 512
     max_measurements_per_cycle: 64
     max_prediction_dt: 0.1
@@ -51,8 +58,8 @@
     # the fourth quaternion entry is retained for config compatibility only.
     process_noise_diag: [0.00005, 0.00005, 0.00006,
                          0.00003, 0.00003, 0.00006, 0.000001,
-                         0.000025, 0.000025, 0.00004,
-                         0.00001, 0.00001, 0.00002,
+                         0.0025, 0.0025, 0.004,
+                         0.0003, 0.0003, 0.0006,
                          0.00001, 0.00001, 0.000015]
     reset_covariance_diag: [1.0, 1.0, 0.25,
                             0.0, 0.00025, 0.00025, 0.00025,
@@ -67,7 +74,9 @@
     default_depth_variance: 0.0025
     covariance_floor: 0.000000001
     imu_covariance_multiplier: 1.0
+    # Provisional weighting used in the matched pool validation, not calibration.
+    imu_angular_velocity_covariance_multiplier: 0.01
     fog_covariance_multiplier: 1.0
     dvl_covariance_multiplier: 1.0
     depth_covariance_multiplier: 1.0
-    publish_debug_diagnostics: false
+    publish_debug_diagnostics: true

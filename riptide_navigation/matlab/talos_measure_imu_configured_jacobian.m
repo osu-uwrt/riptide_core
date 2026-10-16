@@ -2,7 +2,8 @@ function H = talos_measure_imu_configured_jacobian(x, context)
 % Analytic form preserves the exact global-yaw nullspace of gravity. A
 % finite-difference quaternion Jacobian leaks that unobservable direction as
 % yaw covariance grows.
-gravityMeasurement = context(1:3);
+gravityMagnitude = max(norm(context(1:3)), 1e-12);
+gravityMeasurement = context(1:3)/gravityMagnitude;
 mask = context(4:12);
 qRaw = x(4:7);
 qNorm = max(sqrt(sum(qRaw.*qRaw)), 1e-12);
@@ -25,6 +26,8 @@ H(1:3,4:7) = diag(mask(1:3))*gravityCrossJacobian* ...
 H(4,11) = mask(4);
 H(5,12) = mask(5);
 H(6,13) = mask(6);
+H(7:9,4:7) = diag(mask(7:9))*gravityMagnitude* ...
+    gravityQuaternionJacobian*normalizationJacobian;
 H(7,14) = mask(7);
 H(8,15) = mask(8);
 H(9,16) = mask(9);

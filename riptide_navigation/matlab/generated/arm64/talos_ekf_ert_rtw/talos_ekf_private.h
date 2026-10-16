@@ -7,9 +7,9 @@
 //
 // Code generated for Simulink model 'talos_ekf'.
 //
-// Model version                  : 1.6
+// Model version                  : 1.11
 // Simulink Coder version         : 9.9 (R2023a) 19-Nov-2022
-// C/C++ source code generated on : Fri Oct  2 20:29:44 2026
+// C/C++ source code generated on : Thu Oct 15 01:30:36 2026
 //
 // Target selection: ert.tlc
 // Embedded hardware selection: ARM Compatible->ARM 64-bit (LP64)
@@ -25,6 +25,7 @@
 #include "talos_ekf.h"
 
 extern real_T rt_hypotd_snf(real_T u0, real_T u1);
+extern real_T rt_powd_snf(real_T u0, real_T u1);
 extern int32_T div_nde_s32_floor(int32_T numerator, int32_T denominator);
 
 #endif                                 // RTW_HEADER_talos_ekf_private_h_

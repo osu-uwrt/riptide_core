@@ -43,8 +43,9 @@ inline bool normalize_quaternion(State & x, const State * reference = nullptr)
 }
 
 // A gravity-direction measurement is invariant to left multiplication by a
-// world-Z rotation. Use that exact gauge freedom to retain the heading carried
-// into the correction while accepting the corrected tilt.
+// world-Z rotation. Select the nearest attitude on that gauge orbit, so the
+// relative correction has no world-Z twist. Absolute quaternion twist is a
+// tilt-dependent coordinate and cannot be held fixed through a tilt correction.
 inline State remove_world_yaw_correction(const State & before, State corrected)
 {
   State reference = before;
@@ -57,25 +58,13 @@ inline State remove_world_yaw_correction(const State & before, State corrected)
   const double aw = corrected[3], ax = corrected[4];
   const double ay = corrected[5], az = corrected[6];
 
-  const double before_heading_norm = std::hypot(bw, bz);
-  const double corrected_heading_norm = std::hypot(aw, az);
-  const double absolute_half_delta = std::atan2(bz, bw) - std::atan2(az, aw);
-
-  // The nearest member of corrected's world-Z gauge orbit is well conditioned
-  // even at inverted attitude. Blend toward it as the absolute heading chart
-  // approaches its singularity. Every point in the blend is still a world-Z
-  // rotation of corrected, so the accepted gravity direction is unchanged.
+  // Maximize before dot (world-Z rotation * corrected). This is independent
+  // of the absolute attitude chart, including vertical and inverted attitudes.
+  // The only ambiguity is a relative 180-degree tilt; startup handles that
+  // antipode separately with initialize_gravity_attitude.
   const double orbit_dot = bw * aw + bx * ax + by * ay + bz * az;
   const double orbit_cross = -bw * az - bx * ay + by * ax + bz * aw;
-  const double nearest_half_delta = std::atan2(orbit_cross, orbit_dot);
-  const double chart_norm = std::min(before_heading_norm, corrected_heading_norm);
-  const double blend_coordinate = std::clamp((chart_norm - 0.1) / 0.15, 0.0, 1.0);
-  const double absolute_weight =
-    blend_coordinate * blend_coordinate * (3.0 - 2.0 * blend_coordinate);
-  const double delta_difference = std::atan2(
-    std::sin(absolute_half_delta - nearest_half_delta),
-    std::cos(absolute_half_delta - nearest_half_delta));
-  const double half_delta = nearest_half_delta + absolute_weight * delta_difference;
+  const double half_delta = std::atan2(orbit_cross, orbit_dot);
   const double dw = std::cos(half_delta);
   const double dz = std::sin(half_delta);
   corrected[3] = dw * aw - dz * az;
@@ -84,6 +73,83 @@ inline State remove_world_yaw_correction(const State & before, State corrected)
   corrected[6] = dw * az + dz * aw;
   normalize_quaternion(corrected, &reference);
   return corrected;
+}
+
+// Initialize the two observable attitude degrees of freedom from gravity.
+// The cross-product EKF residual alone is zero at both parallel and antipodal
+// gravity directions, so it cannot bootstrap an exactly inverted vehicle.
+inline State initialize_gravity_attitude(const State & prior, std::array<double, 3> gravity)
+{
+  const double norm = std::hypot(std::hypot(gravity[0], gravity[1]), gravity[2]);
+  if (!std::isfinite(norm) || norm < 1e-12) {return prior;}
+  for (auto & value : gravity) {
+    value /= norm;
+  }
+  State aligned = prior;
+  aligned[3] = 1.0 + gravity[2];
+  aligned[4] = gravity[1]; aligned[5] = -gravity[0]; aligned[6] = 0.0;
+  if (!normalize_quaternion(aligned)) {
+    // At the antipode the shortest rotation axis is ambiguous. Choose body X;
+    // the subsequent yaw gauge selection retains the prior heading.
+    aligned[3] = 0.0; aligned[4] = 1.0; aligned[5] = aligned[6] = 0.0;
+  }
+  State reference = prior;
+  if (!normalize_quaternion(reference)) {return prior;}
+  const double bx = 1 - 2 * (reference[5] * reference[5] + reference[6] * reference[6]);
+  const double by = 2 * (reference[4] * reference[5] + reference[3] * reference[6]);
+  const double ax = 1 - 2 * (aligned[5] * aligned[5] + aligned[6] * aligned[6]);
+  const double ay = 2 * (aligned[4] * aligned[5] + aligned[3] * aligned[6]);
+  if (std::hypot(bx, by) < 1e-8 || std::hypot(ax, ay) < 1e-8) {
+    return remove_world_yaw_correction(prior, aligned);
+  }
+  // At startup there is no continuous attitude path to select a gauge at the
+  // inverted twist-chart singularity. Retain the projected body-X heading
+  // wherever it is observable; gravity remains unchanged by this world yaw.
+  const double half = .5 * std::atan2(ax * by - ay * bx, ax * bx + ay * by);
+  const double c = std::cos(half), s = std::sin(half);
+  const double w = aligned[3], x = aligned[4], y = aligned[5], z = aligned[6];
+  aligned[3] = c * w - s * z; aligned[4] = c * x - s * y;
+  aligned[5] = c * y + s * x; aligned[6] = c * z + s * w;
+  normalize_quaternion(aligned, &reference);
+  return aligned;
+}
+
+// Transport the complete covariance along a frozen world-yaw gauge rotation.
+// The gauge selection retains the prior heading; it must not collapse heading
+// uncertainty as a Jacobian conditional on a noiseless prior would do.
+inline Covariance transport_quaternion_covariance(
+  State from, State to, const Covariance & covariance)
+{
+  normalize_quaternion(from);
+  normalize_quaternion(to, &from);
+  const double w = to[3] * from[3] + to[4] * from[4] + to[5] * from[5] + to[6] * from[6];
+  const double x = -to[3] * from[4] + to[4] * from[3] - to[5] * from[6] + to[6] * from[5];
+  const double y = -to[3] * from[5] + to[4] * from[6] + to[5] * from[3] - to[6] * from[4];
+  const double z = -to[3] * from[6] - to[4] * from[5] + to[5] * from[4] + to[6] * from[3];
+  const double left[16]{w, -x, -y, -z, x, w, -z, y, y, z, w, -x, z, -y, x, w};
+  // Only the quaternion block changes coordinates. Retain all other rows
+  // exactly, including position/velocity/acceleration cross correlations.
+  Covariance intermediate = covariance;
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 16; ++j) {
+      double value = 0.0;
+      for (int k = 0; k < 4; ++k) {
+        value += left[4 * i + k] * covariance[(3 + k) + 16 * j];
+      }
+      intermediate[(3 + i) + 16 * j] = value;
+    }
+  }
+  Covariance result = intermediate;
+  for (int i = 0; i < 16; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      double value = 0.0;
+      for (int k = 0; k < 4; ++k) {
+        value += intermediate[i + 16 * (3 + k)] * left[4 * j + k];
+      }
+      result[i + 16 * (3 + j)] = value;
+    }
+  }
+  return result;
 }
 
 inline std::array<double, 9> rotation(const State & x)
@@ -269,12 +335,14 @@ inline bool covariance_is_psd(const Covariance & input, double tolerance = 1e-9)
   for (int i = 0; i < 16; ++i) {
     for (int j = 0; j <= i; ++j) {
       const double aij = 0.5 * (input[i + 16 * j] + input[j + 16 * i]);
-      double sum = aij;
+      // Normalized quaternions have a null radial direction. Test P + tol I
+      // so elimination does not amplify roundoff at its tiny leading pivot.
+      double sum = aij + (i == j ? tolerance : 0.0);
       for (int k = 0; k < j; ++k) {
         sum -= l[i + 16 * k] * l[j + 16 * k];
       }
       if (i == j) {
-        if (sum < -tolerance || !std::isfinite(sum)) {return false;}
+        if (sum < 0.0 || !std::isfinite(sum)) {return false;}
         l[i + 16 * j] = std::sqrt(std::max(0.0, sum));
       } else if (l[j + 16 * j] > tolerance) {
         l[i + 16 * j] = sum / l[j + 16 * j];

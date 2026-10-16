@@ -1,0 +1,11 @@
+matlab/slprj/
+matlab/*.autosave
+matlab/*.slxc
+matlab/*.mexa64
+matlab/generated/*/slprj/
+matlab/generated/*/*_ert_rtw/*.mat
+matlab/generated/*/*_ert_rtw/*.dmr
+matlab/generated/*/*_ert_rtw/*.mk
+matlab/generated/*/*_ert_rtw/ert_main.cpp
+matlab/generated/*/*_ert_rtw/rtw_proj.tmw
+matlab/generated/*/*_ert_rtw/tmwinternal/

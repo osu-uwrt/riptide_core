@@ -8,9 +8,10 @@ cfg.initialCovariance = diag([1 1 0.25, 1e-3 1e-3 1e-3 1e-3, ...
 
 % Continuous-time covariance densities based on robot_localization. Runtime
 % maps the three angular-error entries into quaternion tangent space and
-% discretizes all entries using elapsed seconds.
+% discretizes all entries using elapsed seconds. The model accepts the factor
+% S_Q in prediction_context=[dt;S_Q(:)], with Q=S_Q*S_Q'.
 cfg.processNoise = diag([5e-5 5e-5 6e-5, 3e-5 3e-5 6e-5 1e-6, ...
-    2.5e-5 2.5e-5 4e-5, 1e-5 1e-5 2e-5, 1e-5 1e-5 1.5e-5]);
+    2.5e-5 2.5e-5 4e-5, 3e-4 3e-4 6e-4, 1e-5 1e-5 1.5e-5]);
 
 cfg.imuNoise = diag([2e-4 2e-4 2e-4, 2e-5 2e-5, 2e-3 2e-3 2e-3]);
 cfg.fogNoise = 1e-6;
