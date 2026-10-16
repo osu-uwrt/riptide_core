@@ -160,6 +160,18 @@ existing value and verify readback. `hardware_acceptance.py --flash-persistence`
 is the separate journaled save/reset/restore test. Bias capture is a later,
 operator-assisted acceptance stage.
 
+Run the operator-assisted full bias suite with:
+
+```bash
+ros2 run riptide_imu vn_bias_suite \
+  --remote-namespace /talos \
+  --report ~/vn100_bias_report.json
+```
+
+The script launches the dashboard, gives pose-by-pose instructions, never
+applies or saves coefficients, validates every exported quality gate, and writes
+`~/vn100_bias_report_suite_result.json` with the overall pass/fail result.
+
 ## Feature-to-test matrix
 
 | Feature | Automated without sensor | Hardware acceptance |

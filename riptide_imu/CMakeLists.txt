@@ -78,6 +78,9 @@ install(FILES README_sensor_config.md DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS test/hardware_acceptance.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME vn_hardware_acceptance)
+install(PROGRAMS scripts/run_bias_suite.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME vn_bias_suite)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)

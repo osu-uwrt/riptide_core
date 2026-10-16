@@ -10,5 +10,9 @@ VN-100T-CR serial 0100059698. The final snapshot matched all 30 persistent
 writable pre-test values. The original JSON and Control Center XML backups are
 in the local `hardware_backups/` directory and must remain uncommitted.
 
-Remaining: operator-assisted gyro, accelerometer pose, planar magnetometer, and
-gravity/tilt captures; Windows Control Center bidirectional XML check.
+The installed `vn_bias_suite` script is ready to guide the operator-assisted
+gyro, accelerometer pose, planar magnetometer, and gravity/tilt captures and
+produce a pass/fail JSON result without applying coefficients.
+
+Remaining: execute that assisted bias run; Windows Control Center bidirectional
+XML check.
