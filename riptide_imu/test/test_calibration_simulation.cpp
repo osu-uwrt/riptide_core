@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <string>
 
 #include "riptide_imu/config_tool/calibration_simulation.hpp"
@@ -34,7 +35,24 @@ TEST(CalibrationSimulation, NominalScenarioRecoversKnownBiases) {
   EXPECT_LT((result.gyro.residual_bias - suite.gyro_bias_rad_s).norm(), 2.0e-4);
   EXPECT_LT((result.accelerometer.bias - suite.accelerometer_bias_m_s2).norm(), 0.025);
   EXPECT_NEAR(result.accelerometer.measured_gravity, suite.gravity_m_s2, 0.02);
+  EXPECT_GE(result.accelerometer.axis_span.minCoeff(), 2.0);
   EXPECT_NEAR(result.gravity.magnitude, suite.gravity_m_s2, 0.06);
+}
+
+TEST(CalibrationSimulation, LimitedTiltExposesWeakAxisCoverage) {
+  const auto suite = riptide_imu::loadCalibrationSimulationSuite(
+      std::string(TEST_SHARE_DIRECTORY) + "/config/calibration_simulation.json");
+  const auto iterator = std::find_if(
+      suite.scenarios.begin(), suite.scenarios.end(), [](const auto& scenario) {
+        return scenario.name == "accelerometer_limited_tilt";
+      });
+  ASSERT_NE(iterator, suite.scenarios.end());
+  const auto result = riptide_imu::evaluateCalibrationSimulation(
+      riptide_imu::generateCalibrationSimulation(suite, *iterator),
+      riptide_imu::loadCalibrationPolicy(
+          std::string(TEST_SHARE_DIRECTORY) + "/config/calibration_policy.json"));
+  EXPECT_FALSE(result.accelerometer.quality.passed);
+  EXPECT_LT(result.accelerometer.axis_span.minCoeff(), 2.0);
 }
 
 TEST(CalibrationSimulation, IsDeterministicForAConfiguredSeed) {

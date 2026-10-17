@@ -72,6 +72,7 @@ TEST(AccelerometerCalibration, RecoversBiasAndMagnitudeForArbitraryPoses) {
   EXPECT_TRUE(result.quality.passed) << result.quality.summary;
   EXPECT_LT((result.bias-bias).norm(), .02);
   EXPECT_NEAR(result.measured_gravity, gravity, .02);
+  EXPECT_GE(result.axis_span.minCoeff(), policy.accel_min_axis_span_m_s2);
 }
 
 TEST(AccelerometerCalibration, RejectsMisleadingSinglePoseSphere) {

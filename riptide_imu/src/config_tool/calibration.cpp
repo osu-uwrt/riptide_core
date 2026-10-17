@@ -203,7 +203,8 @@ AccelerometerResult estimateAccelerometerBias(
       variance * information.completeOrthogonalDecomposition().pseudoInverse();
   result.covariance = parameter_covariance.topLeftCorner<3, 3>();
   result.gravity_stddev = std::sqrt(std::max(0.0, parameter_covariance(3, 3)));
-  const double minimum_span = (maximum - minimum).minCoeff();
+  result.axis_span = maximum - minimum;
+  const double minimum_span = result.axis_span.minCoeff();
   result.quality.passed =
       result.quality.rms <= policy.accel_max_rms_m_s2 &&
       result.quality.condition <= policy.accel_max_condition &&
@@ -211,8 +212,10 @@ AccelerometerResult estimateAccelerometerBias(
   std::ostringstream message;
   message << (result.quality.passed ? "Passed" : "Failed")
           << ": sphere RMS " << result.quality.rms << " m/s^2, condition "
-          << result.quality.condition << ", minimum axis span " << minimum_span
-          << " m/s^2. Fitted magnitude is not asserted to be exact local gravity.";
+          << result.quality.condition << ", axis spans [" << result.axis_span.x()
+          << ", " << result.axis_span.y() << ", " << result.axis_span.z()
+          << "] m/s^2 (minimum " << minimum_span
+          << "). Fitted magnitude is not asserted to be exact local gravity.";
   result.quality.summary = message.str();
   return result;
 }

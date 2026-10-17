@@ -149,8 +149,11 @@ def main():
               "Capture stationary windows at varied reachable tilts spanning "
               "both signs of roll and pitch (target 8 or more poses). Exact "
               "angles and a level pose are unnecessary. Stop capture while "
-              "repositioning and wait for settling. Confirm the minimum count, click "
-              "Evaluate quality, and verify the quality message.")
+              "repositioning and wait for settling. Include the normal installed "
+              "pose plus poses near the safe tilt limit about +roll, -roll, "
+              "+pitch, and -pitch; diagonal tilts add useful vertical-axis "
+              "coverage. Confirm the minimum count, click Evaluate quality, "
+              "and verify that all three reported axis spans exceed the policy minimum.")
         pause("MAGNETOMETER: Select 'Planar magnetometer'. Keep tilt variation "
               "small and constant while rotating the whole robot through a slow full "
               "horizontal circle, away from movable ferrous objects and "

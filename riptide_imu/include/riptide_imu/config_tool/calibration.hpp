@@ -30,6 +30,7 @@ struct GyroResult {
 struct AccelerometerResult {
   Eigen::Vector3d bias{Eigen::Vector3d::Zero()};
   Eigen::Matrix3d covariance{Eigen::Matrix3d::Zero()};
+  Eigen::Vector3d axis_span{Eigen::Vector3d::Zero()};
   double measured_gravity{0.0};
   double gravity_stddev{0.0};
   Quality quality;

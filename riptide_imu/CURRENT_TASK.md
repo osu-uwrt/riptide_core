@@ -22,6 +22,9 @@ export now reevaluates every nonempty capture automatically.
 A deterministic, configuration-driven calibration simulator now exercises
 nominal data and eight targeted failure scenarios using the same policy and
 calibration implementations as the dashboard.
+The latest hardware run passed gyro, magnetometer, and gravity. Accelerometer
+missed only its axis-span gate at 1.94 versus 2.00 m/s^2; reports now export all
+three spans and instructions target normal, cardinal, and diagonal tilt poses.
 
 Remaining: rerun the assisted bias suite against the discovered root endpoint;
 Windows Control Center bidirectional XML check.

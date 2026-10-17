@@ -79,6 +79,7 @@ int main(int argc, char** argv) {
           {"estimates", QJsonObject{
               {"gyro_bias_rad_s", vectorJson(result.gyro.residual_bias)},
               {"accelerometer_bias_m_s2", vectorJson(result.accelerometer.bias)},
+              {"accelerometer_axis_span_m_s2", vectorJson(result.accelerometer.axis_span)},
               {"gravity_magnitude_m_s2", result.gravity.magnitude},
               {"gravity_tilt_deg", result.gravity.tilt_from_sensor_z_deg},
               {"magnetometer_coverage_deg", result.magnetometer.coverage_deg}}}};
