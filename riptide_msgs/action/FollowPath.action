@@ -3,6 +3,9 @@ geometry_msgs/PoseStamped[] path_points
 # How to reach each path point (index-aligned with path_points). Empty: straight
 # lines, with the yaw blended from point to point.
 riptide_msgs2/PathSegment[] segments
+# Cruise speed cap for this path (m/s; 0: the controller's own limit). A slow search path, say, while the
+# controller's other moves stay fast.
+float64 max_speed
 ---
 #result definition
 uint8 error_code
