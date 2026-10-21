@@ -30,7 +30,9 @@ rescans serial devices (without connecting), then opens the whole list; typing n
 to the entries containing the text. The baud box opens its list the same way.
 
 Driver-critical communication, synchronization, binary-output, and reference
-frame registers require an expiring maintenance session in ROS mode. Ordinary
+frame registers require an expiring maintenance session in ROS mode. Applying one of
+them, resetting or saving to flash without a session opens a **Maintenance mode required**
+dialog whose **Enter maintenance and continue** opens the session and carries on. Ordinary
 reads, monitoring, and calibration capture leave the running output
 configuration unchanged. Persistent save sends the flash command without
 depending on its delayed acknowledgment, resets the sensor, reconnects at the
@@ -72,8 +74,8 @@ list; every register keeps an editable raw protocol representation for diagnosis
 forward compatibility.
 
 Signals plots attitude (roll, pitch, unwrapped yaw), angular rate, acceleration or the
-magnetic field over 20 s to 30 min; the axis buttons hide or show each line and the scale
-follows the lines shown. Live data adds drift while still: the least-squares slope of
+magnetic field over 20 s to 30 min; click an axis in the plot's legend to hide or show its
+line (a hidden axis is grayed but keeps its current value), and the scale follows the lines shown. Live data adds drift while still: the least-squares slope of
 roll, pitch and yaw over the last 60 s without motion (any rate above 0.05 rad/s restarts
 it), and the total since **Restart drift measurement**. It also separates the sensor's
 output rate (from its registers) from how often this view updates: over local serial the

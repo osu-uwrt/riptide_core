@@ -153,7 +153,8 @@ class AttitudeWidget : public QWidget {
 Eigen::Vector3d telemetryEulerDeg(const Telemetry& sample, AttitudeWidget::WorldFrame frame);
 
 // History of one quantity (attitude, angular rate, acceleration or magnetic field). Long windows draw from a
-// thinned copy, so a ten-minute drift trace stays cheap. Each axis can be hidden; the scale fits what is shown.
+// thinned copy, so a ten-minute drift trace stays cheap. Clicking an axis in the legend hides it (grayed, still
+// showing its value); the scale fits what is shown.
 class PlotWidget : public QWidget {
   Q_OBJECT
  public:
@@ -168,10 +169,13 @@ class PlotWidget : public QWidget {
   void setWindowSeconds(double seconds);
   double windowSeconds() const { return window_s_; }
   static QStringList axisNames(int quantity);
+  QRectF legendRect(int axis) const { return legend_[axis]; }
   void clear();
 
  protected:
   void paintEvent(QPaintEvent*) override;
+  void mousePressEvent(QMouseEvent* event) override;
+  void mouseMoveEvent(QMouseEvent* event) override;
 
  private:
   struct Point {
@@ -185,6 +189,7 @@ class PlotWidget : public QWidget {
   Eigen::Vector3d unwrapped_{Eigen::Vector3d::Zero()};
   AttitudeWidget::WorldFrame frame_{AttitudeWidget::WorldFrame::Ned};
   std::array<bool, 3> visible_{{true, true, true}};
+  std::array<QRectF, 3> legend_;
   int quantity_{Attitude};
   double window_s_{20.0};
 };

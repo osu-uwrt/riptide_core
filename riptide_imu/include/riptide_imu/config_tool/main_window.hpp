@@ -6,6 +6,7 @@
 #include <QPointer>
 #include <QThread>
 #include <deque>
+#include <functional>
 
 #include "riptide_imu/config_tool/calibration.hpp"
 #include "riptide_imu/config_tool/calibration_guide.hpp"
@@ -79,6 +80,7 @@ class MainWindow : public QMainWindow {
   void importConfiguration();
   void exportConfiguration();
   void savePersistently();
+  void resetSensor();
   void exportCalibrationReport();
   void exportTelemetry();
   void loadReplay();
@@ -119,6 +121,10 @@ class MainWindow : public QMainWindow {
   void setStatus(const QString& text, bool error = false);
   RegisterDefinition definitionForId(int id) const;
   bool confirm(const QString& title, const QString& text, bool warning = false);
+  // Over ROS, driver-critical actions need a maintenance session. Without one this asks to enter it, then runs
+  // retry once it is active, and returns true so the caller stops.
+  bool needsMaintenance(const QString& action, std::function<void()> retry = {});
+  void askForMaintenance(const QString& action, std::function<void()> retry);
 
   QString share_directory_;
   QVector<RegisterDefinition> definitions_;
@@ -170,7 +176,6 @@ class MainWindow : public QMainWindow {
   MetricTable* calibration_summary_{nullptr};
   QPushButton* stage_latest_button_{nullptr};
   QLabel* calibration_note_{nullptr};
-  QList<QPushButton*> axis_buttons_;
   QList<QAction*> theme_actions_;
 
   QPointer<CalibrationWizard> wizard_;
@@ -184,6 +189,7 @@ class MainWindow : public QMainWindow {
   bool monitor_paused_{false};
   bool connected_{false};
   bool maintenance_active_{false};
+  std::function<void()> after_maintenance_;
   bool discovery_auto_connect_{true};
   QString connection_mode_{"serial"};
   QString connected_target_;

@@ -111,12 +111,6 @@ void openListOnClick(QComboBox* combo, std::function<void()> refresh = {}) {
   combo->lineEdit()->installEventFilter(new ListOnClick(combo, std::move(refresh)));
 }
 
-QIcon swatch(const QColor& color) {
-  QPixmap pixmap(12, 12);
-  pixmap.fill(color);
-  return QIcon(pixmap);
-}
-
 }  // namespace
 
 MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool demo,
@@ -259,8 +253,16 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
     refreshBandwidth();
     setStatus(detail, !ok && detail != "Disconnected");
   });
-  connect(transport_, &SensorInterface::operationFailed, this,
-          [this](const QString& op, const QString& detail) { setStatus(op + ": " + detail, true); });
+  connect(transport_, &SensorInterface::operationFailed, this, [this](const QString& op, const QString& detail) {
+    setStatus(op + ": " + detail, true);
+    if (op == "Enter maintenance") {
+      after_maintenance_ = {};
+      QMessageBox::warning(this, "Could not enter maintenance", "The driver refused maintenance mode: " + detail);
+    } else if (detail.contains("requires maintenance mode")) {
+      // the driver's own check, e.g. after the lease lapsed
+      askForMaintenance(op, {});
+    }
+  });
   connect(transport_, &SensorInterface::operationSucceeded, this,
           [this](const QString& op, const QString& detail) { setStatus(op + ": " + detail); });
   connect(transport_, &SensorInterface::maintenanceChanged, this, [this](bool active, const QString& detail) {
@@ -268,6 +270,9 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
     maintenance_button_->setText(active ? "Leave maintenance" : "Enter maintenance");
     maintenance_chip_->setVisible(active);
     setStatus(detail);
+    auto next = std::move(after_maintenance_);
+    after_maintenance_ = {};
+    if (active && next) next();
   });
   connect(transport_, &SensorInterface::endpointsDiscovered, this, [this, baud](const QStringList& endpoints) {
     if (connection_mode_ != "ros") return;
@@ -510,9 +515,7 @@ void MainWindow::buildMenus() {
     if (confirm("Tare orientation", "Tare changes the sensor's active attitude reference. Continue?"))
       emit requestTare();
   });
-  sensor_menu->addAction("Reset sensor…", this, [this] {
-    if (confirm("Reset sensor", "Reset the sensor? The connection will be interrupted.", true)) emit requestReset();
-  });
+  sensor_menu->addAction("Reset sensor…", this, &MainWindow::resetSensor);
 
   auto* view_menu = menuBar()->addMenu("&View");
   auto* theme_menu = view_menu->addMenu("Theme");
@@ -714,17 +717,6 @@ QWidget* MainWindow::buildSignalsPage() {
   layout->addLayout(controls);
   auto* options = new QHBoxLayout;
   options->setSpacing(6);
-  for (int axis = 0; axis < 3; ++axis) {
-    auto* button = new QPushButton;
-    button->setObjectName(QString("plotAxis%1").arg(axis));
-    button->setCheckable(true);
-    button->setChecked(true);
-    button->setIcon(swatch(axisColor(axis)));
-    button->setToolTip("Show or hide this axis; the scale fits the axes shown");
-    connect(button, &QPushButton::toggled, this, [this, axis](bool on) { plot_->setAxisVisible(axis, on); });
-    options->addWidget(button);
-    axis_buttons_ << button;
-  }
   options->addStretch();
   auto* pause = new QPushButton("Pause");
   pause->setCheckable(true);
@@ -740,15 +732,7 @@ QWidget* MainWindow::buildSignalsPage() {
   plot_ = new PlotWidget;
   plot_->setWorldFrame(connection_mode_ == "ros" ? AttitudeWidget::WorldFrame::Enu : AttitudeWidget::WorldFrame::Ned);
   layout->addWidget(plot_, 1);
-  auto names = [this] {
-    const QStringList axes = PlotWidget::axisNames(plot_->quantity());
-    for (int axis = 0; axis < axis_buttons_.size(); ++axis) axis_buttons_[axis]->setText(axes[axis]);
-  };
-  names();
-  connect(quantity, &SegmentedSwitch::currentIndexChanged, this, [this, names](int index) {
-    plot_->setQuantity(index);
-    names();
-  });
+  connect(quantity, &SegmentedSwitch::currentIndexChanged, plot_, &PlotWidget::setQuantity);
   connect(span, &SegmentedSwitch::currentIndexChanged, plot_, [this](int index) {
     const double spans[] = {20, 120, 600, 1800};
     plot_->setWindowSeconds(spans[index]);
@@ -832,9 +816,7 @@ QWidget* MainWindow::buildProtocolPage() {
     if (confirm("Tare orientation", "Tare changes the sensor's active attitude reference. Continue?"))
       emit requestTare();
   });
-  connect(reset, &QPushButton::clicked, this, [this] {
-    if (confirm("Reset sensor", "Reset the sensor? The connection will be interrupted.", true)) emit requestReset();
-  });
+  connect(reset, &QPushButton::clicked, this, &MainWindow::resetSensor);
   return page;
 }
 
@@ -868,7 +850,6 @@ void MainWindow::setTheme(const QString& id) {
   applyTheme(qApp, id, share_directory_);
   QSettings().setValue("appearance/theme", id);
   for (auto* action : theme_actions_) action->setChecked(action->data().toString() == id);
-  for (int axis = 0; axis < axis_buttons_.size(); ++axis) axis_buttons_[axis]->setIcon(swatch(axisColor(axis)));
   refreshRegisterTable();
 }
 
@@ -1283,6 +1264,36 @@ bool MainWindow::confirm(const QString& title, const QString& text, bool warning
                   : QMessageBox::question(this, title, text)) == QMessageBox::Yes;
 }
 
+bool MainWindow::needsMaintenance(const QString& action, std::function<void()> retry) {
+  if (connection_mode_ != "ros" || maintenance_active_) return false;
+  askForMaintenance(action, std::move(retry));
+  return true;
+}
+
+void MainWindow::askForMaintenance(const QString& action, std::function<void()> retry) {
+  QMessageBox box(QMessageBox::Warning, "Maintenance mode required",
+                  action + " needs maintenance mode while connected to the robot's driver.", QMessageBox::Cancel,
+                  this);
+  box.setInformativeText("Maintenance mode lets this tool change driver-critical registers, reset the sensor "
+                         "and save to flash. These can briefly interrupt IMU data on the robot; the driver keeps "
+                         "running. Leave maintenance mode when you are done.");
+  auto* enter = box.addButton(retry ? "Enter maintenance and continue" : "Enter maintenance",
+                              QMessageBox::AcceptRole);
+  box.setDefaultButton(enter);
+  box.exec();
+  if (box.clickedButton() != enter) {
+    setStatus(action + " cancelled: maintenance mode is off", true);
+    return;
+  }
+  after_maintenance_ = std::move(retry);
+  emit requestOpenMaintenance();
+}
+
+void MainWindow::resetSensor() {
+  if (needsMaintenance("Resetting the sensor", [this] { resetSensor(); })) return;
+  if (confirm("Reset sensor", "Reset the sensor? The connection will be interrupted.", true)) emit requestReset();
+}
+
 RegisterDefinition MainWindow::definitionForId(int id) const {
   for (const auto& definition : definitions_)
     if (definition.id == id) return definition;
@@ -1338,10 +1349,9 @@ void MainWindow::applyStagedRegisters() {
       setStatus(definition.name + ": " + error, true);
       return;
     }
-    if (connection_mode_ == "ros" && definition.driver_critical && !maintenance_active_) {
-      setStatus(definition.name + " requires an active maintenance session", true);
+    if (definition.driver_critical &&
+        needsMaintenance("Writing " + definition.name, [this] { applyStagedRegisters(); }))
       return;
-    }
   }
   // output config has to fit the serial line
   bool touches_output = false;
@@ -1423,10 +1433,7 @@ void MainWindow::savePersistently() {
                          "Apply and verify staged changes before saving persistent sensor state.");
     return;
   }
-  if (connection_mode_ == "ros" && !maintenance_active_) {
-    setStatus("Enter maintenance mode before persistent save", true);
-    return;
-  }
+  if (needsMaintenance("Saving to flash", [this] { savePersistently(); })) return;
   const auto load = bandwidth(false);
   if (connection_mode_ != "demo" && !load.known) {
     readOutputRegisters();

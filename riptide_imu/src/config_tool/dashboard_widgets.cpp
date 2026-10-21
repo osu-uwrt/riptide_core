@@ -729,6 +729,7 @@ Eigen::Vector3d telemetryEulerDeg(const Telemetry& sample, AttitudeWidget::World
 PlotWidget::PlotWidget(QWidget* parent) : QWidget(parent) {
   setObjectName("signalPlot");
   setMinimumHeight(140);
+  setMouseTracking(true);
 }
 
 QStringList PlotWidget::axisNames(int quantity) {
@@ -778,6 +779,23 @@ void PlotWidget::setAxisVisible(int axis, bool visible) {
   if (axis < 0 || axis > 2) return;
   visible_[axis] = visible;
   update();
+}
+
+void PlotWidget::mousePressEvent(QMouseEvent* event) {
+  for (int axis = 0; axis < 3; ++axis) {
+    if (event->button() == Qt::LeftButton && legend_[axis].contains(event->pos())) {
+      setAxisVisible(axis, !visible_[axis]);
+      return;
+    }
+  }
+  QWidget::mousePressEvent(event);
+}
+
+void PlotWidget::mouseMoveEvent(QMouseEvent* event) {
+  const bool over =
+      std::any_of(legend_.begin(), legend_.end(), [&](const QRectF& r) { return r.contains(event->pos()); });
+  setCursor(over ? Qt::PointingHandCursor : Qt::ArrowCursor);
+  setToolTip(over ? "Click to show or hide this axis; the scale fits the axes shown" : QString());
 }
 
 void PlotWidget::setWindowSeconds(double seconds) {
@@ -882,13 +900,14 @@ void PlotWidget::paintEvent(QPaintEvent*) {
   const QStringList names = axisNames(quantity_);
   double lx = area.left();
   for (int axis = 0; axis < 3; ++axis) {
-    if (!visible_[axis]) continue;
+    // hidden axes stay in the legend, grayed, so they can be clicked back on
+    const double start = lx;
     painter.setPen(Qt::NoPen);
-    painter.setBrush(axisColor(axis));
+    painter.setBrush(visible_[axis] ? axisColor(axis) : t.muted);
     painter.drawRect(QRectF(lx, 12, 14, 3));
     lx += 20;
     painter.setFont(strongFont(12));
-    painter.setPen(t.text);
+    painter.setPen(visible_[axis] ? t.text : t.muted);
     const double name_width = QFontMetrics(strongFont(12)).horizontalAdvance(names[axis]) + 6;
     painter.drawText(QRectF(lx, 4, name_width, 20), Qt::AlignVCenter, names[axis]);
     lx += name_width;
@@ -899,6 +918,7 @@ void PlotWidget::paintEvent(QPaintEvent*) {
     painter.drawText(QRectF(lx, 4, 90, 20), Qt::AlignVCenter,
                      std::isfinite(latest) ? QString::number(latest, 'f', decimals) : QString("--"));
     lx += 96;
+    legend_[axis] = QRectF(start - 4, 2, lx - start, 24);
   }
   if (recent_.size() < 2 || !any_visible) {
     painter.setFont(strongFont(14));

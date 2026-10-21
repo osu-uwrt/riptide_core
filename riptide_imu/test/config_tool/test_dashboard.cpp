@@ -39,6 +39,8 @@ class FakeSensor : public SensorInterface {
   QMap<int, QString> registers;  // what reads return; empty for any other register
   QStringList endpoints{"/talos"};
   bool capture{false};
+  int reset_count{0};
+  int maintenance_requests{0};
 
  public slots:
   void connectSensor(const QString& port, int baud) override {
@@ -69,7 +71,11 @@ class FakeSensor : public SensorInterface {
   }
   void writeSettings(const QString&) override {}
   void tare() override {}
-  void reset() override {}
+  void reset() override { ++reset_count; }
+  void openMaintenance() override {
+    ++maintenance_requests;
+    SensorInterface::openMaintenance();
+  }
 
   void provideRegister(int id, const QString& value) { emit registerRead(id, value); }
   void provideCalibration(const Telemetry& value) { emit calibrationSampleReceived(value); }
@@ -93,6 +99,26 @@ void acceptNextMessageBox() {
     for (QWidget* widget : QApplication::topLevelWidgets())
       if (auto* box = qobject_cast<QMessageBox*>(widget)) box->accept();
   });
+}
+
+// Clicks the button with this text in the next message box that has one.
+void clickInMessageBox(const QString& text) {
+  auto* timer = new QTimer;
+  timer->setInterval(20);
+  QObject::connect(timer, &QTimer::timeout, [timer, text] {
+    for (QWidget* widget : QApplication::topLevelWidgets()) {
+      auto* box = qobject_cast<QMessageBox*>(widget);
+      if (!box || !box->isVisible()) continue;
+      for (auto* button : box->buttons()) {
+        if (button->text().remove('&') != text) continue;
+        timer->stop();
+        timer->deleteLater();
+        button->click();
+        return;
+      }
+    }
+  });
+  timer->start();
 }
 
 const QMap<int, QString> kTalosOutput{{5, "460800"}, {6, "0"}, {7, "50"}, {75, "1;2;03;0530;0001"},
@@ -523,11 +549,45 @@ class DashboardTest : public QObject {
                       &sensor);
     auto* plot = window.findChild<PlotWidget*>("signalPlot");
     QCOMPARE(plot->quantity(), int(PlotWidget::Attitude));
-    auto* yaw = window.findChild<QPushButton*>("plotAxis2");
-    QCOMPARE(yaw->text(), QString("Yaw"));
-    window.findChild<QPushButton*>("plotAxis0")->click();
+    QCOMPARE(PlotWidget::axisNames(plot->quantity()).value(2), QString("Yaw"));
+    window.resize(1440, 900);
+    window.show();
+    QVERIFY(QTest::qWaitForWindowExposed(&window));
+    QVERIFY(plot->isVisible());
+    plot->repaint();
+    // the legend entries are the toggles; a hidden one stays in place to click back on
+    const QPoint roll = plot->legendRect(0).center().toPoint();
+    QTest::mouseClick(plot, Qt::LeftButton, Qt::NoModifier, roll);
     QVERIFY(!plot->axisVisible(0));
     QVERIFY(plot->axisVisible(2));
+    plot->repaint();
+    QCOMPARE(plot->legendRect(0).center().toPoint(), roll);
+    QTest::mouseClick(plot, Qt::LeftButton, Qt::NoModifier, roll);
+    QVERIFY(plot->axisVisible(0));
+  }
+
+  void maintenanceIsAskedForThenTheActionContinues() {
+    FakeSensor sensor;
+    MainWindow window(QString(), 460800, QString(), false, QStringLiteral(TEST_SHARE_DIRECTORY), nullptr, &sensor,
+                      "ros");
+    window.show();
+    // declining leaves the sensor alone
+    clickInMessageBox("Cancel");
+    QVERIFY(QMetaObject::invokeMethod(&window, "resetSensor"));
+    QCOMPARE(sensor.maintenance_requests, 0);
+    QCOMPARE(sensor.reset_count, 0);
+    // entering it carries on to the reset's own confirmation
+    clickInMessageBox("Enter maintenance and continue");
+    clickInMessageBox("Yes");
+    QVERIFY(QMetaObject::invokeMethod(&window, "resetSensor"));
+    QCOMPARE(sensor.maintenance_requests, 1);
+    QTRY_COMPARE(sensor.reset_count, 1);
+    QVERIFY(window.findChild<QPushButton*>("maintenanceButton")->text() == "Leave maintenance");
+    // already in maintenance: no second ask
+    clickInMessageBox("Yes");
+    QVERIFY(QMetaObject::invokeMethod(&window, "resetSensor"));
+    QTRY_COMPARE(sensor.reset_count, 2);
+    QCOMPARE(sensor.maintenance_requests, 1);
   }
 
   void wizardTemperatureSaysChangingAndHoldsItsVerdict() {
