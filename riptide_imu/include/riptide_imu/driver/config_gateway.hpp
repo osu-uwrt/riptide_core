@@ -38,6 +38,12 @@ std::optional<BaudTransitionPlan> planBaudTransition(
     int active_port, std::string* error);
 Json persistentMismatches(const Json& expected, const Json& actual);
 
+// Whether a register reads back what was written. The sensor stores float32 and echoes about six significant
+// digits, so "-0.00847907" confirms a write of "-0.00847906899": decimals agree within that precision, integers and
+// hex words exactly (ignoring leading zeros and case), anything else as text.
+bool registerFieldsMatch(const std::string& written, const std::string& read);
+bool registerValuesMatch(const std::vector<std::string>& written, const std::vector<std::string>& read);
+
 class MaintenanceLease {
  public:
   using Clock = std::chrono::steady_clock;

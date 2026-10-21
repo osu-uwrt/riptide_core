@@ -321,6 +321,10 @@ GravityReport makeGravityReport(const std::vector<Sample>& samples,
   result.tilt_stddev_deg =
       std::sqrt(std::max(0.0, result.covariance.trace())) / result.magnitude *
       180.0 / M_PI;
+  result.roll_deg = std::atan2(gravity_direction.y(), gravity_direction.z()) * 180.0 / M_PI;
+  result.pitch_deg = std::atan2(-gravity_direction.x(),
+                                std::hypot(gravity_direction.y(), gravity_direction.z())) *
+                     180.0 / M_PI;
   result.quality.rms = std::sqrt(covariance(values, result.specific_force_mean).trace());
   result.quality.passed = result.quality.rms <= policy.accel_max_rms_m_s2;
   result.quality.summary = result.quality.passed

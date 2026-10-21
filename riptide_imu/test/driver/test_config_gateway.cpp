@@ -69,6 +69,22 @@ TEST(ConfigGateway, PersistenceComparisonDetectsMissingAndChangedValues) {
   const Json mismatch = persistentMismatches(expected, actual);
   EXPECT_TRUE(mismatch.contains("5"));
   EXPECT_TRUE(mismatch.contains("84"));
+  const Json echoed{{"5", {"460800", "115200"}}, {"84", {"1.0", "2"}}};
+  EXPECT_TRUE(persistentMismatches(expected, echoed).empty());
+}
+
+TEST(ConfigGateway, ReadbackAcceptsTheSensorsSixDigitEcho) {
+  // From a real calibration write: the staged bias and the sensor's float32 echo of it.
+  EXPECT_TRUE(registerValuesMatch({"1", "0", "-0.00847906899", "-0.121211335", "0.000140408898"},
+                                  {"1", "0", "-0.00847907", "-0.121211", "0.000140409"}));
+  EXPECT_TRUE(registerFieldsMatch("-0.0003521", "-0.000352100004"));
+  EXPECT_TRUE(registerFieldsMatch("0530", "530"));
+  EXPECT_TRUE(registerFieldsMatch("0a30", "0A30"));
+  EXPECT_TRUE(registerFieldsMatch("+00.000", "0"));
+  EXPECT_FALSE(registerFieldsMatch("-0.008479", "-0.008480"));
+  EXPECT_FALSE(registerFieldsMatch("460800", "460801"));
+  EXPECT_FALSE(registerFieldsMatch("TALOS", "TAL0S"));
+  EXPECT_FALSE(registerValuesMatch({"1", "2"}, {"1"}));
 }
 
 }  // namespace riptide_imu::driver

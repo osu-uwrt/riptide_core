@@ -2,11 +2,11 @@
 #include <algorithm>
 #include <string>
 
-#include "riptide_imu/config_tool/calibration_simulation.hpp"
+#include "calibration_simulation.hpp"
 
 TEST(CalibrationSimulation, EveryScenarioTriggersItsExpectedQualityGates) {
   const auto suite = riptide_imu::loadCalibrationSimulationSuite(
-      std::string(TEST_SHARE_DIRECTORY) + "/config/calibration_simulation.json");
+      std::string(TEST_DATA_DIRECTORY) + "/calibration_simulation.json");
   const auto policy = riptide_imu::loadCalibrationPolicy(
       std::string(TEST_SHARE_DIRECTORY) + "/config/calibration_policy.json");
   ASSERT_GE(suite.scenarios.size(), 9u);
@@ -25,7 +25,7 @@ TEST(CalibrationSimulation, EveryScenarioTriggersItsExpectedQualityGates) {
 
 TEST(CalibrationSimulation, NominalScenarioRecoversKnownBiases) {
   const auto suite = riptide_imu::loadCalibrationSimulationSuite(
-      std::string(TEST_SHARE_DIRECTORY) + "/config/calibration_simulation.json");
+      std::string(TEST_DATA_DIRECTORY) + "/calibration_simulation.json");
   const auto& scenario = suite.scenarios.front();
   ASSERT_EQ(scenario.name, "nominal");
   const auto data = riptide_imu::generateCalibrationSimulation(suite, scenario);
@@ -41,7 +41,7 @@ TEST(CalibrationSimulation, NominalScenarioRecoversKnownBiases) {
 
 TEST(CalibrationSimulation, LimitedTiltExposesWeakAxisCoverage) {
   const auto suite = riptide_imu::loadCalibrationSimulationSuite(
-      std::string(TEST_SHARE_DIRECTORY) + "/config/calibration_simulation.json");
+      std::string(TEST_DATA_DIRECTORY) + "/calibration_simulation.json");
   const auto iterator = std::find_if(
       suite.scenarios.begin(), suite.scenarios.end(), [](const auto& scenario) {
         return scenario.name == "accelerometer_limited_tilt";
@@ -57,7 +57,7 @@ TEST(CalibrationSimulation, LimitedTiltExposesWeakAxisCoverage) {
 
 TEST(CalibrationSimulation, IsDeterministicForAConfiguredSeed) {
   const auto suite = riptide_imu::loadCalibrationSimulationSuite(
-      std::string(TEST_SHARE_DIRECTORY) + "/config/calibration_simulation.json");
+      std::string(TEST_DATA_DIRECTORY) + "/calibration_simulation.json");
   const auto first = riptide_imu::generateCalibrationSimulation(suite, suite.scenarios.front());
   const auto second = riptide_imu::generateCalibrationSimulation(suite, suite.scenarios.front());
   ASSERT_EQ(first.gyro.size(), second.gyro.size());

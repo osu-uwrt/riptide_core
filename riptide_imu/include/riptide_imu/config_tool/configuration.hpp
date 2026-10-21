@@ -56,5 +56,8 @@ bool saveControlCenterXml(const QString& path,
                           QString* error);
 bool validateRegisterValue(const RegisterDefinition& definition,
                            const QString& values, QString* error);
+// Semicolon-separated register values that agree to the precision the sensor echoes (see
+// driver::registerFieldsMatch).
+bool registerValuesMatch(const QString& written, const QString& read);
 
 }  // namespace riptide_imu

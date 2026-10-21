@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
+#include <cmath>
+#include <cstdlib>
 #include <iomanip>
 #include <random>
 #include <sstream>
@@ -66,11 +69,66 @@ std::optional<BaudTransitionPlan> planBaudTransition(
   return plan;
 }
 
+namespace {
+
+std::string trimmed(const std::string& text) {
+  const auto first = text.find_first_not_of(" \t\r\n");
+  if (first == std::string::npos) return {};
+  return text.substr(first, text.find_last_not_of(" \t\r\n") - first + 1);
+}
+
+bool parseNumber(const std::string& text, double* value) {
+  if (text.empty()) return false;
+  char* end = nullptr;
+  *value = std::strtod(text.c_str(), &end);
+  return end == text.c_str() + text.size() && std::isfinite(*value);
+}
+
+bool looksDecimal(const std::string& text) {
+  return text.find_first_of(".eE") != std::string::npos;
+}
+
+std::string normalizedWord(std::string text) {
+  if (!text.empty() && text.front() == '+') text.erase(text.begin());
+  std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::toupper(c); });
+  const auto first = text.find_first_not_of('0');
+  return first == std::string::npos ? "0" : text.substr(first);
+}
+
+bool stringArray(const Json& value) {
+  return value.is_array() && std::all_of(value.begin(), value.end(), [](const Json& v) { return v.is_string(); });
+}
+
+}  // namespace
+
+bool registerFieldsMatch(const std::string& written, const std::string& read) {
+  const std::string a = trimmed(written), b = trimmed(read);
+  if (a == b) return true;
+  double x = 0.0, y = 0.0;
+  if (parseNumber(a, &x) && parseNumber(b, &y)) {
+    if (!looksDecimal(a) && !looksDecimal(b)) return x == y;
+    // half a unit in the sixth significant digit, with a little room for float32 rounding
+    return std::abs(x - y) <= 1e-5 * std::max(std::abs(x), std::abs(y)) + 1e-12;
+  }
+  return normalizedWord(a) == normalizedWord(b);
+}
+
+bool registerValuesMatch(const std::vector<std::string>& written, const std::vector<std::string>& read) {
+  if (written.size() != read.size()) return false;
+  for (std::size_t i = 0; i < written.size(); ++i)
+    if (!registerFieldsMatch(written[i], read[i])) return false;
+  return true;
+}
+
 Json persistentMismatches(const Json& expected, const Json& actual) {
   Json mismatches = Json::object();
   for (const auto& entry : expected.items()) {
     const auto actual_entry = actual.find(entry.key());
-    if (actual_entry == actual.end() || *actual_entry != entry.value()) {
+    const bool same = actual_entry != actual.end() &&
+        (*actual_entry == entry.value() || (stringArray(entry.value()) && stringArray(*actual_entry) &&
+                                            registerValuesMatch(entry.value().get<std::vector<std::string>>(),
+                                                                actual_entry->get<std::vector<std::string>>())));
+    if (!same) {
       mismatches[entry.key()] = {{"expected", entry.value()},
                                  {"actual", actual_entry == actual.end() ? Json() : *actual_entry}};
     }

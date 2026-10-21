@@ -6,6 +6,8 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
+#include "riptide_imu/driver/config_gateway.hpp"
+
 namespace riptide_imu {
 
 QVector<RegisterDefinition> loadRegisterDefinitions(const QString& path,
@@ -143,6 +145,13 @@ bool validateRegisterValue(const RegisterDefinition& definition,
     }
   }
   return true;
+}
+
+bool registerValuesMatch(const QString& written, const QString& read) {
+  std::vector<std::string> a, b;
+  for (const auto& field : written.split(';')) a.push_back(field.toStdString());
+  for (const auto& field : read.split(';')) b.push_back(field.toStdString());
+  return driver::registerValuesMatch(a, b);
 }
 
 }  // namespace riptide_imu

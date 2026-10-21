@@ -52,6 +52,8 @@ struct GravityReport {
   double magnitude_stddev{0.0};
   double tilt_from_sensor_z_deg{0.0};
   double tilt_stddev_deg{0.0};
+  // The sensor's attitude against gravity, as the VN-100 reports it (roll right side down, pitch nose up).
+  double roll_deg{0.0}, pitch_deg{0.0};
   Quality quality;
 };
 

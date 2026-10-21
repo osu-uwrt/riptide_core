@@ -1,4 +1,4 @@
-#include "riptide_imu/config_tool/calibration_simulation.hpp"
+#include "calibration_simulation.hpp"
 
 #include <QFile>
 #include <QJsonArray>

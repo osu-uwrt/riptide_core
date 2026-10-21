@@ -9,6 +9,8 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "riptide_imu/config_tool/configuration.hpp"
+
 namespace riptide_imu {
 
 SensorTransport::SensorTransport(QObject* parent) : SensorInterface(parent) {}
@@ -115,8 +117,8 @@ void SensorTransport::writeRegister(int id, const QString& semicolon_values) {
     const QString wire_values = QString(semicolon_values).replace(';', ',');
     transact(QString("VNWRG,%1,%2").arg(id).arg(wire_values));
     const QString verified = valuesFromResponse(transact(QString("VNRRG,%1").arg(id)), id);
-    if (verified != semicolon_values)
-      throw std::runtime_error("Readback differs from staged value");
+    if (!registerValuesMatch(semicolon_values, verified))
+      throw std::runtime_error(("Readback " + verified + " differs from staged " + semicolon_values).toStdString());
     emit writeVerified(id, verified);
   } catch (const std::exception& exception) { emit operationFailed("Write register", exception.what()); }
 }
@@ -138,7 +140,7 @@ void SensorTransport::writeSettings(const QString& expected_json) {
       QStringList values;
       for (const auto value : entry.value().toArray()) values.push_back(value.toVariant().toString());
       const int id = entry.key().toInt();
-      if (valuesFromResponse(transact(QString("VNRRG,%1").arg(id)), id) != values.join(';'))
+      if (!registerValuesMatch(values.join(';'), valuesFromResponse(transact(QString("VNRRG,%1").arg(id)), id)))
         mismatches.push_back(entry.key());
     }
     if (!mismatches.isEmpty())
@@ -180,7 +182,8 @@ void SensorTransport::poll() {
     output.qw = std::cos(roll / 2.0) * std::cos(pitch / 2.0);
     output.ax = 9.81 * std::sin(pitch) + 0.01 * std::sin(demo_time_ * 9.0);
     output.ay = -9.81 * std::sin(roll) * std::cos(pitch);
-    output.az = 9.81 * std::cos(roll) * std::cos(pitch);
+    // specific force, as the sensor reports it: -g on Z when level
+    output.az = -9.81 * std::cos(roll) * std::cos(pitch);
     output.gx = 0.245 * std::cos(demo_time_ * 0.7);
     output.gy = 0.095 * std::cos(demo_time_ * 0.43);
     output.mx = 0.3 * std::cos(demo_time_); output.my = 0.3 * std::sin(demo_time_); output.mz = 0.4;

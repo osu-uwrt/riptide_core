@@ -747,9 +747,10 @@ class Vectornav : public rclcpp::Node {
     } else {
       verified = {std::to_string(vs->readSerialBaudRate())};
     }
+    const bool ok = riptide_imu::driver::registerValuesMatch(values, verified);
     return riptide_imu::driver::configResponse(
-        verified == values, verified == values ? "ok" : "readback_mismatch",
-        verified == values ? "baud changed and verified" : "baud readback differs",
+        ok, ok ? "ok" : "readback_mismatch",
+        ok ? "baud changed and verified" : "baud readback differs",
         {{"values", verified}, {"effective_baud", vs->baudrate()}});
   }
 
@@ -800,7 +801,7 @@ class Vectornav : public rclcpp::Node {
       for (const auto& value : values) command << ',' << value;
       vs->transaction("$" + command.str());
       const auto verified = readRegisterValues(id);
-      const bool ok = verified == values;
+      const bool ok = riptide_imu::driver::registerValuesMatch(values, verified);
       return storeOperationResult(request.operation_id,
           configResponse(ok, ok ? "ok" : "readback_mismatch",
                          ok ? "register written and verified" : "register readback differs",

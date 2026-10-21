@@ -1,54 +1,120 @@
 #include "riptide_imu/config_tool/main_window.hpp"
+#include "riptide_imu/config_tool/calibration_wizard.hpp"
 #include "riptide_imu/config_tool/ros_sensor_transport.hpp"
+#include "riptide_imu/config_tool/theme.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
-#include <QCheckBox>
 #include <QComboBox>
-#include <QDockWidget>
-#include <QDoubleSpinBox>
+#include <QCompleter>
+#include <QDateTime>
 #include <QDir>
+#include <QDoubleSpinBox>
 #include <QFile>
 #include <QFileDialog>
-#include <QFormLayout>
-#include <QHeaderView>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLabel>
 #include <QLineEdit>
-#include <QListWidget>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
-#include <QSignalBlocker>
+#include <QScrollArea>
 #include <QSettings>
-#include <QShowEvent>
+#include <QSignalBlocker>
 #include <QSplitter>
+#include <QStackedWidget>
 #include <QStatusBar>
+#include <QStyle>
+#include <QTabWidget>
 #include <QTableWidget>
 #include <QTimer>
-#include <QToolBar>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <cmath>
+#include <functional>
 
 namespace riptide_imu {
 namespace {
 
-QLabel* title(const QString& text) {
-  auto* label = new QLabel(text);
-  label->setObjectName("sectionTitle");
-  return label;
+const QStringList kModes{"ros", "serial", "demo"};
+const int kCalibrationRegisters[] = {23, 25, 26, 43, 84};
+const int kOutputRegisters[] = {5, 6, 7, 75, 76, 77};
+// Reading this one resets the sensor's integration interval, so it is never read just because it was selected.
+const int kNoAutoRead[] = {80};
+
+QTabWidget* panel(QWidget* page, const QString& title, const QString& object_name) {
+  auto* tabs = new QTabWidget;
+  tabs->setObjectName(object_name);
+  tabs->setDocumentMode(true);
+  tabs->addTab(page, title);
+  return tabs;
 }
 
-QString vectorText(const Eigen::Vector3d& value, int precision = 7) {
-  return QString("[%1, %2, %3]")
-      .arg(value.x(), 0, 'g', precision).arg(value.y(), 0, 'g', precision)
-      .arg(value.z(), 0, 'g', precision);
+QWidget* sheet() {
+  auto* widget = new QWidget;
+  widget->setObjectName("sheet");
+  widget->setAttribute(Qt::WA_StyledBackground);
+  return widget;
+}
+
+void repolish(QWidget* widget) {
+  widget->style()->unpolish(widget);
+  widget->style()->polish(widget);
+}
+
+QPushButton* commandButton(const QString& text, const QString& tooltip, QAction* action = nullptr) {
+  auto* button = new QPushButton(text);
+  button->setToolTip(tooltip);
+  if (action) QObject::connect(button, &QPushButton::clicked, action, &QAction::trigger);
+  return button;
+}
+
+// A click anywhere in an editable combo box refreshes its entries (when `refresh` is given) and opens the whole
+// list; typing then narrows it to matching entries.
+class ListOnClick : public QObject {
+ public:
+  ListOnClick(QComboBox* combo, std::function<void()> refresh)
+      : QObject(combo), combo_(combo), refresh_(std::move(refresh)) {}
+
+ protected:
+  bool eventFilter(QObject*, QEvent* event) override {
+    if (event->type() != QEvent::MouseButtonRelease || !combo_->isEnabled() ||
+        combo_->completer()->popup()->isVisible())
+      return false;
+    if (refresh_) refresh_();
+    if (combo_->count() > 0) {
+      combo_->completer()->setCompletionPrefix(QString());
+      combo_->completer()->complete();
+    }
+    return false;
+  }
+
+ private:
+  QComboBox* combo_;
+  std::function<void()> refresh_;
+};
+
+void openListOnClick(QComboBox* combo, std::function<void()> refresh = {}) {
+  auto* completer = new QCompleter(combo->model(), combo);
+  completer->setFilterMode(Qt::MatchContains);
+  completer->setCaseSensitivity(Qt::CaseInsensitive);
+  completer->setCompletionMode(QCompleter::PopupCompletion);
+  completer->setMaxVisibleItems(12);
+  combo->setCompleter(completer);
+  combo->lineEdit()->installEventFilter(new ListOnClick(combo, std::move(refresh)));
+}
+
+QIcon swatch(const QColor& color) {
+  QPixmap pixmap(12, 12);
+  pixmap.fill(color);
+  return QIcon(pixmap);
 }
 
 }  // namespace
@@ -59,47 +125,80 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
     : QMainWindow(parent), share_directory_(std::move(share_directory)),
       connection_mode_(demo ? "demo" : connection_mode.toLower()) {
   qRegisterMetaType<Telemetry>();
-  setWindowTitle("VectorNav Workbench");
+  setWindowTitle("VectorNav Workshop");
   setObjectName("vectorNavWorkbench");
   resize(1440, 900);
-  setDockOptions(QMainWindow::AnimatedDocks | QMainWindow::AllowNestedDocks |
-                 QMainWindow::AllowTabbedDocks | QMainWindow::GroupedDragging);
-  setCentralWidget(buildRegistersPage());
 
-  monitor_dock_ = new QDockWidget("Live Sensor", this);
-  monitor_dock_->setObjectName("monitorDock");
-  monitor_dock_->setWidget(buildMonitorPage());
-  addDockWidget(Qt::RightDockWidgetArea, monitor_dock_);
+  auto* central = new QWidget;
+  auto* layout = new QVBoxLayout(central);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(0);
+  layout->addWidget(buildBoard(imu_port, baud));
+  layout->addWidget(buildCommandBar());
 
-  plot_dock_ = new QDockWidget("Signal Monitor", this);
-  plot_dock_->setObjectName("plotDock");
-  plot_dock_->setWidget(buildPlotPanel());
-  addDockWidget(Qt::BottomDockWidgetArea, plot_dock_);
+  main_splitter_ = new QSplitter(Qt::Horizontal);
+  main_splitter_->setObjectName("mainSplitter");
+  main_splitter_->setChildrenCollapsible(false);
+  main_splitter_->addWidget(panel(buildRegisterListPage(), "Registers", "registerPanel"));
+  center_splitter_ = new QSplitter(Qt::Vertical);
+  center_splitter_->setObjectName("centerSplitter");
+  center_splitter_->setChildrenCollapsible(false);
+  center_splitter_->addWidget(panel(buildInspectorPage(), "Register", "inspectorPanel"));
+  lower_tabs_ = new QTabWidget;
+  lower_tabs_->setObjectName("lowerPanel");
+  lower_tabs_->setDocumentMode(true);
+  lower_tabs_->addTab(buildSignalsPage(), "Signals");
+  lower_tabs_->addTab(buildCalibrationPage(), "Calibration");
+  lower_tabs_->addTab(buildProtocolPage(), "Protocol log");
+  center_splitter_->addWidget(lower_tabs_);
+  main_splitter_->addWidget(center_splitter_);
+  right_splitter_ = new QSplitter(Qt::Vertical);
+  right_splitter_->setObjectName("rightSplitter");
+  right_splitter_->setChildrenCollapsible(false);
+  right_splitter_->addWidget(panel(buildAttitudePage(), "Attitude", "attitudePanel"));
+  telemetry_summary_ = new TelemetrySummaryWidget;
+  telemetry_summary_->setWorldFrame(connection_mode_ == "ros" ? AttitudeWidget::WorldFrame::Enu
+                                                              : AttitudeWidget::WorldFrame::Ned);
+  auto* live_page = sheet();
+  auto* live_layout = new QVBoxLayout(live_page);
+  live_layout->setContentsMargins(0, 0, 0, 8);
+  auto* live_scroll = new QScrollArea;
+  live_scroll->setWidget(telemetry_summary_);
+  live_scroll->setWidgetResizable(true);
+  live_scroll->setFrameShape(QFrame::NoFrame);
+  live_scroll->viewport()->setAutoFillBackground(false);
+  live_layout->addWidget(live_scroll, 1);
+  auto* live_controls = new QHBoxLayout;
+  live_controls->setContentsMargins(12, 0, 12, 0);
+  live_controls->addStretch();
+  auto* restart_drift = new QPushButton("Restart drift measurement");
+  restart_drift->setObjectName("restartDriftButton");
+  restart_drift->setToolTip("Start the drift total and rate from now");
+  connect(restart_drift, &QPushButton::clicked, telemetry_summary_, &TelemetrySummaryWidget::restartDrift);
+  live_controls->addWidget(restart_drift);
+  live_layout->addLayout(live_controls);
+  right_splitter_->addWidget(panel(live_page, "Live data", "liveDataPanel"));
+  main_splitter_->addWidget(right_splitter_);
+  main_splitter_->setStretchFactor(1, 1);
+  layout->addWidget(main_splitter_, 1);
+  setCentralWidget(central);
+  buildMenus();
 
-  calibration_dock_ = new QDockWidget("Calibration", this);
-  calibration_dock_->setObjectName("calibrationDock");
-  calibration_dock_->setWidget(buildCalibrationPage());
-  addDockWidget(Qt::BottomDockWidgetArea, calibration_dock_);
-
-  diagnostics_dock_ = new QDockWidget("Diagnostics & Protocol", this);
-  diagnostics_dock_->setObjectName("diagnosticsDock");
-  diagnostics_dock_->setWidget(buildDiagnosticsPage());
-  addDockWidget(Qt::BottomDockWidgetArea, diagnostics_dock_);
-  tabifyDockWidget(plot_dock_, calibration_dock_);
-  tabifyDockWidget(calibration_dock_, diagnostics_dock_);
-  plot_dock_->raise();
-
-  auto* connection_toolbar = addToolBar("Connection");
-  connection_toolbar->setObjectName("connectionToolbar");
-  connection_toolbar->setMovable(false);
-  connection_toolbar->addWidget(buildConnectionBar(imu_port, baud));
-  buildMenusAndToolbar();
-
-  status_ = new QLabel("Disconnected"); statusBar()->addPermanentWidget(status_, 1);
+  status_ = new QLabel("Disconnected");
+  status_->setObjectName("statusMessage");
+  statusBar()->addWidget(status_, 1);
+  statusBar()->setSizeGripEnabled(false);
   loadDefinitions(share_directory_ + "/config/registers.json");
+  // before any connection, which can come up during construction
+  auto_read_timer_ = new QTimer(this);
+  auto_read_timer_->setSingleShot(true);
+  auto_read_timer_->setInterval(150);
+  connect(auto_read_timer_, &QTimer::timeout, this, [this] {
+    if (connected_ && connection_mode_ != "demo" && current_register_id_ >= 0) emit requestRead(current_register_id_);
+  });
+
   try {
-    policy_ = loadCalibrationPolicy(
-        (share_directory_ + "/config/calibration_policy.json").toStdString());
+    policy_ = loadCalibrationPolicy((share_directory_ + "/config/calibration_policy.json").toStdString());
   } catch (const std::exception& exception) {
     setStatus("Calibration policy: " + QString::fromStdString(exception.what()), true);
   }
@@ -126,54 +225,72 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
   connect(this, &MainWindow::requestTare, transport_, &SensorInterface::tare);
   connect(this, &MainWindow::requestReset, transport_, &SensorInterface::reset);
   connect(transport_, &SensorInterface::telemetryReceived, this, &MainWindow::onTelemetry);
-  connect(transport_, &SensorInterface::calibrationSampleReceived,
-          this, &MainWindow::onCalibrationSample);
+  connect(transport_, &SensorInterface::calibrationSampleReceived, this, &MainWindow::onCalibrationSample);
   connect(transport_, &SensorInterface::registerRead, this, &MainWindow::onRegisterRead);
   connect(transport_, &SensorInterface::writeVerified, this, &MainWindow::onRegisterRead);
-  connect(transport_, &SensorInterface::connectionChanged, this,
-          [this](bool ok, const QString& detail) {
-            connected_ = ok;
-            if (connection_button_) {
-              connection_button_->setEnabled(true);
-              connection_button_->setText(ok ? "Disconnect" : "Connect");
-            }
-            if (port_selector_) port_selector_->setEnabled(!ok);
-            if (baud_selector_) baud_selector_->setEnabled(!ok);
-            if (connection_mode_selector_) connection_mode_selector_->setEnabled(!ok);
-            setStatus(detail, !ok && detail != "Disconnected");
-          });
+  connect(transport_, &SensorInterface::connectionChanged, this, [this](bool ok, const QString& detail) {
+    connected_ = ok;
+    connection_button_->setEnabled(true);
+    connection_button_->setText(ok ? "Disconnect" : "Connect");
+    connection_button_->setProperty("role", ok ? "" : "primary");
+    repolish(connection_button_);
+    port_selector_->setEnabled(!ok);
+    baud_selector_->setEnabled(!ok);
+    connection_mode_selector_->setEnabled(!ok);
+    connected_target_ = ok ? (connection_mode_ == "demo" ? QString("demo") : port_selector_->currentText())
+                           : QString();
+    // long by-id paths cut short, full one in the tooltip
+    const QString context = connected_target_.isEmpty() ? QString("/  VN-100")
+                                                        : QString("/  VN-100 · %1").arg(connected_target_);
+    context_label_->setText(context_label_->fontMetrics().elidedText(context, Qt::ElideMiddle, 220));
+    context_label_->setToolTip(context);
+    if (!ok) {
+      attitude_->clearAttitude();
+      telemetry_summary_->markStale(true);
+    }
+    bandwidth_meter_->setVisible(ok && connection_mode_ != "demo");
+    if (ok) {
+      readOutputRegisters();
+      // register on show gets read like any selection
+      scheduleAutoRead();
+    }
+    if (wizard_) wizard_->setConnected(ok);
+    refreshTelemetryChip();
+    refreshBandwidth();
+    setStatus(detail, !ok && detail != "Disconnected");
+  });
   connect(transport_, &SensorInterface::operationFailed, this,
           [this](const QString& op, const QString& detail) { setStatus(op + ": " + detail, true); });
   connect(transport_, &SensorInterface::operationSucceeded, this,
           [this](const QString& op, const QString& detail) { setStatus(op + ": " + detail); });
-  connect(transport_, &SensorInterface::maintenanceChanged, this,
-          [this](bool active, const QString& detail) {
-            maintenance_active_ = active;
-            if (maintenance_button_)
-              maintenance_button_->setText(active ? "Leave maintenance" : "Enter maintenance");
-            setStatus(detail);
-          });
-  connect(transport_, &SensorInterface::endpointsDiscovered, this,
-          [this, baud](const QStringList& endpoints) {
-            if (connection_mode_ != "ros") return;
-            const QString selected = port_selector_->currentText();
-            port_selector_->clear();
-            port_selector_->addItems(endpoints);
-            if (!selected.isEmpty()) port_selector_->setCurrentText(selected);
-            if (endpoints.size() == 1 && !connected_) {
-              port_selector_->setCurrentIndex(0);
-              connection_button_->setEnabled(false);
-              emit requestConnect(endpoints.front(), baud);
-            } else {
-              connection_button_->setEnabled(true);
-              setStatus(endpoints.isEmpty() ? "No VectorNav drivers discovered" :
-                                             "Select a robot endpoint");
-            }
-          });
-  connect(transport_, &SensorInterface::traffic, this,
-          [this](const QString& direction, const QString& packet) {
-            if (traffic_log_) traffic_log_->appendPlainText(direction + "  " + packet);
-          });
+  connect(transport_, &SensorInterface::maintenanceChanged, this, [this](bool active, const QString& detail) {
+    maintenance_active_ = active;
+    maintenance_button_->setText(active ? "Leave maintenance" : "Enter maintenance");
+    maintenance_chip_->setVisible(active);
+    setStatus(detail);
+  });
+  connect(transport_, &SensorInterface::endpointsDiscovered, this, [this, baud](const QStringList& endpoints) {
+    if (connection_mode_ != "ros") return;
+    const QString selected = port_selector_->currentText();
+    port_selector_->clear();
+    port_selector_->addItems(endpoints);
+    if (!selected.isEmpty()) port_selector_->setCurrentText(selected);
+    if (port_selector_->completer()->popup()->isVisible()) port_selector_->completer()->complete();
+    // refresh only updates the list, never connects
+    if (endpoints.size() == 1 && !connected_ && discovery_auto_connect_) {
+      port_selector_->setCurrentIndex(0);
+      connection_button_->setEnabled(false);
+      emit requestConnect(endpoints.front(), baud);
+    } else {
+      connection_button_->setEnabled(true);
+      setStatus(endpoints.isEmpty() ? "No VectorNav drivers discovered" : "Select a robot endpoint");
+    }
+  });
+  connect(transport_, &SensorInterface::traffic, this, [this](const QString& direction, const QString& packet) {
+    traffic_log_->appendPlainText(QTime::currentTime().toString("HH:mm:ss.zzz") + "  " + direction + "  " + packet);
+  });
+  connect(telemetry_summary_, &TelemetrySummaryWidget::freshnessChanged, this, [this] { refreshTelemetryChip(); });
+
   if (owns_transport_) sensor_thread_.start();
   emit requestConnectionMode(connection_mode_ == "ros" ? "ros" : "serial");
   emit requestDemo(demo);
@@ -187,7 +304,8 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
     emit requestEndpointDiscovery();
   }
   if (!config_file.isEmpty()) {
-    QString error; configuration_metadata_ = loadControlCenterXml(config_file, &error);
+    QString error;
+    configuration_metadata_ = loadControlCenterXml(config_file, &error);
     for (const auto& reg : configuration_metadata_.registers) staged_values_[reg.id] = reg.values;
     refreshRegisterTable();
     if (!error.isEmpty()) setStatus("Configuration import: " + error, true);
@@ -195,235 +313,594 @@ MainWindow::MainWindow(QString imu_port, int baud, QString config_file, bool dem
   last_sample_clock_.start();
   stale_timer_ = new QTimer(this);
   stale_timer_->setInterval(500);
-  connect(stale_timer_, &QTimer::timeout, this, [this] {
-    if (telemetry_summary_) telemetry_summary_->markStale(last_sample_clock_.elapsed() > 1200);
-  });
+  connect(stale_timer_, &QTimer::timeout, this,
+          [this] { telemetry_summary_->markStale(last_sample_clock_.elapsed() > 1200); });
   stale_timer_->start();
-  restoreDashboardLayout();
+  refreshCalibrationSummary();
+  refreshTelemetryChip();
+  restoreLayout();
 }
 
-void MainWindow::buildMenusAndToolbar() {
-  auto* file_menu = menuBar()->addMenu("&File");
-  auto* import_action = file_menu->addAction("Import Control Center XML…");
-  auto* export_action = file_menu->addAction("Export Control Center XML…");
-  file_menu->addSeparator();
-  auto* export_csv_action = file_menu->addAction("Export telemetry CSV…");
-  auto* replay_action = file_menu->addAction("Replay telemetry CSV…");
-  file_menu->addSeparator();
-  file_menu->addAction("Quit", this, &QWidget::close, QKeySequence::Quit);
-
-  auto* sensor_menu = menuBar()->addMenu("&Sensor");
-  auto* read_action = sensor_menu->addAction("Read selected register");
-  read_action->setShortcut(QKeySequence::Refresh);
-  auto* apply_action = sensor_menu->addAction("Apply staged values");
-  apply_action->setShortcut(QKeySequence("Ctrl+Return"));
-  auto* discard_action = sensor_menu->addAction("Discard staged values");
-  auto* save_action = sensor_menu->addAction("Save active settings to flash…");
-  sensor_menu->addSeparator();
-  auto* tare_action = sensor_menu->addAction("Tare orientation…");
-  auto* reset_action = sensor_menu->addAction("Reset sensor…");
-
-  auto* view_menu = menuBar()->addMenu("&View");
-  view_menu->addAction(monitor_dock_->toggleViewAction());
-  view_menu->addAction(plot_dock_->toggleViewAction());
-  view_menu->addAction(calibration_dock_->toggleViewAction());
-  view_menu->addAction(diagnostics_dock_->toggleViewAction());
-  view_menu->addSeparator();
-  view_menu->addAction("Reset Dashboard Layout", this, &MainWindow::resetDashboardLayout);
-
-  auto* toolbar = addToolBar("Register actions");
-  toolbar->setObjectName("registerActionsToolbar");
-  toolbar->setMovable(false);
-  toolbar->addAction(read_action);
-  toolbar->addAction(apply_action);
-  toolbar->addAction(discard_action);
-  toolbar->addSeparator();
-  toolbar->addAction(import_action);
-  toolbar->addAction(export_action);
-  toolbar->addSeparator();
-  toolbar->addAction(save_action);
-  toolbar->addSeparator();
-  auto* record_action = toolbar->addAction("Record");
-  record_action->setCheckable(true);
-  toolbar->addAction(replay_action);
-
-  connect(read_action, &QAction::triggered, this, &MainWindow::readSelectedRegister);
-  connect(apply_action, &QAction::triggered, this, &MainWindow::applyStagedRegisters);
-  connect(discard_action, &QAction::triggered, this, &MainWindow::discardStagedRegisters);
-  connect(import_action, &QAction::triggered, this, &MainWindow::importConfiguration);
-  connect(export_action, &QAction::triggered, this, &MainWindow::exportConfiguration);
-  connect(export_csv_action, &QAction::triggered, this, &MainWindow::exportTelemetry);
-  connect(replay_action, &QAction::triggered, this, &MainWindow::loadReplay);
-  connect(save_action, &QAction::triggered, this, &MainWindow::savePersistently);
-  connect(record_action, &QAction::toggled, this, [this](bool enabled) {
-    recording_ = enabled;
-    setStatus(enabled ? "Recording telemetry in memory" : "Recording stopped");
-  });
-  connect(tare_action, &QAction::triggered, this, [this] {
-    if (QMessageBox::question(this, "Tare orientation",
-                              "Tare changes the sensor's active attitude reference. Continue?") == QMessageBox::Yes)
-      emit requestTare();
-  });
-  connect(reset_action, &QAction::triggered, this, [this] {
-    if (QMessageBox::question(this, "Reset sensor",
-                              "Reset the sensor? The connection will be interrupted.") == QMessageBox::Yes)
-      emit requestReset();
-  });
-}
-
-void MainWindow::applyDefaultDashboardLayout() {
-  monitor_dock_->show();
-  plot_dock_->show();
-  calibration_dock_->show();
-  diagnostics_dock_->show();
-  addDockWidget(Qt::RightDockWidgetArea, monitor_dock_);
-  addDockWidget(Qt::BottomDockWidgetArea, plot_dock_);
-  addDockWidget(Qt::BottomDockWidgetArea, calibration_dock_);
-  addDockWidget(Qt::BottomDockWidgetArea, diagnostics_dock_);
-  tabifyDockWidget(plot_dock_, calibration_dock_);
-  tabifyDockWidget(calibration_dock_, diagnostics_dock_);
-  resizeDocks({monitor_dock_}, {360}, Qt::Horizontal);
-  resizeDocks({plot_dock_}, {255}, Qt::Vertical);
-  plot_dock_->raise();
-}
-
-void MainWindow::restoreDashboardLayout() {
+MainWindow::~MainWindow() {
   QSettings settings;
-  const QByteArray geometry = settings.value("dashboard/geometry").toByteArray();
-  const QByteArray state = settings.value("dashboard/state").toByteArray();
-  if (!geometry.isEmpty()) restoreGeometry(geometry);
-  if (state.isEmpty() || !restoreState(state, 2)) {
-    applyDefaultDashboardLayout();
-  }
-  for (auto* dock : {monitor_dock_, plot_dock_, calibration_dock_, diagnostics_dock_}) {
-    const QString key = QString("dashboard/docks/%1/visible").arg(dock->objectName());
-    if (settings.contains(key)) {
-      const bool visible = settings.value(key).toBool();
-      dock->setProperty("restoredVisibility", visible);
-      dock->setVisible(visible);
-    }
+  settings.setValue("workbench/geometry", saveGeometry());
+  settings.setValue("workbench/main", main_splitter_->saveState());
+  settings.setValue("workbench/center", center_splitter_->saveState());
+  settings.setValue("workbench/right", right_splitter_->saveState());
+  settings.setValue("workbench/lowerTab", lower_tabs_->currentIndex());
+  settings.sync();
+  delete wizard_;
+  if (owns_transport_) {
+    QMetaObject::invokeMethod(transport_, "disconnectSensor", Qt::BlockingQueuedConnection);
+    sensor_thread_.quit();
+    sensor_thread_.wait(3000);
   }
 }
 
-void MainWindow::showEvent(QShowEvent* event) {
-  QMainWindow::showEvent(event);
-  for (auto* dock : {monitor_dock_, plot_dock_, calibration_dock_, diagnostics_dock_}) {
-    const QVariant restored = dock->property("restoredVisibility");
-    if (restored.isValid()) {
-      const bool visible = restored.toBool();
-      QTimer::singleShot(10, dock, [dock, visible] {
-        dock->setVisible(visible);
-        dock->setProperty("restoredVisibility", QVariant());
-      });
-    }
-  }
-}
+QWidget* MainWindow::buildBoard(const QString& initial_port, int initial_baud) {
+  auto* board = new QWidget;
+  board->setObjectName("board");
+  board->setAttribute(Qt::WA_StyledBackground);
+  auto* layout = new QHBoxLayout(board);
+  layout->setContentsMargins(16, 8, 14, 8);
+  layout->setSpacing(10);
 
-void MainWindow::resetDashboardLayout() {
-  QSettings settings;
-  settings.remove("dashboard/geometry");
-  settings.remove("dashboard/state");
-  settings.remove("dashboard/docks");
-  resize(1440, 900);
-  applyDefaultDashboardLayout();
-  setStatus("Dashboard layout reset");
-}
+  auto* wordmark = new QLabel("VECTORNAV");
+  wordmark->setObjectName("wordmark");
+  layout->addWidget(wordmark);
+  context_label_ = new QLabel("/  VN-100");
+  context_label_->setProperty("tone", "muted");
+  context_label_->setMinimumWidth(80);
+  layout->addWidget(context_label_);
+  layout->addSpacing(14);
 
-QWidget* MainWindow::buildConnectionBar(const QString& initial_port, int initial_baud) {
-  auto* bar = new QWidget;
-  bar->setObjectName("connectionBar");
-  auto* layout = new QHBoxLayout(bar);
-  layout->setContentsMargins(10, 6, 10, 6);
-
-  connection_mode_selector_ = new QComboBox;
+  connection_mode_selector_ = new SegmentedSwitch({"Robot (ROS)", "Local serial", "Demo"}, true);
   connection_mode_selector_->setObjectName("connectionModeSelector");
-  connection_mode_selector_->addItem("Robot over ROS", "ros");
-  connection_mode_selector_->addItem("Local serial", "serial");
-  connection_mode_selector_->addItem("Demo", "demo");
-  const int initial_mode = connection_mode_selector_->findData(connection_mode_);
-  connection_mode_selector_->setCurrentIndex(initial_mode >= 0 ? initial_mode : 0);
+  connection_mode_selector_->setToolTip("Where the sensor is: behind the robot's ROS driver, on a local "
+                                        "serial port, or generated demo data");
+  connection_mode_selector_->setCurrentIndex(std::max(0, static_cast<int>(kModes.indexOf(connection_mode_))));
   layout->addWidget(connection_mode_selector_);
 
-  connection_target_label_ = new QLabel(connection_mode_ == "ros" ? "Robot" : "Sensor port");
+  connection_target_label_ = new QLabel(connection_mode_ == "ros" ? "ROBOT" : "PORT");
+  connection_target_label_->setProperty("tone", "muted");
   layout->addWidget(connection_target_label_);
-
   port_selector_ = new QComboBox;
   port_selector_->setObjectName("sensorPortSelector");
   port_selector_->setAccessibleName("Sensor serial port");
   port_selector_->setEditable(true);
   port_selector_->setInsertPolicy(QComboBox::NoInsert);
-  port_selector_->setMinimumContentsLength(24);
-  port_selector_->setToolTip("Select a discovered robot or enter a local serial device path.");
+  port_selector_->setMinimumContentsLength(12);
+  port_selector_->setToolTip("A discovered robot namespace, or a local serial device path");
   if (!initial_port.trimmed().isEmpty()) port_selector_->addItem(initial_port.trimmed());
   if (connection_mode_ != "ros") refreshSerialPorts();
   port_selector_->setCurrentText(initial_port);
+  // rescan on every click
+  openListOnClick(port_selector_, [this] { refreshConnectionTargets(false); });
   layout->addWidget(port_selector_, 1);
 
-  auto* refresh = new QPushButton("Refresh");
+  auto* refresh = new QPushButton("Rescan");
   refresh->setObjectName("refreshSerialPortsButton");
   refresh->setToolTip("Rediscover ROS drivers or rescan Linux serial devices");
-  connect(refresh, &QPushButton::clicked, this, &MainWindow::refreshConnectionTargets);
+  connect(refresh, &QPushButton::clicked, this, [this] { refreshConnectionTargets(); });
   layout->addWidget(refresh);
 
-  baud_label_ = new QLabel("Baud");
+  baud_label_ = new QLabel("BAUD");
+  baud_label_->setProperty("tone", "muted");
   layout->addWidget(baud_label_);
   baud_selector_ = new QComboBox;
   baud_selector_->setObjectName("sensorBaudSelector");
   baud_selector_->setAccessibleName("Sensor baud rate");
   baud_selector_->setEditable(true);
-  baud_selector_->addItems({"9600", "19200", "38400", "57600", "115200", "128000",
-                            "230400", "460800", "921600"});
+  baud_selector_->addItems({"9600", "19200", "38400", "57600", "115200", "128000", "230400", "460800", "921600"});
   baud_selector_->setCurrentText(QString::number(initial_baud));
+  baud_selector_->setMinimumContentsLength(7);
+  openListOnClick(baud_selector_);
   layout->addWidget(baud_selector_);
+  baud_selector_->setVisible(connection_mode_ != "ros");
+  baud_label_->setVisible(connection_mode_ != "ros");
 
-  maintenance_button_ = new QPushButton("Enter maintenance");
+  connection_button_ = new QPushButton("Connect");
+  connection_button_->setObjectName("connectButton");
+  connection_button_->setAccessibleName("Connect or disconnect sensor");
+  connection_button_->setProperty("role", "primary");
+  connection_button_->setMinimumWidth(96);
+  connect(connection_button_, &QPushButton::clicked, this, &MainWindow::toggleConnection);
+  layout->addWidget(connection_button_);
+  layout->addStretch();
+
+  staged_chip_ = new StatusChip("0 staged", StatusChip::Level::Change, true);
+  staged_chip_->setObjectName("stagedChip");
+  staged_chip_->setToolTip("Values staged in the workspace that the sensor does not have yet");
+  staged_chip_->hide();
+  layout->addWidget(staged_chip_);
+  maintenance_chip_ = new StatusChip("Maintenance", StatusChip::Level::Warn, true);
+  maintenance_chip_->setToolTip("Driver-critical writes, reset and flash save are allowed");
+  maintenance_chip_->hide();
+  layout->addWidget(maintenance_chip_);
+  telemetry_chip_ = new StatusChip("Offline", StatusChip::Level::Neutral, true);
+  telemetry_chip_->setObjectName("telemetryChip");
+  layout->addWidget(telemetry_chip_);
+
+  connect(connection_mode_selector_, &SegmentedSwitch::currentIndexChanged, this,
+          [this](int index) { setConnectionMode(kModes.value(index, "ros")); });
+  return board;
+}
+
+QWidget* MainWindow::buildCommandBar() {
+  auto* bar = new QWidget;
+  bar->setObjectName("commandBar");
+  bar->setAttribute(Qt::WA_StyledBackground);
+  auto* layout = new QHBoxLayout(bar);
+  layout->setContentsMargins(12, 7, 12, 7);
+  layout->setSpacing(6);
+
+  auto* read = commandButton("Read", "Read the selected register from the sensor (F5)");
+  connect(read, &QPushButton::clicked, this, &MainWindow::readSelectedRegister);
+  layout->addWidget(read);
+  apply_button_ = commandButton("Apply", "Write every staged value and read it back (Ctrl+Return)");
+  apply_button_->setObjectName("applyButton");
+  connect(apply_button_, &QPushButton::clicked, this, &MainWindow::applyStagedRegisters);
+  layout->addWidget(apply_button_);
+  auto* discard = commandButton("Discard", "Drop all staged values; the sensor is unchanged");
+  discard->setObjectName("discardButton");
+  connect(discard, &QPushButton::clicked, this, &MainWindow::discardStagedRegisters);
+  layout->addWidget(discard);
+  layout->addSpacing(14);
+  auto* import_button = commandButton("Import XML…", "Stage a VectorNav Control Center configuration");
+  connect(import_button, &QPushButton::clicked, this, &MainWindow::importConfiguration);
+  layout->addWidget(import_button);
+  auto* export_button = commandButton("Export XML…", "Write device and staged values as Control Center XML");
+  connect(export_button, &QPushButton::clicked, this, &MainWindow::exportConfiguration);
+  layout->addWidget(export_button);
+  layout->addSpacing(14);
+  auto* save = commandButton("Save to flash…", "Persist the active configuration, reset and verify");
+  connect(save, &QPushButton::clicked, this, &MainWindow::savePersistently);
+  layout->addWidget(save);
+  // next to the actions it can block
+  layout->addSpacing(18);
+  bandwidth_meter_ = new BandwidthMeter;
+  bandwidth_meter_->hide();
+  layout->addWidget(bandwidth_meter_);
+  layout->addStretch();
+
+  maintenance_button_ = commandButton("Enter maintenance", "Required on the robot for settings that can "
+                                                           "interrupt the live driver");
   maintenance_button_->setObjectName("maintenanceButton");
-  maintenance_button_->setToolTip("Required for settings that can interrupt the live driver");
   connect(maintenance_button_, &QPushButton::clicked, this, [this] {
     if (maintenance_active_) {
       emit requestCloseMaintenance();
       return;
     }
-    if (QMessageBox::warning(
-            this, "Enter sensor maintenance",
-            "Driver-critical writes, reset, and persistent save can briefly interrupt IMU data. "
-            "The driver process will remain running. Enter maintenance mode?",
-            QMessageBox::Yes | QMessageBox::Cancel) == QMessageBox::Yes)
+    if (confirm("Enter sensor maintenance",
+                "Driver-critical writes, reset, and persistent save can briefly interrupt IMU data. "
+                "The driver process will remain running. Enter maintenance mode?", true))
       emit requestOpenMaintenance();
   });
   layout->addWidget(maintenance_button_);
-
-  connection_button_ = new QPushButton("Connect");
-  connection_button_->setAccessibleName("Connect or disconnect sensor");
-  connection_button_->setObjectName("primaryButton");
-  connect(connection_button_, &QPushButton::clicked, this, &MainWindow::toggleConnection);
-  layout->addWidget(connection_button_);
-  connect(connection_mode_selector_, qOverload<int>(&QComboBox::currentIndexChanged),
-          this, [this](int index) {
-    connection_mode_ = connection_mode_selector_->itemData(index).toString();
-    maintenance_active_ = false;
-    maintenance_button_->setText("Enter maintenance");
-    connection_target_label_->setText(connection_mode_ == "ros" ? "Robot" : "Sensor port");
-    baud_selector_->setVisible(connection_mode_ != "ros");
-    baud_label_->setVisible(connection_mode_ != "ros");
-    emit requestConnectionMode(connection_mode_ == "ros" ? "ros" : "serial");
-    emit requestDemo(connection_mode_ == "demo");
-    port_selector_->clear();
-    refreshConnectionTargets();
-    connection_button_->setText("Connect");
-    connection_button_->setEnabled(true);
-  });
-  baud_selector_->setVisible(connection_mode_ != "ros");
-  baud_label_->setVisible(connection_mode_ != "ros");
+  auto* calibrate = commandButton("Calibrate…", "Open the guided calibration");
+  calibrate->setObjectName("calibrateButton");
+  calibrate->setProperty("role", "primary");
+  connect(calibrate, &QPushButton::clicked, this, &MainWindow::openCalibrationWizard);
+  layout->addWidget(calibrate);
   return bar;
 }
 
-void MainWindow::refreshConnectionTargets() {
-  if (connection_mode_ == "ros") {
-    emit requestEndpointDiscovery();
-  } else {
-    refreshSerialPorts();
+void MainWindow::buildMenus() {
+  auto* file_menu = menuBar()->addMenu("&File");
+  file_menu->addAction("Import Control Center XML…", this, &MainWindow::importConfiguration);
+  file_menu->addAction("Export Control Center XML…", this, &MainWindow::exportConfiguration);
+  file_menu->addSeparator();
+  file_menu->addAction("Export telemetry CSV…", this, &MainWindow::exportTelemetry);
+  file_menu->addAction("Replay telemetry CSV…", this, &MainWindow::loadReplay);
+  file_menu->addAction("Export calibration report…", this, &MainWindow::exportCalibrationReport);
+  file_menu->addAction("Export protocol log…", this, &MainWindow::exportProtocolLog);
+  file_menu->addSeparator();
+  file_menu->addAction("Quit", this, &QWidget::close, QKeySequence::Quit);
+
+  auto* sensor_menu = menuBar()->addMenu("&Sensor");
+  sensor_menu->addAction("Read selected register", this, &MainWindow::readSelectedRegister, QKeySequence::Refresh);
+  sensor_menu->addAction("Apply staged values", this, &MainWindow::applyStagedRegisters,
+                         QKeySequence("Ctrl+Return"));
+  sensor_menu->addAction("Discard staged values", this, &MainWindow::discardStagedRegisters);
+  sensor_menu->addAction("Save active settings to flash…", this, &MainWindow::savePersistently);
+  sensor_menu->addSeparator();
+  sensor_menu->addAction("Calibrate…", this, &MainWindow::openCalibrationWizard, QKeySequence("Ctrl+K"));
+  sensor_menu->addSeparator();
+  sensor_menu->addAction("Tare orientation…", this, [this] {
+    if (confirm("Tare orientation", "Tare changes the sensor's active attitude reference. Continue?"))
+      emit requestTare();
+  });
+  sensor_menu->addAction("Reset sensor…", this, [this] {
+    if (confirm("Reset sensor", "Reset the sensor? The connection will be interrupted.", true)) emit requestReset();
+  });
+
+  auto* view_menu = menuBar()->addMenu("&View");
+  auto* theme_menu = view_menu->addMenu("Theme");
+  auto* group = new QActionGroup(this);
+  for (const QString& id : themeIds()) {
+    auto* action = theme_menu->addAction(themeLabel(id));
+    action->setCheckable(true);
+    action->setChecked(theme().id == id);
+    action->setData(id);
+    group->addAction(action);
+    theme_actions_ << action;
+    connect(action, &QAction::triggered, this, [this, id] { setTheme(id); });
   }
+  view_menu->addSeparator();
+  auto* record = view_menu->addAction("Record telemetry in memory");
+  record->setCheckable(true);
+  connect(record, &QAction::toggled, this, [this](bool enabled) {
+    recording_ = enabled;
+    setStatus(enabled ? "Recording telemetry in memory" : "Recording stopped");
+  });
+  view_menu->addSeparator();
+  view_menu->addAction("Reset layout", this, &MainWindow::resetDashboardLayout);
+
+  auto* search = new QAction(this);
+  search->setShortcut(QKeySequence::Find);
+  addAction(search);
+  connect(search, &QAction::triggered, register_filter_, qOverload<>(&QWidget::setFocus));
+}
+
+QWidget* MainWindow::buildRegisterListPage() {
+  auto* page = sheet();
+  auto* layout = new QVBoxLayout(page);
+  layout->setContentsMargins(10, 10, 10, 6);
+  layout->setSpacing(8);
+  register_filter_ = new QLineEdit;
+  register_filter_->setObjectName("registerSearch");
+  register_filter_->setClearButtonEnabled(true);
+  register_filter_->setPlaceholderText("Search ID, name or description  (Ctrl+F)");
+  layout->addWidget(register_filter_);
+  register_tree_ = new QTreeWidget;
+  register_tree_->setObjectName("registerTree");
+  register_tree_->setColumnCount(2);
+  register_tree_->setHeaderLabels({"Register", "State"});
+  register_tree_->setRootIsDecorated(true);
+  register_tree_->setIndentation(14);
+  register_tree_->setUniformRowHeights(true);
+  register_tree_->header()->setStretchLastSection(false);
+  register_tree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
+  register_tree_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+  layout->addWidget(register_tree_, 1);
+  connect(register_filter_, &QLineEdit::textChanged, this, [this] { refreshRegisterTable(); });
+  connect(register_tree_, &QTreeWidget::currentItemChanged, this, &MainWindow::selectRegister);
+  connect(register_tree_, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem* item) {
+    if (item && item->parent() && item->data(0, Qt::UserRole).toInt() == current_register_id_) scheduleAutoRead();
+  });
+  return page;
+}
+
+QWidget* MainWindow::buildInspectorPage() {
+  auto* page = sheet();
+  auto* layout = new QVBoxLayout(page);
+  layout->setContentsMargins(16, 12, 16, 12);
+  layout->setSpacing(8);
+  register_title_ = sectionTitle("No register selected");
+  layout->addWidget(register_title_);
+  auto* chips = new QHBoxLayout;
+  chips->setSpacing(6);
+  register_group_chip_ = new StatusChip("", StatusChip::Level::Neutral);
+  register_access_chip_ = new StatusChip("", StatusChip::Level::Neutral);
+  register_state_chip_ = new StatusChip("", StatusChip::Level::Neutral);
+  register_state_chip_->setObjectName("registerStateChip");
+  chips->addWidget(register_group_chip_);
+  chips->addWidget(register_access_chip_);
+  chips->addWidget(register_state_chip_);
+  chips->addStretch();
+  layout->addLayout(chips);
+  register_description_ = toneLabel("Select a register to compare its device and staged values.", "muted");
+  register_description_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+  layout->addWidget(register_description_);
+
+  register_inspector_ = new QTableWidget(0, 4);
+  register_inspector_->setObjectName("registerInspector");
+  register_inspector_->setHorizontalHeaderLabels({"Field", "Device", "Staged", "Units"});
+  register_inspector_->setAlternatingRowColors(true);
+  register_inspector_->setShowGrid(false);
+  register_inspector_->verticalHeader()->setVisible(false);
+  register_inspector_->verticalHeader()->setDefaultSectionSize(32);
+  auto* header = register_inspector_->horizontalHeader();
+  header->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+  header->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+  header->setSectionResizeMode(1, QHeaderView::Stretch);
+  header->setSectionResizeMode(2, QHeaderView::Stretch);
+  header->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+  binary_editor_ = new BinaryOutputEditor;
+  auto* binary_scroll = new QScrollArea;
+  binary_scroll->setWidget(binary_editor_);
+  binary_scroll->setWidgetResizable(true);
+  binary_scroll->setFrameShape(QFrame::NoFrame);
+  binary_scroll->viewport()->setAutoFillBackground(false);
+  inspector_stack_ = new QStackedWidget;
+  inspector_stack_->addWidget(register_inspector_);
+  inspector_stack_->addWidget(binary_scroll);
+  layout->addWidget(inspector_stack_, 1);
+
+  auto* raw_row = new QHBoxLayout;
+  auto* raw_label = new QLabel("RAW");
+  raw_label->setProperty("tone", "muted");
+  raw_label->setToolTip("The register's protocol fields, separated by semicolons");
+  raw_row->addWidget(raw_label);
+  raw_register_editor_ = new QLineEdit;
+  raw_register_editor_->setObjectName("rawRegisterEditor");
+  raw_register_editor_->setPlaceholderText("Semicolon-separated register fields");
+  raw_row->addWidget(raw_register_editor_, 1);
+  stage_raw_button_ = new QPushButton("Stage raw");
+  raw_row->addWidget(stage_raw_button_);
+  layout->addLayout(raw_row);
+
+  connect(register_inspector_, &QTableWidget::cellChanged, this, [this](int, int column) {
+    if (column == 2) stageInspectorValues();
+  });
+  connect(binary_editor_, &BinaryOutputEditor::edited, this, [this](const QString& values) {
+    if (current_register_id_ < 0) return;
+    const auto definition = definitionForId(current_register_id_);
+    QString error;
+    if (!validateRegisterValue(definition, values, &error)) {
+      setStatus(definition.name + ": " + error, true);
+      return;
+    }
+    if (registerValuesMatch(values, device_values_.value(current_register_id_)))
+      staged_values_.remove(current_register_id_);
+    else
+      staged_values_[current_register_id_] = values;
+    refreshRegisterTable();
+    setStatus(definition.name + " staged; sensor unchanged");
+  });
+  connect(stage_raw_button_, &QPushButton::clicked, this, [this] {
+    if (current_register_id_ < 0) return;
+    const auto definition = definitionForId(current_register_id_);
+    QString error;
+    if (!validateRegisterValue(definition, raw_register_editor_->text(), &error)) {
+      setStatus(definition.name + ": " + error, true);
+      return;
+    }
+    staged_values_[current_register_id_] = raw_register_editor_->text();
+    refreshRegisterTable();
+    setStatus(definition.name + " staged; sensor unchanged");
+  });
+  return page;
+}
+
+QWidget* MainWindow::buildAttitudePage() {
+  auto* page = sheet();
+  auto* layout = new QVBoxLayout(page);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->setSpacing(0);
+  auto* controls = new QHBoxLayout;
+  controls->setContentsMargins(10, 8, 10, 6);
+  auto* preset = new SegmentedSwitch({"3D", "Level", "Top"});
+  preset->setObjectName("attitudeViewPreset");
+  preset->setToolTip("3D: from above and behind. Level: side-on, to read tilt against the horizon ring. "
+                     "Top: straight down, to read heading.");
+  controls->addWidget(preset);
+  controls->addStretch();
+  auto* follow = new QPushButton("Follow heading");
+  follow->setCheckable(true);
+  follow->setToolTip("Keep the camera behind the sensor as it turns");
+  controls->addWidget(follow);
+  layout->addLayout(controls);
+  attitude_ = new AttitudeWidget;
+  attitude_->setWorldFrame(connection_mode_ == "ros" ? AttitudeWidget::WorldFrame::Enu
+                                                     : AttitudeWidget::WorldFrame::Ned);
+  layout->addWidget(attitude_, 1);
+  connect(preset, &SegmentedSwitch::activated, attitude_, &AttitudeWidget::setViewPreset);
+  // orbiting leaves the preset
+  connect(attitude_, &AttitudeWidget::orbited, preset, [preset] {
+    const QSignalBlocker blocker(preset);
+    preset->setCurrentIndex(0);
+  });
+  connect(follow, &QPushButton::toggled, attitude_, &AttitudeWidget::setFollowHeading);
+  return page;
+}
+
+QWidget* MainWindow::buildSignalsPage() {
+  auto* page = sheet();
+  auto* layout = new QVBoxLayout(page);
+  layout->setContentsMargins(10, 8, 10, 6);
+  layout->setSpacing(4);
+  auto* controls = new QHBoxLayout;
+  controls->setSpacing(6);
+  auto* quantity = new SegmentedSwitch({"Attitude", "Angular rate", "Acceleration", "Magnetic"});
+  quantity->setObjectName("signalQuantity");
+  quantity->setToolTip("Attitude plots roll, pitch and yaw over time, so drift shows as a slope");
+  controls->addWidget(quantity);
+  controls->addStretch();
+  auto* span = new SegmentedSwitch({"20 s", "2 min", "10 min", "30 min"});
+  span->setObjectName("signalWindow");
+  span->setToolTip("Time span shown. Long spans make slow drift visible");
+  controls->addWidget(span);
+  layout->addLayout(controls);
+  auto* options = new QHBoxLayout;
+  options->setSpacing(6);
+  for (int axis = 0; axis < 3; ++axis) {
+    auto* button = new QPushButton;
+    button->setObjectName(QString("plotAxis%1").arg(axis));
+    button->setCheckable(true);
+    button->setChecked(true);
+    button->setIcon(swatch(axisColor(axis)));
+    button->setToolTip("Show or hide this axis; the scale fits the axes shown");
+    connect(button, &QPushButton::toggled, this, [this, axis](bool on) { plot_->setAxisVisible(axis, on); });
+    options->addWidget(button);
+    axis_buttons_ << button;
+  }
+  options->addStretch();
+  auto* pause = new QPushButton("Pause");
+  pause->setCheckable(true);
+  auto* csv = new QPushButton("CSV");
+  auto* csv_menu = new QMenu(csv);
+  csv_menu->addAction("Export recorded telemetry…", this, &MainWindow::exportTelemetry);
+  csv_menu->addAction("Replay a recording…", this, &MainWindow::loadReplay);
+  csv->setMenu(csv_menu);
+  csv->setToolTip("Export telemetry recorded in memory (View › Record telemetry), or replay a CSV");
+  options->addWidget(pause);
+  options->addWidget(csv);
+  layout->addLayout(options);
+  plot_ = new PlotWidget;
+  plot_->setWorldFrame(connection_mode_ == "ros" ? AttitudeWidget::WorldFrame::Enu : AttitudeWidget::WorldFrame::Ned);
+  layout->addWidget(plot_, 1);
+  auto names = [this] {
+    const QStringList axes = PlotWidget::axisNames(plot_->quantity());
+    for (int axis = 0; axis < axis_buttons_.size(); ++axis) axis_buttons_[axis]->setText(axes[axis]);
+  };
+  names();
+  connect(quantity, &SegmentedSwitch::currentIndexChanged, this, [this, names](int index) {
+    plot_->setQuantity(index);
+    names();
+  });
+  connect(span, &SegmentedSwitch::currentIndexChanged, plot_, [this](int index) {
+    const double spans[] = {20, 120, 600, 1800};
+    plot_->setWindowSeconds(spans[index]);
+  });
+  connect(pause, &QPushButton::toggled, this, [this](bool paused) { monitor_paused_ = paused; });
+  return page;
+}
+
+QWidget* MainWindow::buildCalibrationPage() {
+  auto* page = sheet();
+  auto* layout = new QHBoxLayout(page);
+  layout->setContentsMargins(16, 12, 16, 12);
+  layout->setSpacing(28);
+  auto* left = new QVBoxLayout;
+  left->setSpacing(10);
+  left->addWidget(sectionTitle("Guided calibration"));
+  left->addWidget(toneLabel(
+      "Step-by-step capture of gyro bias, accelerometer bias, magnetometer hard iron and a gravity report, "
+      "with drawings of each pose and live checks. Results are staged here for you to apply.", "muted"));
+  auto* buttons = new QHBoxLayout;
+  auto* open = new QPushButton("Open calibration…");
+  open->setObjectName("openCalibrationButton");
+  open->setProperty("role", "primary");
+  connect(open, &QPushButton::clicked, this, &MainWindow::openCalibrationWizard);
+  auto* report = new QPushButton("Export report…");
+  connect(report, &QPushButton::clicked, this, &MainWindow::exportCalibrationReport);
+  stage_latest_button_ = new QPushButton("Stage latest results");
+  stage_latest_button_->setObjectName("stageLatestButton");
+  stage_latest_button_->setToolTip("Stage every passed result that is not already staged or on the sensor");
+  connect(stage_latest_button_, &QPushButton::clicked, this, &MainWindow::stageLatestCalibration);
+  buttons->addWidget(open);
+  buttons->addWidget(report);
+  buttons->addStretch();
+  left->addLayout(buttons);
+  auto* stage_row = new QHBoxLayout;
+  stage_row->addWidget(stage_latest_button_);
+  stage_row->addStretch();
+  left->addLayout(stage_row);
+  calibration_note_ = toneLabel(QString(), "muted");
+  calibration_note_->setObjectName("calibrationNote");
+  left->addWidget(calibration_note_);
+  left->addStretch();
+  layout->addLayout(left, 2);
+  auto* right = new QVBoxLayout;
+  right->addWidget(sectionTitle("This session"));
+  calibration_summary_ = new MetricTable;
+  calibration_summary_->setObjectName("calibrationSummary");
+  calibration_summary_->setColumns({"Step", "Result", "Register"}, {0.22, 0.6, 0.18});
+  calibration_summary_->setFitContent(false);
+  right->addWidget(calibration_summary_);
+  right->addStretch();
+  layout->addLayout(right, 3);
+  return page;
+}
+
+QWidget* MainWindow::buildProtocolPage() {
+  auto* page = sheet();
+  auto* layout = new QVBoxLayout(page);
+  layout->setContentsMargins(10, 6, 10, 8);
+  traffic_log_ = new QPlainTextEdit;
+  traffic_log_->setObjectName("protocolLog");
+  traffic_log_->setReadOnly(true);
+  traffic_log_->document()->setMaximumBlockCount(20000);
+  layout->addWidget(traffic_log_, 1);
+  auto* row = new QHBoxLayout;
+  auto* tare = new QPushButton("Tare orientation…");
+  auto* reset = new QPushButton("Reset sensor…");
+  auto* export_log = new QPushButton("Export log…");
+  export_log->setObjectName("exportLogButton");
+  export_log->setToolTip("Save this log as a text file, with times");
+  auto* clear = new QPushButton("Clear log");
+  row->addWidget(tare);
+  row->addWidget(reset);
+  row->addStretch();
+  row->addWidget(export_log);
+  row->addWidget(clear);
+  connect(export_log, &QPushButton::clicked, this, &MainWindow::exportProtocolLog);
+  layout->addLayout(row);
+  connect(clear, &QPushButton::clicked, traffic_log_, &QPlainTextEdit::clear);
+  connect(tare, &QPushButton::clicked, this, [this] {
+    if (confirm("Tare orientation", "Tare changes the sensor's active attitude reference. Continue?"))
+      emit requestTare();
+  });
+  connect(reset, &QPushButton::clicked, this, [this] {
+    if (confirm("Reset sensor", "Reset the sensor? The connection will be interrupted.", true)) emit requestReset();
+  });
+  return page;
+}
+
+void MainWindow::applyDefaultLayout() {
+  main_splitter_->setSizes({320, 650, 470});
+  center_splitter_->setSizes({480, 300});
+  right_splitter_->setSizes({400, 380});
+  lower_tabs_->setCurrentIndex(0);
+}
+
+void MainWindow::restoreLayout() {
+  QSettings settings;
+  const QByteArray geometry = settings.value("workbench/geometry").toByteArray();
+  if (!geometry.isEmpty()) restoreGeometry(geometry);
+  applyDefaultLayout();
+  main_splitter_->restoreState(settings.value("workbench/main").toByteArray());
+  center_splitter_->restoreState(settings.value("workbench/center").toByteArray());
+  right_splitter_->restoreState(settings.value("workbench/right").toByteArray());
+  lower_tabs_->setCurrentIndex(settings.value("workbench/lowerTab", 0).toInt());
+}
+
+void MainWindow::resetDashboardLayout() {
+  QSettings settings;
+  settings.remove("workbench");
+  resize(1440, 900);
+  applyDefaultLayout();
+  setStatus("Layout reset");
+}
+
+void MainWindow::setTheme(const QString& id) {
+  applyTheme(qApp, id, share_directory_);
+  QSettings().setValue("appearance/theme", id);
+  for (auto* action : theme_actions_) action->setChecked(action->data().toString() == id);
+  for (int axis = 0; axis < axis_buttons_.size(); ++axis) axis_buttons_[axis]->setIcon(swatch(axisColor(axis)));
+  refreshRegisterTable();
+}
+
+void MainWindow::setConnectionMode(const QString& mode) {
+  connection_mode_ = mode;
+  maintenance_active_ = false;
+  maintenance_button_->setText("Enter maintenance");
+  maintenance_chip_->hide();
+  connection_target_label_->setText(mode == "ros" ? "ROBOT" : "PORT");
+  baud_selector_->setVisible(mode == "serial");
+  baud_label_->setVisible(mode == "serial");
+  port_selector_->setVisible(mode != "demo");
+  connection_target_label_->setVisible(mode != "demo");
+  const auto frame = mode == "ros" ? AttitudeWidget::WorldFrame::Enu : AttitudeWidget::WorldFrame::Ned;
+  attitude_->setWorldFrame(frame);
+  attitude_->clearAttitude();
+  plot_->setWorldFrame(frame);
+  telemetry_summary_->setWorldFrame(frame);
+  emit requestConnectionMode(mode == "ros" ? "ros" : "serial");
+  emit requestDemo(mode == "demo");
+  port_selector_->clear();
+  refreshConnectionTargets();
+  connection_button_->setText("Connect");
+  connection_button_->setEnabled(true);
+}
+
+void MainWindow::refreshConnectionTargets(bool auto_connect) {
+  discovery_auto_connect_ = auto_connect;
+  if (connection_mode_ == "ros")
+    emit requestEndpointDiscovery();
+  else
+    refreshSerialPorts();
 }
 
 void MainWindow::refreshSerialPorts() {
@@ -431,19 +908,16 @@ void MainWindow::refreshSerialPorts() {
   const QString selected = port_selector_->currentText().trimmed();
   QStringList ports;
   if (!selected.isEmpty()) ports << selected;
-
   const QDir stable_directory("/dev/serial/by-id");
-  for (const QString& entry : stable_directory.entryList(QDir::Files | QDir::System | QDir::NoDotAndDotDot,
-                                                          QDir::Name)) {
+  for (const QString& entry :
+       stable_directory.entryList(QDir::Files | QDir::System | QDir::NoDotAndDotDot, QDir::Name))
     ports << stable_directory.absoluteFilePath(entry);
-  }
   const QDir devices("/dev");
   for (const QString& pattern : {QString("ttyUSB*"), QString("ttyACM*"), QString("ttyTHS*")}) {
     for (const QString& entry : devices.entryList({pattern}, QDir::Files | QDir::System, QDir::Name))
       ports << devices.absoluteFilePath(entry);
   }
   ports.removeDuplicates();
-
   const QSignalBlocker blocker(port_selector_);
   port_selector_->clear();
   port_selector_->addItems(ports);
@@ -457,7 +931,6 @@ void MainWindow::toggleConnection() {
     emit requestDisconnect();
     return;
   }
-
   QString port = port_selector_->currentText().trimmed();
   if (connection_mode_ == "ros" && port.isEmpty()) port = "/";
   if (connection_mode_ == "demo") port = "demo";
@@ -478,245 +951,81 @@ void MainWindow::toggleConnection() {
   emit requestConnect(port, baud);
 }
 
-MainWindow::~MainWindow() {
-  QSettings settings;
-  settings.setValue("dashboard/geometry", saveGeometry());
-  settings.setValue("dashboard/state", saveState(2));
-  for (auto* dock : {monitor_dock_, plot_dock_, calibration_dock_, diagnostics_dock_}) {
-    settings.setValue(QString("dashboard/docks/%1/visible").arg(dock->objectName()),
-                      !dock->isHidden());
+void MainWindow::refreshTelemetryChip() {
+  using Level = StatusChip::Level;
+  const double output = bandwidth(false).output_rate_hz;
+  const QString rate = output > 0 ? QString(" · %1 Hz").arg(output, 0, 'g', 4) : QString();
+  if (!connected_) {
+    telemetry_chip_->setState("Offline", Level::Neutral);
+  } else if (telemetry_summary_->stale()) {
+    telemetry_chip_->setState("No data" + rate, Level::Warn);
+  } else {
+    telemetry_chip_->setState("Live" + rate, Level::Ok);
   }
-  settings.sync();
-  if (owns_transport_) {
-    QMetaObject::invokeMethod(transport_, "disconnectSensor", Qt::BlockingQueuedConnection);
-    sensor_thread_.quit();
-    sensor_thread_.wait(3000);
-  }
+  telemetry_chip_->setToolTip(rateSource());
+  telemetry_summary_->setSensorRate(connection_mode_ == "demo" ? 0.0 : output, rateSource());
 }
 
-QWidget* MainWindow::buildMonitorPage() {
-  auto* page = new QWidget;
-  auto* layout = new QVBoxLayout(page);
-  layout->setContentsMargins(6, 6, 6, 6);
-  layout->setSpacing(5);
-  attitude_ = new AttitudeWidget;
-  telemetry_summary_ = new TelemetrySummaryWidget;
-  auto* splitter = new QSplitter(Qt::Vertical);
-  splitter->setObjectName("monitorSplitter");
-  splitter->addWidget(attitude_);
-  splitter->addWidget(telemetry_summary_);
-  splitter->setStretchFactor(0, 1);
-  splitter->setStretchFactor(1, 1);
-  layout->addWidget(splitter, 1);
-  return page;
-}
-
-QWidget* MainWindow::buildPlotPanel() {
-  auto* page = new QWidget;
-  auto* layout = new QVBoxLayout(page);
-  layout->setContentsMargins(6, 6, 6, 6);
-  auto* controls = new QHBoxLayout;
-  auto* pause = new QPushButton("Pause display");
-  auto* export_button = new QPushButton("Export CSV…");
-  auto* replay = new QPushButton("Replay CSV…");
-  controls->addWidget(new QLabel("Angular rate · X / Y / Z"));
-  controls->addStretch();
-  controls->addWidget(pause);
-  controls->addWidget(export_button);
-  controls->addWidget(replay);
-  layout->addLayout(controls);
-  connect(pause, &QPushButton::clicked, this, [this, pause] {
-    monitor_paused_ = !monitor_paused_;
-    pause->setText(monitor_paused_ ? "Resume display" : "Pause display");
-  });
-  connect(export_button, &QPushButton::clicked, this, &MainWindow::exportTelemetry);
-  connect(replay, &QPushButton::clicked, this, &MainWindow::loadReplay);
-  plot_ = new PlotWidget;
-  layout->addWidget(plot_, 1);
-  return page;
-}
-
-QWidget* MainWindow::buildRegistersPage() {
-  auto* page = new QWidget;
-  page->setObjectName("registerWorkspace");
-  auto* layout = new QVBoxLayout(page);
-  layout->setContentsMargins(8, 8, 8, 8);
-  layout->setSpacing(6);
-
-  auto* heading = new QHBoxLayout;
-  heading->addWidget(title("Register Workbench"));
-  register_state_ = new QLabel("NO REGISTER SELECTED");
-  register_state_->setObjectName("stagedBadge");
-  heading->addStretch();
-  heading->addWidget(register_state_);
-  layout->addLayout(heading);
-
-  register_filter_ = new QLineEdit;
-  register_filter_->setObjectName("registerSearch");
-  register_filter_->setClearButtonEnabled(true);
-  register_filter_->setPlaceholderText("Filter register ID, group, name, or description…  (Ctrl+F)");
-  layout->addWidget(register_filter_);
-
-  auto* splitter = new QSplitter(Qt::Horizontal);
-  splitter->setObjectName("registerSplitter");
-  register_tree_ = new QTreeWidget;
-  register_tree_->setObjectName("registerTree");
-  register_tree_->setColumnCount(2);
-  register_tree_->setHeaderLabels({"Register", "State"});
-  register_tree_->setAlternatingRowColors(true);
-  register_tree_->setMinimumWidth(320);
-  register_tree_->header()->setSectionResizeMode(0, QHeaderView::Stretch);
-  register_tree_->header()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-  splitter->addWidget(register_tree_);
-
-  auto* inspector = new QWidget;
-  auto* inspector_layout = new QVBoxLayout(inspector);
-  inspector_layout->setContentsMargins(8, 0, 0, 0);
-  register_description_ = new QLabel("Select a register to inspect its current and staged values.");
-  register_description_->setWordWrap(true);
-  register_description_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-  inspector_layout->addWidget(register_description_);
-
-  register_inspector_ = new QTableWidget(0, 4);
-  register_inspector_->setObjectName("registerInspector");
-  register_inspector_->setHorizontalHeaderLabels({"Field", "Device", "Staged", "Units"});
-  register_inspector_->setAlternatingRowColors(true);
-  register_inspector_->verticalHeader()->setVisible(false);
-  register_inspector_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-  register_inspector_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
-  register_inspector_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-  register_inspector_->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
-  inspector_layout->addWidget(register_inspector_, 1);
-
-  auto* raw_row = new QHBoxLayout;
-  raw_row->addWidget(new QLabel("Raw protocol values"));
-  raw_register_editor_ = new QLineEdit;
-  raw_register_editor_->setObjectName("rawRegisterEditor");
-  raw_register_editor_->setPlaceholderText("Semicolon-separated register fields");
-  raw_row->addWidget(raw_register_editor_, 1);
-  auto* stage_raw = new QPushButton("Stage raw");
-  raw_row->addWidget(stage_raw);
-  inspector_layout->addLayout(raw_row);
-  splitter->addWidget(inspector);
-  splitter->setStretchFactor(0, 2);
-  splitter->setStretchFactor(1, 5);
-  layout->addWidget(splitter, 1);
-
-  connect(register_filter_, &QLineEdit::textChanged, this, [this] { refreshRegisterTable(); });
-  connect(register_tree_, &QTreeWidget::currentItemChanged, this, &MainWindow::selectRegister);
-  connect(register_inspector_, &QTableWidget::cellChanged, this, [this](int, int column) {
-    if (column == 2) stageInspectorValues();
-  });
-  connect(stage_raw, &QPushButton::clicked, this, [this] {
-    if (current_register_id_ < 0) return;
-    const auto definition = definitionForId(current_register_id_);
-    QString error;
-    if (!validateRegisterValue(definition, raw_register_editor_->text(), &error)) {
-      setStatus(definition.name + ": " + error, true);
-      return;
-    }
-    staged_values_[current_register_id_] = raw_register_editor_->text();
-    refreshRegisterTable();
-    setStatus(definition.name + " staged; sensor unchanged");
-  });
-  auto* search_shortcut = new QAction(this);
-  search_shortcut->setShortcut(QKeySequence::Find);
-  addAction(search_shortcut);
-  connect(search_shortcut, &QAction::triggered, register_filter_, qOverload<>(&QWidget::setFocus));
-  return page;
-}
-
-QWidget* MainWindow::buildCalibrationPage() {
-  auto* page = new QWidget; auto* layout = new QVBoxLayout(page); layout->addWidget(title("Guided calibration"));
-  auto* explanation = new QLabel(
-      "Steps: 1 Gyro stationary poses · 2 Accelerometer varied stationary poses · 3 Magnetometer horizontal circle · "
-      "4 Gravity report. Each step is independent. Skipped steps preserve their registers. Collection never writes the sensor.");
-  explanation->setWordWrap(true); layout->addWidget(explanation);
-  auto* row = new QHBoxLayout; auto* selector = new QComboBox;
-  selector->setObjectName("calibrationStepSelector");
-  selector->addItems({"Gyro bias", "Accelerometer bias + magnitude", "Planar magnetometer", "Gravity/tilt report"});
-  calibration_sample_count_ = new QLabel("0 samples");
-  calibration_sample_count_->setObjectName("calibrationSampleCount");
-  connect(selector, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int index) {
-    if (capturing_) toggleCapture();
-    calibration_step_ = index;
-    const std::size_t count = index == 0 ? gyro_samples_.size() :
-        index == 1 ? accel_samples_.size() : index == 2 ? mag_samples_.size() : gravity_samples_.size();
-    calibration_sample_count_->setText(QString("%1 / %2 minimum samples").arg(count).arg(policy_.minimum_samples));
-  });
-  capture_button_ = new QPushButton("Start capture"); auto* evaluate = new QPushButton("Evaluate quality");
-  capture_button_->setObjectName("calibrationCaptureButton");
-  auto* stage = new QPushButton("Stage passed result"); auto* clear = new QPushButton("Clear selected samples");
-  row->addWidget(selector); row->addWidget(capture_button_); row->addWidget(evaluate); row->addWidget(stage); row->addWidget(clear); row->addWidget(calibration_sample_count_); layout->addLayout(row);
-  calibration_result_ = new QPlainTextEdit; calibration_result_->setReadOnly(true); layout->addWidget(calibration_result_, 1);
-  auto* export_button = new QPushButton("Export machine-readable report…"); layout->addWidget(export_button);
-  connect(capture_button_, &QPushButton::clicked, this, &MainWindow::toggleCapture);
-  connect(evaluate, &QPushButton::clicked, this, &MainWindow::evaluateCalibration);
-  connect(stage, &QPushButton::clicked, this, &MainWindow::stageCalibrationResult);
-  connect(export_button, &QPushButton::clicked, this, &MainWindow::exportCalibrationReport);
-  connect(clear, &QPushButton::clicked, this, [this] {
-    if (calibration_step_ == 0) gyro_samples_.clear(); else if (calibration_step_ == 1) accel_samples_.clear();
-    else if (calibration_step_ == 2) { mag_samples_.clear(); mag_accel_samples_.clear(); }
-    else gravity_samples_.clear();
-    calibration_sample_count_->setText(QString("0 / %1 minimum samples").arg(policy_.minimum_samples));
-    calibration_result_->appendPlainText("Selected samples cleared; sensor registers unchanged.");
-  });
-  return page;
-}
-
-QWidget* MainWindow::buildDiagnosticsPage() {
-  auto* page = new QWidget; auto* layout = new QVBoxLayout(page); layout->addWidget(title("Diagnostics"));
-  traffic_log_ = new QPlainTextEdit; traffic_log_->setReadOnly(true); traffic_log_->document()->setMaximumBlockCount(2000); layout->addWidget(traffic_log_, 1);
-  auto* row = new QHBoxLayout; auto* tare_button = new QPushButton("Tare orientation…"); auto* reset_button = new QPushButton("Reset sensor…"); auto* clear = new QPushButton("Clear log");
-  row->addWidget(tare_button); row->addWidget(reset_button); row->addStretch(); row->addWidget(clear); layout->addLayout(row);
-  connect(clear, &QPushButton::clicked, traffic_log_, &QPlainTextEdit::clear);
-  connect(tare_button, &QPushButton::clicked, this, [this] {
-    if (QMessageBox::question(this, "Tare orientation", "Tare changes the sensor's active attitude reference. Continue?") == QMessageBox::Yes) emit requestTare();
-  });
-  connect(reset_button, &QPushButton::clicked, this, [this] {
-    if (QMessageBox::question(this, "Reset sensor", "Reset the sensor? The connection will be interrupted.") == QMessageBox::Yes) emit requestReset();
-  }); return page;
+QString MainWindow::rateSource() const {
+  if (connection_mode_ == "demo") return "Demo data, generated at 20 Hz.";
+  const double output = bandwidth(false).output_rate_hz;
+  const QString sensor = output > 0
+      ? QString("The sensor sends %1 Hz by itself (registers 6, 7 and 75-77).").arg(output, 0, 'g', 4)
+      : QString("The sensor's own output rate is known once registers 6, 7 and 75-77 are read.");
+  if (connection_mode_ == "ros")
+    return sensor + " This view receives the driver's vectornav/imu topic at whatever rate it publishes.";
+  return sensor + " Over local serial this view asks for attitude and IMU registers every 50 ms instead, so it "
+                  "updates at about 20 Hz whatever the sensor's output rate.";
 }
 
 void MainWindow::loadDefinitions(const QString& path) {
-  QString error; definitions_ = loadRegisterDefinitions(path, &error);
+  QString error;
+  definitions_ = loadRegisterDefinitions(path, &error);
   if (!error.isEmpty()) setStatus("Register schema: " + error, true);
   refreshRegisterTable();
 }
 
 void MainWindow::refreshRegisterTable() {
   if (!register_tree_) return;
+  const auto& t = theme();
   const QSignalBlocker blocker(register_tree_);
   const int selected_id = current_register_id_;
   register_tree_->clear();
   const QString filter = register_filter_ ? register_filter_->text().trimmed() : QString();
   QMap<QString, QTreeWidgetItem*> groups;
   QTreeWidgetItem* selected_item = nullptr;
+  QColor staged_fill = t.change;
+  staged_fill.setAlpha(t.dark ? 46 : 110);
   for (const auto& definition : definitions_) {
-    const QString searchable = QString("%1 %2 %3 %4").arg(definition.id).arg(definition.group, definition.name, definition.description);
+    const QString searchable = QString("%1 %2 %3 %4")
+                                   .arg(definition.id).arg(definition.group, definition.name, definition.description);
     if (!filter.isEmpty() && !searchable.contains(filter, Qt::CaseInsensitive)) continue;
     auto* group = groups.value(definition.group, nullptr);
     if (!group) {
-      group = new QTreeWidgetItem(register_tree_, {definition.group});
+      group = new QTreeWidgetItem(register_tree_, {definition.group.toUpper()});
       group->setFirstColumnSpanned(true);
       group->setFlags(group->flags() & ~Qt::ItemIsSelectable);
-      QFont group_font = group->font(0);
-      group_font.setBold(true);
-      group->setFont(0, group_font);
+      group->setFont(0, strongFont(12));
+      group->setForeground(0, t.muted);
       groups.insert(definition.group, group);
     }
-    QString state = definition.writable ? "" : "READ";
-    if (device_values_.contains(definition.id)) state = "DEVICE";
-    if (staged_values_.contains(definition.id)) state = "STAGED";
-    auto* item = new QTreeWidgetItem(group,
-        {QString("%1  %2").arg(definition.id, 3).arg(definition.name), state});
+    QString state;
+    if (device_values_.contains(definition.id)) state = "Read";
+    if (staged_values_.contains(definition.id)) state = "Staged";
+    auto* item = new QTreeWidgetItem(group, {QString("%1   %2").arg(definition.id, 3).arg(definition.name), state});
     item->setData(0, Qt::UserRole, definition.id);
-    item->setToolTip(0, definition.description);
+    item->setToolTip(0, definition.writable ? definition.description
+                                            : definition.description + "\n(read-only)");
+    item->setFont(0, uiFont(14));
+    if (!definition.writable) item->setForeground(0, t.muted);
+    item->setForeground(1, t.muted);
     if (staged_values_.contains(definition.id)) {
-      item->setForeground(0, QColor("#7dd3fc"));
-      item->setForeground(1, QColor("#7dd3fc"));
-    } else if (!definition.writable) {
-      item->setForeground(1, QColor("#7f8b99"));
+      item->setBackground(0, staged_fill);
+      item->setBackground(1, staged_fill);
+      item->setFont(1, strongFont(13));
+      item->setForeground(1, t.dark ? t.change : t.warn);
+    } else {
+      item->setFont(1, uiFont(13));
     }
     if (definition.id == selected_id) selected_item = item;
   }
@@ -728,6 +1037,59 @@ void MainWindow::refreshRegisterTable() {
   }
   if (selected_item) register_tree_->setCurrentItem(selected_item);
   refreshRegisterInspector();
+  registersChanged();
+}
+
+void MainWindow::registersChanged() {
+  refreshStagedIndicators();
+  refreshBandwidth();
+  refreshCalibrationSummary();
+  if (wizard_) wizard_->setRegisterContext(device_values_, staged_values_);
+}
+
+BandwidthEstimate MainWindow::bandwidth(bool with_staged) const {
+  QMap<int, QString> registers = device_values_;
+  if (with_staged)
+    for (auto staged = staged_values_.cbegin(); staged != staged_values_.cend(); ++staged)
+      registers[staged.key()] = staged.value();
+  return estimateBandwidth(registers);
+}
+
+void MainWindow::refreshBandwidth() {
+  if (!bandwidth_meter_) return;
+  bool touches_output = false;
+  for (int id : kOutputRegisters) touches_output |= staged_values_.contains(id);
+  bandwidth_meter_->setEstimates(bandwidth(false), touches_output ? std::optional(bandwidth(true)) : std::nullopt);
+  if (telemetry_chip_) refreshTelemetryChip();
+}
+
+void MainWindow::readOutputRegisters() {
+  if (!connected_ || connection_mode_ == "demo") return;
+  for (int id : kOutputRegisters) emit requestRead(id);
+}
+
+void MainWindow::scheduleAutoRead() {
+  if (!auto_read_timer_ || !connected_ || connection_mode_ == "demo" || current_register_id_ < 0) return;
+  // staged change is left alone; Read (F5) still fetches
+  if (staged_values_.contains(current_register_id_)) return;
+  for (int id : kNoAutoRead)
+    if (id == current_register_id_) return;
+  auto_read_timer_->start();
+}
+
+void MainWindow::refreshStagedIndicators() {
+  if (!apply_button_) return;
+  const int count = staged_values_.size();
+  staged_chip_->setState(QString("%1 staged").arg(count), StatusChip::Level::Change);
+  staged_chip_->setVisible(count > 0);
+  apply_button_->setText(count ? QString("Apply %1").arg(count) : QString("Apply"));
+  apply_button_->setEnabled(count > 0);
+  const QString role = count ? "primary" : "";
+  if (apply_button_->property("role").toString() != role) {
+    apply_button_->setProperty("role", role);
+    repolish(apply_button_);
+  }
+  if (auto* discard = findChild<QPushButton*>("discardButton")) discard->setEnabled(count > 0);
 }
 
 QStringList MainWindow::fieldNames(const RegisterDefinition& definition, int count) const {
@@ -738,8 +1100,7 @@ QStringList MainWindow::fieldNames(const RegisterDefinition& definition, int cou
     return {"C11", "C12", "C13", "C21", "C22", "C23", "C31", "C32", "C33", "Bias X", "Bias Y", "Bias Z"};
   if (count == 9 && definition.name.contains("Rotation"))
     return {"R11", "R12", "R13", "R21", "R22", "R23", "R31", "R32", "R33"};
-  if (count == 4 && definition.name.contains("Quaternion", Qt::CaseInsensitive))
-    return {"X", "Y", "Z", "W"};
+  if (count == 4 && definition.name.contains("Quaternion", Qt::CaseInsensitive)) return {"X", "Y", "Z", "W"};
   if (count == 3) return {"X", "Y", "Z"};
   for (int index = 0; index < count; ++index) names << QString("Field %1").arg(index + 1);
   return names;
@@ -749,18 +1110,24 @@ void MainWindow::selectRegister(QTreeWidgetItem* current, QTreeWidgetItem*) {
   if (!current || !current->parent()) return;
   current_register_id_ = current->data(0, Qt::UserRole).toInt();
   refreshRegisterInspector();
+  scheduleAutoRead();
 }
 
 void MainWindow::refreshRegisterInspector() {
   if (!register_inspector_ || !raw_register_editor_) return;
+  using Level = StatusChip::Level;
   const RegisterDefinition definition = definitionForId(current_register_id_);
   updating_register_editor_ = true;
   register_inspector_->setRowCount(0);
   if (definition.id < 0) {
-    register_description_->setText("Select a register to inspect its current and staged values.");
-    register_state_->setText("NO REGISTER SELECTED");
+    register_title_->setText("No register selected");
+    register_description_->setText("Select a register to compare its device and staged values.");
+    register_group_chip_->hide();
+    register_access_chip_->hide();
+    register_state_chip_->hide();
     raw_register_editor_->clear();
     raw_register_editor_->setEnabled(false);
+    stage_raw_button_->setEnabled(false);
     updating_register_editor_ = false;
     return;
   }
@@ -769,40 +1136,64 @@ void MainWindow::refreshRegisterInspector() {
   const QString staged_text = staged_values_.value(definition.id, device_text);
   const QStringList device = device_text.split(';', Qt::KeepEmptyParts);
   const QStringList staged = staged_text.split(';', Qt::KeepEmptyParts);
-  int count = std::max(device.size(), staged.size());
-  count = std::max(count, definition.fields.size());
+  // optional trailing fields show only if present
+  int count = std::max(device_text.isEmpty() ? 0 : device.size(), staged_text.isEmpty() ? 0 : staged.size());
   if (definition.value_count >= 0) count = std::max(count, definition.value_count);
-  if (device_text.isEmpty() && staged_text.isEmpty() && definition.value_count < 0) count = 1;
+  if (count == 0) count = std::max(1, definition.value_count < 0 ? 1 : static_cast<int>(definition.fields.size()));
   const QStringList names = fieldNames(definition, count);
 
-  register_description_->setText(QString("%1 · Register %2 · %3%4")
-      .arg(definition.group).arg(definition.id).arg(definition.description)
-      .arg(definition.firmware.isEmpty() ? QString() : " · Firmware " + definition.firmware));
-  register_state_->setText(staged_values_.contains(definition.id) ? "STAGED — SENSOR UNCHANGED" :
-                           device_values_.contains(definition.id) ? "DEVICE VALUE" : "NOT READ");
+  register_title_->setText(QString("%1  ·  %2").arg(definition.id).arg(definition.name));
+  register_description_->setText(definition.description +
+                                 (definition.firmware.isEmpty() ? QString() : "  ·  Firmware " + definition.firmware));
+  register_group_chip_->setState(definition.group, Level::Neutral);
+  register_access_chip_->setState(definition.writable ? (definition.persistent ? "Writable · flash" : "Writable")
+                                                      : "Read-only",
+                                  definition.writable ? Level::Info : Level::Neutral);
+  register_state_chip_->setState(staged_values_.contains(definition.id) ? "Staged, sensor unchanged"
+                                 : device_values_.contains(definition.id) ? "Device value"
+                                                                          : "Not read",
+                                 staged_values_.contains(definition.id) ? Level::Change
+                                 : device_values_.contains(definition.id) ? Level::Ok
+                                                                          : Level::Neutral);
+  register_group_chip_->show();
+  register_access_chip_->show();
+  register_state_chip_->show();
+  const bool binary = definition.editor == "binary_output";
+  inspector_stack_->setCurrentIndex(binary ? 1 : 0);
+  if (binary) {
+    binary_editor_->setValues(definition.id, device_text, staged_text, device_values_);
+    binary_editor_->setEditable(definition.writable);
+  }
+
+  QColor changed = theme().change;
+  changed.setAlpha(theme().dark ? 60 : 130);
   register_inspector_->setRowCount(count);
   for (int row = 0; row < count; ++row) {
     QString field_name = names.value(row, QString("Field %1").arg(row + 1));
     QString units = definition.units;
-    if (row < definition.fields.size()) {
-      const auto& field = definition.fields[row];
-      if (!field.units.isEmpty()) units = field.units;
-      if (!field.enum_values.isEmpty()) {
-        QStringList choices;
-        for (auto value = field.enum_values.cbegin(); value != field.enum_values.cend(); ++value)
-          choices << value.key() + "=" + value.value();
-        field_name += "  [" + choices.join(", ") + "]";
-      }
-    }
+    if (row < definition.fields.size() && !definition.fields[row].units.isEmpty())
+      units = definition.fields[row].units;
     auto* name_item = new QTableWidgetItem(field_name);
     auto* device_item = new QTableWidgetItem(device.value(row));
     auto* staged_item = new QTableWidgetItem(staged.value(row));
     auto* units_item = new QTableWidgetItem(units);
+    device_item->setFont(figuresFont(15));
+    staged_item->setFont(figuresFont(15));
+    units_item->setForeground(theme().muted);
+    if (row < definition.fields.size() && !definition.fields[row].enum_values.isEmpty()) {
+      QStringList choices;
+      const auto& values = definition.fields[row].enum_values;
+      for (auto value = values.cbegin(); value != values.cend(); ++value)
+        choices << value.key() + " = " + value.value();
+      name_item->setToolTip(choices.join("\n"));
+      const QString device_choice = values.value(device.value(row));
+      if (!device_choice.isEmpty()) device_item->setText(device_choice + "  [" + device.value(row) + "]");
+    }
     name_item->setFlags(name_item->flags() & ~Qt::ItemIsEditable);
     device_item->setFlags(device_item->flags() & ~Qt::ItemIsEditable);
     units_item->setFlags(units_item->flags() & ~Qt::ItemIsEditable);
     if (!definition.writable) staged_item->setFlags(staged_item->flags() & ~Qt::ItemIsEditable);
-    if (device.value(row) != staged.value(row)) staged_item->setBackground(QColor("#173b58"));
+    if (device.value(row) != staged.value(row)) staged_item->setBackground(changed);
     register_inspector_->setItem(row, 0, name_item);
     register_inspector_->setItem(row, 1, device_item);
     register_inspector_->setItem(row, 2, staged_item);
@@ -811,18 +1202,31 @@ void MainWindow::refreshRegisterInspector() {
       const auto& field = definition.fields[row];
       if (!field.enum_values.isEmpty()) {
         auto* editor = new QComboBox;
+        QList<std::pair<double, QString>> keys;
         for (auto value = field.enum_values.cbegin(); value != field.enum_values.cend(); ++value)
-          editor->addItem(value.value() + "  [" + value.key() + "]", value.key());
-        const int selected = editor->findData(staged.value(row));
-        if (selected >= 0) editor->setCurrentIndex(selected);
+          keys << std::make_pair(value.key().toDouble(), value.key());
+        std::sort(keys.begin(), keys.end());
+        for (const auto& key : keys) editor->addItem(field.enum_values.value(key.second) + "  [" + key.second + "]",
+                                                     key.second);
+        // unlisted value stays selectable
+        int selected = -1;
+        for (int i = 0; i < editor->count(); ++i)
+          if (registerValuesMatch(editor->itemData(i).toString(), staged.value(row))) selected = i;
+        if (selected < 0) {
+          editor->addItem(staged.value(row).isEmpty() ? QString("(not read)")
+                                                      : staged.value(row) + "  (not in the manual's list)",
+                          staged.value(row));
+          selected = editor->count() - 1;
+        }
+        editor->setCurrentIndex(selected);
         register_inspector_->setCellWidget(row, 2, editor);
-        connect(editor, qOverload<int>(&QComboBox::currentIndexChanged), this,
-                [this](int) { stageInspectorValues(); });
+        connect(editor, qOverload<int>(&QComboBox::currentIndexChanged), this, [this](int) { stageInspectorValues(); });
       } else if (field.has_range) {
         auto* editor = new QDoubleSpinBox;
         editor->setRange(field.minimum, field.maximum);
         editor->setDecimals(7);
         editor->setValue(staged.value(row).toDouble());
+        editor->setFont(figuresFont(15));
         register_inspector_->setCellWidget(row, 2, editor);
         connect(editor, qOverload<double>(&QDoubleSpinBox::valueChanged), this,
                 [this](double) { stageInspectorValues(); });
@@ -831,6 +1235,7 @@ void MainWindow::refreshRegisterInspector() {
   }
   raw_register_editor_->setText(staged_text);
   raw_register_editor_->setEnabled(definition.writable);
+  stage_raw_button_->setEnabled(definition.writable);
   updating_register_editor_ = false;
 }
 
@@ -853,23 +1258,34 @@ void MainWindow::stageInspectorValues() {
     setStatus(definition.name + ": " + error, true);
     return;
   }
-  if (serialized == device_values_.value(current_register_id_))
+  if (registerValuesMatch(serialized, device_values_.value(current_register_id_)))
     staged_values_.remove(current_register_id_);
   else
     staged_values_[current_register_id_] = serialized;
   raw_register_editor_->setText(serialized);
-  register_state_->setText("STAGED — SENSOR UNCHANGED");
+  register_state_chip_->setState("Staged, sensor unchanged", StatusChip::Level::Change);
+  registersChanged();
   setStatus(definition.name + " staged; sensor unchanged");
 }
 
 void MainWindow::setStatus(const QString& text, bool error) {
   if (!status_) return;
   status_->setText(text);
-  status_->setStyleSheet(error ? "color:#ff6262" : "");
+  const QString tone = error ? "error" : "";
+  if (status_->property("tone").toString() != tone) {
+    status_->setProperty("tone", tone);
+    repolish(status_);
+  }
+}
+
+bool MainWindow::confirm(const QString& title, const QString& text, bool warning) {
+  return (warning ? QMessageBox::warning(this, title, text, QMessageBox::Yes | QMessageBox::Cancel)
+                  : QMessageBox::question(this, title, text)) == QMessageBox::Yes;
 }
 
 RegisterDefinition MainWindow::definitionForId(int id) const {
-  for (const auto& definition : definitions_) if (definition.id == id) return definition;
+  for (const auto& definition : definitions_)
+    if (definition.id == id) return definition;
   return {};
 }
 
@@ -887,26 +1303,14 @@ void MainWindow::onTelemetry(const Telemetry& sample) {
 }
 
 void MainWindow::onCalibrationSample(const Telemetry& sample) {
-  if (!capturing_) return;
-  const double t = capture_clock_.elapsed() / 1000.0;
-  if (calibration_step_ == 0)
-    gyro_samples_.push_back({t, {sample.gx, sample.gy, sample.gz}, sample.temperature_c});
-  else if (calibration_step_ == 1)
-    accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
-  else if (calibration_step_ == 3)
-    gravity_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
-  else {
-    mag_samples_.push_back({t, {sample.mx, sample.my, sample.mz}, sample.temperature_c});
-    mag_accel_samples_.push_back({t, {sample.ax, sample.ay, sample.az}, sample.temperature_c});
-  }
-  const std::size_t count = calibration_step_ == 0 ? gyro_samples_.size() :
-      calibration_step_ == 1 ? accel_samples_.size() :
-      calibration_step_ == 2 ? mag_samples_.size() : gravity_samples_.size();
-  calibration_sample_count_->setText(QString("%1 / %2 minimum samples").arg(count).arg(policy_.minimum_samples));
+  if (wizard_ && wizard_->isVisible()) wizard_->addSample(sample);
 }
 
 void MainWindow::onRegisterRead(int id, const QString& values) {
-  device_values_[id] = values; if (staged_values_.value(id) == values) staged_values_.remove(id); refreshRegisterTable();
+  device_values_[id] = values;
+  if (staged_values_.contains(id) && registerValuesMatch(staged_values_.value(id), values)) staged_values_.remove(id);
+  refreshRegisterTable();
+  if (wizard_) wizard_->setRegistersMissing(missingCalibrationRegisters());
 }
 
 void MainWindow::readSelectedRegister() {
@@ -918,55 +1322,131 @@ void MainWindow::readSelectedRegister() {
 }
 
 void MainWindow::applyStagedRegisters() {
-  if (staged_values_.isEmpty()) { setStatus("No staged changes"); return; }
+  if (staged_values_.isEmpty()) {
+    setStatus("No staged changes");
+    return;
+  }
   const QMap<int, QString> pending = staged_values_;
   for (auto iterator = pending.cbegin(); iterator != pending.cend(); ++iterator) {
-    QString error; const auto definition = definitionForId(iterator.key());
-    if (definition.id < 0) { setStatus(QString("Register %1 is unsupported by this schema").arg(iterator.key()), true); return; }
-    if (!validateRegisterValue(definition, iterator.value(), &error)) { setStatus(definition.name + ": " + error, true); return; }
+    QString error;
+    const auto definition = definitionForId(iterator.key());
+    if (definition.id < 0) {
+      setStatus(QString("Register %1 is unsupported by this schema").arg(iterator.key()), true);
+      return;
+    }
+    if (!validateRegisterValue(definition, iterator.value(), &error)) {
+      setStatus(definition.name + ": " + error, true);
+      return;
+    }
     if (connection_mode_ == "ros" && definition.driver_critical && !maintenance_active_) {
       setStatus(definition.name + " requires an active maintenance session", true);
       return;
     }
-    if (definition.dangerous && QMessageBox::question(this, "Connection-affecting register", definition.name + " can interrupt the connection. Apply it?") != QMessageBox::Yes) return;
+  }
+  // output config has to fit the serial line
+  bool touches_output = false;
+  for (int id : kOutputRegisters) touches_output |= pending.contains(id);
+  if (touches_output && connection_mode_ != "demo") {
+    const auto projected = bandwidth(true);
+    if (!projected.known) {
+      readOutputRegisters();
+      setStatus("Reading registers " + projected.missing + " to check the line load first; apply again after", true);
+      return;
+    }
+    if (projected.exceeds()) {
+      QMessageBox::warning(this, "Output exceeds the baud rate",
+                           QString("With these changes the sensor's output needs %1% of the %2 baud line:\n\n%3"
+                                   "\n\nLower an output's rate, drop fields, or raise the baud rate first.")
+                               .arg(100 * projected.fraction(), 0, 'f', 0).arg(projected.baud)
+                               .arg(projected.parts.join("\n")));
+      setStatus("Not applied: output would exceed the baud rate", true);
+      return;
+    }
+  }
+  for (auto iterator = pending.cbegin(); iterator != pending.cend(); ++iterator) {
+    const auto definition = definitionForId(iterator.key());
+    if (definition.dangerous &&
+        !confirm("Connection-affecting register", definition.name + " can interrupt the connection. Apply it?"))
+      return;
   }
   for (auto iterator = pending.cbegin(); iterator != pending.cend(); ++iterator)
     emit requestWrite(iterator.key(), iterator.value());
 }
 
-void MainWindow::discardStagedRegisters() { staged_values_.clear(); refreshRegisterTable(); setStatus("Staged changes discarded"); }
+void MainWindow::discardStagedRegisters() {
+  staged_values_.clear();
+  refreshRegisterTable();
+  setStatus("Staged changes discarded");
+}
 
 void MainWindow::importConfiguration() {
-  const QString path = QFileDialog::getOpenFileName(this, "Import Control Center configuration", {}, "VectorNav XML (*.xml)"); if (path.isEmpty()) return;
-  QString error; const auto imported = loadControlCenterXml(path, &error); if (!error.isEmpty()) { setStatus(error, true); return; }
-  if (QMessageBox::question(this, "Stage configuration", QString("Stage %1 register entries? Nothing will be written yet.").arg(imported.registers.size())) != QMessageBox::Yes) return;
-  configuration_metadata_ = imported; for (const auto& reg : imported.registers) staged_values_[reg.id] = reg.values; refreshRegisterTable();
+  const QString path =
+      QFileDialog::getOpenFileName(this, "Import Control Center configuration", {}, "VectorNav XML (*.xml)");
+  if (path.isEmpty()) return;
+  QString error;
+  const auto imported = loadControlCenterXml(path, &error);
+  if (!error.isEmpty()) {
+    setStatus(error, true);
+    return;
+  }
+  if (!confirm("Stage configuration",
+               QString("Stage %1 register entries? Nothing will be written yet.").arg(imported.registers.size())))
+    return;
+  configuration_metadata_ = imported;
+  for (const auto& reg : imported.registers) staged_values_[reg.id] = reg.values;
+  refreshRegisterTable();
 }
 
 void MainWindow::exportConfiguration() {
-  const QString path = QFileDialog::getSaveFileName(this, "Export Control Center configuration", {}, "VectorNav XML (*.xml)"); if (path.isEmpty()) return;
-  SensorConfiguration output = configuration_metadata_; output.registers.clear();
-  for (const auto& definition : definitions_) if (device_values_.contains(definition.id) || staged_values_.contains(definition.id))
-    output.registers.push_back({definition.id, definition.name, staged_values_.value(definition.id, device_values_.value(definition.id)), true});
-  for (const auto& unknown : configuration_metadata_.registers) if (definitionForId(unknown.id).id < 0) output.registers.push_back(unknown);
-  QString error; if (!saveControlCenterXml(path, output, &error)) setStatus(error, true); else setStatus("Configuration exported");
+  const QString path =
+      QFileDialog::getSaveFileName(this, "Export Control Center configuration", {}, "VectorNav XML (*.xml)");
+  if (path.isEmpty()) return;
+  SensorConfiguration output = configuration_metadata_;
+  output.registers.clear();
+  for (const auto& definition : definitions_) {
+    if (device_values_.contains(definition.id) || staged_values_.contains(definition.id))
+      output.registers.push_back({definition.id, definition.name,
+                                  staged_values_.value(definition.id, device_values_.value(definition.id)), true});
+  }
+  for (const auto& unknown : configuration_metadata_.registers)
+    if (definitionForId(unknown.id).id < 0) output.registers.push_back(unknown);
+  QString error;
+  if (!saveControlCenterXml(path, output, &error))
+    setStatus(error, true);
+  else
+    setStatus("Configuration exported");
 }
 
 void MainWindow::savePersistently() {
-  if (!staged_values_.isEmpty()) { QMessageBox::warning(this, "Unsaved staged values", "Apply and verify staged changes before saving persistent sensor state."); return; }
+  if (!staged_values_.isEmpty()) {
+    QMessageBox::warning(this, "Unsaved staged values",
+                         "Apply and verify staged changes before saving persistent sensor state.");
+    return;
+  }
   if (connection_mode_ == "ros" && !maintenance_active_) {
     setStatus("Enter maintenance mode before persistent save", true);
     return;
   }
-  if (QMessageBox::question(
-          this, "Save, reset, and verify",
-          "Persist the complete active configuration, reset the sensor, reconnect the driver, "
-          "and verify all values read by this dashboard? IMU output will be stale briefly.") !=
-      QMessageBox::Yes) return;
+  const auto load = bandwidth(false);
+  if (connection_mode_ != "demo" && !load.known) {
+    readOutputRegisters();
+    setStatus("Reading registers " + load.missing + " to check the line load before saving; save again after", true);
+    return;
+  }
+  if (load.exceeds()) {
+    QMessageBox::warning(this, "Output exceeds the baud rate",
+                         QString("The sensor's output needs %1% of its %2 baud line, so it is already dropping "
+                                 "data. Fix the output configuration before saving it to flash.")
+                             .arg(100 * load.fraction(), 0, 'f', 0).arg(load.baud));
+    return;
+  }
+  if (!confirm("Save, reset, and verify",
+               "Persist the complete active configuration, reset the sensor, reconnect the driver, "
+               "and verify all values read by this dashboard? IMU output will be stale briefly."))
+    return;
   QJsonObject expected;
   for (const auto& definition : definitions_) {
-    if (!definition.writable || !definition.persistent ||
-        !device_values_.contains(definition.id)) continue;
+    if (!definition.writable || !definition.persistent || !device_values_.contains(definition.id)) continue;
     QJsonArray fields;
     for (const auto& value : device_values_.value(definition.id).split(';')) fields.push_back(value);
     expected[QString::number(definition.id)] = fields;
@@ -974,97 +1454,147 @@ void MainWindow::savePersistently() {
   emit requestSaveSettings(QString::fromUtf8(QJsonDocument(expected).toJson(QJsonDocument::Compact)));
 }
 
-void MainWindow::toggleCapture() {
-  capturing_ = !capturing_; if (capturing_) capture_clock_.restart();
-  emit requestCalibrationCapture(capturing_);
-  capture_button_->setText(capturing_ ? "Stop capture" : "Start capture");
-  calibration_result_->appendPlainText(capturing_ ? "Capture started. Keep each requested pose stationary; stop between motions." : "Capture stopped; no sensor values changed.");
-}
-
-void MainWindow::evaluateCalibration() {
-  if (capturing_) toggleCapture();
-  if (calibration_step_ == 0) { gyro_result_ = estimateGyroBias(gyro_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(gyro_result_.quality.summary) + "\nResidual " + vectorText(gyro_result_.residual_bias)); }
-  else if (calibration_step_ == 1) { accel_result_ = estimateAccelerometerBias(accel_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(accel_result_.quality.summary) + "\nBias " + vectorText(accel_result_.bias) + QString("; measured magnitude %1 ± %2 m/s²").arg(accel_result_.measured_gravity).arg(accel_result_.gravity_stddev)); }
-  else if (calibration_step_ == 2) { mag_result_ = estimatePlanarMagBias(mag_samples_, mag_accel_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(mag_result_.quality.summary) + "\nObservable in-plane bias " + vectorText(mag_result_.in_plane_bias)); }
-  else { gravity_report_ = makeGravityReport(gravity_samples_, policy_); calibration_result_->appendPlainText(QString::fromStdString(gravity_report_.quality.summary) + "\nSpecific force " + vectorText(gravity_report_.specific_force_mean) + "\nGravity vector (opposite specific force) " + vectorText(gravity_report_.gravity_vector) + QString("\nMagnitude %1 ± %2 m/s²; tilt from sensor +Z %3 ± %4 deg. This is not sensor-to-robot mounting rotation.").arg(gravity_report_.magnitude).arg(gravity_report_.magnitude_stddev).arg(gravity_report_.tilt_from_sensor_z_deg).arg(gravity_report_.tilt_stddev_deg)); }
-}
-
-bool MainWindow::parseCompensation(const QString& text, Eigen::Matrix3d* matrix, Eigen::Vector3d* bias) {
-  const auto fields = text.split(';'); if (fields.size() != 12) return false;
-  bool ok = true; for (int i = 0; i < 9; ++i) { bool part=false; (*matrix)(i/3,i%3)=fields[i].toDouble(&part); ok &= part; }
-  for (int i = 0; i < 3; ++i) { bool part=false; (*bias)(i)=fields[i+9].toDouble(&part); ok &= part; } return ok;
-}
-
-QString MainWindow::formatCompensation(const Eigen::Matrix3d& matrix, const Eigen::Vector3d& bias) {
-  QStringList fields; for (int row=0; row<3; ++row) for(int column=0;column<3;++column) fields << QString::number(static_cast<float>(matrix(row,column)),'g',9);
-  for(int i=0;i<3;++i) fields << QString::number(static_cast<float>(bias(i)),'g',9);
-  return fields.join(';');
-}
-
-void MainWindow::stageCalibrationResult() {
-  const int id = calibration_step_ == 0 ? 84 : calibration_step_ == 1 ? 25 : calibration_step_ == 2 ? 23 : -1;
-  if (id < 0) { setStatus("Gravity report has no register update by design"); return; }
-  const Quality quality = calibration_step_ == 0 ? gyro_result_.quality : calibration_step_ == 1 ? accel_result_.quality : mag_result_.quality;
-  if (!quality.passed) { setStatus("Quality gate failed; result cannot be staged", true); return; }
-  Eigen::Matrix3d matrix; Eigen::Vector3d old_bias;
-  if (!parseCompensation(device_values_.value(id), &matrix, &old_bias)) { setStatus(QString("Read register %1 before staging calibration").arg(id), true); emit requestRead(id); return; }
-  Eigen::Matrix3d output_rotation; Eigen::Vector3d unused;
-  if (!parseCompensation(device_values_.value(26) + ";0;0;0", &output_rotation, &unused)) {
-    setStatus("Read reference-frame rotation register 26 before staging calibration", true);
-    emit requestRead(26); return;
+void MainWindow::openCalibrationWizard() {
+  if (!wizard_) {
+    wizard_ = new CalibrationWizard(&calibration_, policy_, this);
+    connect(wizard_, &CalibrationWizard::captureRequested, this, &MainWindow::requestCalibrationCapture);
+    connect(wizard_, &CalibrationWizard::registersRequested, this, [this] {
+      if (!connected_) return;
+      for (int id : kCalibrationRegisters) emit requestRead(id);
+    });
+    connect(wizard_, &CalibrationWizard::stageRequested, this, &MainWindow::stageCalibration);
+    connect(wizard_, &CalibrationWizard::exportRequested, this, &MainWindow::exportCalibrationReport);
+    connect(wizard_, &CalibrationWizard::sessionChanged, this, &MainWindow::refreshCalibrationSummary);
   }
-  if (calibration_step_ == 0) {
-    if (!device_values_.contains(43)) { setStatus("Read startup gyro bias register 43 before staging gyro compensation", true); emit requestRead(43); return; }
-    Eigen::Vector3d startup; const auto fields=device_values_[43].split(';'); bool ok=fields.size()==3;
-    for(int i=0;i<3 && ok;++i){bool part=false; startup(i)=fields[i].toDouble(&part);ok&=part;}
-    if (!ok || startup.norm() > 1e-7) { setStatus("Gyro staging blocked: nonzero or unreadable startup filter bias could double-correct angular rate", true); return; }
-    staged_values_[84] = formatCompensation(matrix, composeCompensationBias(matrix, output_rotation, old_bias, gyro_result_.residual_bias));
-  } else if (calibration_step_ == 1) {
-    staged_values_[25] = formatCompensation(matrix, composeCompensationBias(matrix, output_rotation, old_bias, accel_result_.bias));
-  } else {
-    staged_values_[23] = formatCompensation(matrix, composeCompensationBias(matrix, output_rotation, old_bias, mag_result_.in_plane_bias));
+  wizard_->setConnected(connected_);
+  wizard_->setRegistersMissing(missingCalibrationRegisters());
+  wizard_->setRegisterContext(device_values_, staged_values_);
+  wizard_->show();
+  wizard_->raise();
+  wizard_->activateWindow();
+}
+
+QString MainWindow::missingCalibrationRegisters() const {
+  QStringList missing;
+  for (int id : kCalibrationRegisters)
+    if (!device_values_.contains(id)) missing << QString::number(id);
+  return missing.join(", ");
+}
+
+void MainWindow::refreshCalibrationSummary() {
+  if (!calibration_summary_) return;
+  using Level = StatusChip::Level;
+  std::vector<MetricRow> rows;
+  int stageable = 0;
+  QStringList notes;
+  for (int index = 0; index < kCalibrationStepCount; ++index) {
+    const auto step = static_cast<CalibrationStep>(index);
+    const int id = compensationRegister(step);
+    QString verdict = "Not run";
+    Level level = Level::Neutral;
+    if (calibration_.evaluated[index]) {
+      const bool passed = calibration_.quality(step).passed;
+      verdict = passed ? "Passed" : "Failed";
+      level = passed ? Level::Ok : Level::Error;
+      // checked against the registers every time
+      const auto delivery = deliveryState(calibration_, step, device_values_, staged_values_);
+      if (passed && delivery == Delivery::Staged) verdict = "Staged", level = Level::Change;
+      if (passed && delivery == Delivery::Applied) verdict = "On sensor", level = Level::Info;
+      if (passed && id >= 0 && delivery == Delivery::None) {
+        ++stageable;
+        if (!calibration_.delivered[index].isEmpty())
+          notes << QString("%1: no longer staged or on the sensor.").arg(calibrationStepName(step));
+      }
+    }
+    rows.push_back({calibrationStepName(step), calibrationHeadline(calibration_, step),
+                    id >= 0 ? QString::number(id) : QString("none"), level, verdict});
   }
-  refreshRegisterTable(); setStatus("Calibration result staged; inspect it before applying");
+  calibration_summary_->setRows(rows);
+  stage_latest_button_->setEnabled(stageable > 0);
+  stage_latest_button_->setText(stageable ? QString("Stage latest results (%1)").arg(stageable)
+                                          : QString("Stage latest results"));
+  if (stageable) notes << "Stage latest results copies them into the register workspace again.";
+  calibration_note_->setText(notes.join(" "));
+  calibration_note_->setVisible(!notes.isEmpty());
+}
+
+void MainWindow::stageCalibration(CalibrationStep step) {
+  auto finish = [&](bool staged, const QString& message) {
+    setStatus(message, !staged);
+    if (wizard_) wizard_->setStageOutcome(step, staged, message);
+    refreshCalibrationSummary();
+  };
+  const auto proposal = proposeCompensation(calibration_, step, device_values_);
+  if (!proposal.error.isEmpty()) {
+    for (int id : proposal.unread) emit requestRead(id);
+    finish(false, proposal.error);
+    return;
+  }
+  staged_values_[proposal.register_id] = proposal.values;
+  calibration_.delivered[static_cast<int>(step)] = proposal.values;
+  refreshRegisterTable();
+  finish(true, QString("Register %1 staged; review it in the register list, then Apply").arg(proposal.register_id));
+}
+
+void MainWindow::stageLatestCalibration() {
+  for (int index = 0; index < kCalibrationStepCount; ++index) {
+    const auto step = static_cast<CalibrationStep>(index);
+    if (compensationRegister(step) < 0 || !calibration_.evaluated[index] || !calibration_.quality(step).passed)
+      continue;
+    if (deliveryState(calibration_, step, device_values_, staged_values_) == Delivery::None) stageCalibration(step);
+  }
+}
+
+void MainWindow::exportProtocolLog() {
+  const QString stamp = QDateTime::currentDateTime().toString("yyyy-MM-dd_HHmmss");
+  const QString path = QFileDialog::getSaveFileName(this, "Export protocol log",
+                                                    QDir::home().filePath("vn_protocol_" + stamp + ".txt"),
+                                                    "Text (*.txt *.log)");
+  if (path.isEmpty()) return;
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+    setStatus(file.errorString(), true);
+    return;
+  }
+  const QString header = QString("# VectorNav Workshop protocol log, exported %1\n# Connection: %2 %3\n")
+                             .arg(QDateTime::currentDateTime().toString(Qt::ISODate), connection_mode_,
+                                  connected_target_.isEmpty() ? QString("(disconnected)") : connected_target_);
+  file.write(header.toUtf8());
+  file.write(traffic_log_->toPlainText().toUtf8());
+  file.write("\n");
+  setStatus(QString("Protocol log exported to %1").arg(path));
 }
 
 void MainWindow::exportCalibrationReport() {
-  const QString path = QFileDialog::getSaveFileName(this, "Export calibration report", {}, "JSON (*.json)"); if (path.isEmpty()) return;
-  // Always report the samples currently in memory. The live Evaluate button is
-  // useful for feedback, but omitting it must not export default result objects.
-  if (!gyro_samples_.empty()) gyro_result_ = estimateGyroBias(gyro_samples_, policy_);
-  if (!accel_samples_.empty()) accel_result_ = estimateAccelerometerBias(accel_samples_, policy_);
-  if (!mag_samples_.empty() || !mag_accel_samples_.empty())
-    mag_result_ = estimatePlanarMagBias(mag_samples_, mag_accel_samples_, policy_);
-  if (!gravity_samples_.empty()) gravity_report_ = makeGravityReport(gravity_samples_, policy_);
-  QJsonObject report{{"schema_version", 1}, {"warning", "Gravity-derived tilt is not sensor-to-robot mounting rotation; yaw is unobservable."},
-                     {"gravity_sign", "gravity_vector_sensor = -mean_stationary_specific_force"}, {"frame", "VectorNav configured sensor output frame"}};
-  auto vec=[](const Eigen::Vector3d& v){return QJsonArray{v.x(),v.y(),v.z()};};
-  auto matrix=[](const Eigen::Matrix3d& value){QJsonArray rows; for(int row=0;row<3;++row) rows.push_back(QJsonArray{value(row,0),value(row,1),value(row,2)});return rows;};
-  report["gyro"] = QJsonObject{{"evaluated",!gyro_result_.quality.summary.empty()},{"sample_count",static_cast<int>(gyro_samples_.size())},{"passed",gyro_result_.quality.passed},{"residual_bias_rad_s",vec(gyro_result_.residual_bias)},{"bias_covariance_rad2_s2",matrix(gyro_result_.covariance)},{"quality_rms_rad_s",gyro_result_.quality.rms},{"temperature_span_c",gyro_result_.temperature_span_c},{"quality",QString::fromStdString(gyro_result_.quality.summary)}};
-  report["accelerometer"] = QJsonObject{{"evaluated",!accel_result_.quality.summary.empty()},{"sample_count",static_cast<int>(accel_samples_.size())},{"passed",accel_result_.quality.passed},{"bias_m_s2",vec(accel_result_.bias)},{"bias_covariance_m2_s4",matrix(accel_result_.covariance)},{"axis_span_m_s2",vec(accel_result_.axis_span)},{"measured_magnitude_m_s2",accel_result_.measured_gravity},{"magnitude_stddev_m_s2",accel_result_.gravity_stddev},{"quality_rms_m_s2",accel_result_.quality.rms},{"condition",accel_result_.quality.condition},{"quality",QString::fromStdString(accel_result_.quality.summary)}};
-  report["magnetometer"] = QJsonObject{{"evaluated",!mag_result_.quality.summary.empty()},{"sample_count",static_cast<int>(mag_samples_.size())},{"paired_gravity_sample_count",static_cast<int>(mag_accel_samples_.size())},{"passed",mag_result_.quality.passed},{"in_plane_bias_gauss",vec(mag_result_.in_plane_bias)},{"coverage_deg",mag_result_.coverage_deg},{"quality",QString::fromStdString(mag_result_.quality.summary)}};
-  report["gravity_report"] = QJsonObject{{"evaluated",!gravity_report_.quality.summary.empty()},{"sample_count",static_cast<int>(gravity_samples_.size())},{"passed",gravity_report_.quality.passed},{"specific_force_mean_m_s2",vec(gravity_report_.specific_force_mean)},{"gravity_vector_m_s2",vec(gravity_report_.gravity_vector)},{"mean_covariance_m2_s4",matrix(gravity_report_.covariance)},{"magnitude_m_s2",gravity_report_.magnitude},{"magnitude_stddev_m_s2",gravity_report_.magnitude_stddev},{"tilt_from_sensor_z_deg",gravity_report_.tilt_from_sensor_z_deg},{"tilt_stddev_deg",gravity_report_.tilt_stddev_deg},{"quality_rms_m_s2",gravity_report_.quality.rms},{"quality",QString::fromStdString(gravity_report_.quality.summary)}};
-  report["policy"] = QJsonObject{{"minimum_samples",static_cast<int>(policy_.minimum_samples)},
-      {"gyro_max_rms_rad_s",policy_.gyro_max_rms_rad_s},{"gyro_max_temperature_span_c",policy_.gyro_max_temperature_span_c},
-      {"gyro_max_pose_delta_rad_s",policy_.gyro_max_pose_delta_rad_s},{"accelerometer_max_rms_m_s2",policy_.accel_max_rms_m_s2},
-      {"accelerometer_max_condition",policy_.accel_max_condition},{"accelerometer_min_axis_span_m_s2",policy_.accel_min_axis_span_m_s2},
-      {"magnetometer_max_rms_fraction",policy_.mag_max_rms_fraction},{"magnetometer_min_coverage_deg",policy_.mag_min_coverage_deg},
-      {"magnetometer_max_tilt_stddev_deg",policy_.mag_max_tilt_stddev_deg}};
-  QFile file(path); if (!file.open(QIODevice::WriteOnly|QIODevice::Truncate)) { setStatus(file.errorString(),true);return;} file.write(QJsonDocument(report).toJson(QJsonDocument::Indented)); setStatus("Calibration report exported");
+  const QString path = QFileDialog::getSaveFileName(this, "Export calibration report", {}, "JSON (*.json)");
+  if (path.isEmpty()) return;
+  const QJsonObject report = calibrationReport(calibration_, policy_);
+  refreshCalibrationSummary();
+  QFile file(path);
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    setStatus(file.errorString(), true);
+    return;
+  }
+  file.write(QJsonDocument(report).toJson(QJsonDocument::Indented));
+  setStatus("Calibration report exported");
 }
 
 void MainWindow::exportTelemetry() {
   const QString path = QFileDialog::getSaveFileName(this, "Export telemetry", {}, "CSV (*.csv)");
   if (path.isEmpty()) return;
   QFile file(path);
-  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) { setStatus(file.errorString(), true); return; }
+  if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+    setStatus(file.errorString(), true);
+    return;
+  }
   file.write("time_s,qx,qy,qz,qw,mx,my,mz,ax,ay,az,gx,gy,gz,temperature_c,pressure_kpa\n");
   for (const auto& s : recorded_telemetry_) {
     const QString line = QString("%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11,%12,%13,%14,%15,%16\n")
-        .arg(s.time_s,0,'g',16).arg(s.qx,0,'g',12).arg(s.qy,0,'g',12).arg(s.qz,0,'g',12).arg(s.qw,0,'g',12)
-        .arg(s.mx,0,'g',12).arg(s.my,0,'g',12).arg(s.mz,0,'g',12).arg(s.ax,0,'g',12).arg(s.ay,0,'g',12)
-        .arg(s.az,0,'g',12).arg(s.gx,0,'g',12).arg(s.gy,0,'g',12).arg(s.gz,0,'g',12)
-        .arg(s.temperature_c,0,'g',12).arg(s.pressure_kpa,0,'g',12);
+        .arg(s.time_s, 0, 'g', 16).arg(s.qx, 0, 'g', 12).arg(s.qy, 0, 'g', 12).arg(s.qz, 0, 'g', 12)
+        .arg(s.qw, 0, 'g', 12).arg(s.mx, 0, 'g', 12).arg(s.my, 0, 'g', 12).arg(s.mz, 0, 'g', 12)
+        .arg(s.ax, 0, 'g', 12).arg(s.ay, 0, 'g', 12).arg(s.az, 0, 'g', 12).arg(s.gx, 0, 'g', 12)
+        .arg(s.gy, 0, 'g', 12).arg(s.gz, 0, 'g', 12).arg(s.temperature_c, 0, 'g', 12)
+        .arg(s.pressure_kpa, 0, 'g', 12);
     file.write(line.toUtf8());
   }
   setStatus(QString("Exported %1 telemetry samples").arg(recorded_telemetry_.size()));
@@ -1074,25 +1604,49 @@ void MainWindow::loadReplay() {
   const QString path = QFileDialog::getOpenFileName(this, "Replay telemetry", {}, "CSV (*.csv)");
   if (path.isEmpty()) return;
   QFile file(path);
-  if (!file.open(QIODevice::ReadOnly)) { setStatus(file.errorString(), true); return; }
+  if (!file.open(QIODevice::ReadOnly)) {
+    setStatus(file.errorString(), true);
+    return;
+  }
   replay_telemetry_.clear();
   file.readLine();
   while (!file.atEnd()) {
     const auto fields = QString::fromUtf8(file.readLine()).trimmed().split(',');
     if (fields.size() != 16) continue;
-    Telemetry s; bool ok = true; double* values[] = {&s.time_s,&s.qx,&s.qy,&s.qz,&s.qw,&s.mx,&s.my,&s.mz,&s.ax,&s.ay,&s.az,&s.gx,&s.gy,&s.gz,&s.temperature_c,&s.pressure_kpa};
-    for (int i=0;i<16;++i) { bool field_ok=false; *values[i]=fields[i].toDouble(&field_ok); ok &= field_ok; }
+    Telemetry s;
+    bool ok = true;
+    double* values[] = {&s.time_s, &s.qx, &s.qy, &s.qz, &s.qw, &s.mx, &s.my, &s.mz,
+                        &s.ax, &s.ay, &s.az, &s.gx, &s.gy, &s.gz, &s.temperature_c, &s.pressure_kpa};
+    for (int i = 0; i < 16; ++i) {
+      bool field_ok = false;
+      *values[i] = fields[i].toDouble(&field_ok);
+      ok &= field_ok;
+    }
     if (ok) replay_telemetry_.push_back(s);
   }
-  if (replay_telemetry_.empty()) { setStatus("Replay file has no valid telemetry rows", true); return; }
+  if (replay_telemetry_.empty()) {
+    setStatus("Replay file has no valid telemetry rows", true);
+    return;
+  }
   if (!replay_timer_) {
-    replay_timer_ = new QTimer(this); replay_timer_->setInterval(50);
+    replay_timer_ = new QTimer(this);
+    replay_timer_->setInterval(50);
     connect(replay_timer_, &QTimer::timeout, this, [this] {
-      if (replay_telemetry_.empty()) { replay_timer_->stop(); setStatus("Replay complete"); return; }
-      const bool was_recording = recording_; recording_ = false; onTelemetry(replay_telemetry_.front()); recording_ = was_recording; replay_telemetry_.pop_front();
+      if (replay_telemetry_.empty()) {
+        replay_timer_->stop();
+        setStatus("Replay complete");
+        return;
+      }
+      const bool was_recording = recording_;
+      recording_ = false;
+      onTelemetry(replay_telemetry_.front());
+      recording_ = was_recording;
+      replay_telemetry_.pop_front();
     });
   }
-  replay_timer_->start(); setStatus("Replaying telemetry through monitor pipeline");
+  plot_->clear();
+  replay_timer_->start();
+  setStatus("Replaying telemetry through the monitor");
 }
 
 }  // namespace riptide_imu
