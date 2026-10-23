@@ -148,6 +148,9 @@ class Vectornav : public rclcpp::Node {
       vs.reset();
     vs = std::make_shared<VnSensor>();
 
+    // Sensor startup time restarts on reset, so re-learn the offset
+    averageTimeDifference = 0;
+
     // Binary packet data callback
     vs->registerAsyncPacketReceivedHandler(this, Vectornav::asyncPacketReceivedHandler);
 
@@ -229,7 +232,7 @@ class Vectornav : public rclcpp::Node {
       CompositeData cd = cd.parse(asyncPacket);
 
       // Parse message data
-      msg.header.stamp = node->getTimeStamp();
+      msg.header.stamp = node->getTimeStamp(cd);
       msg.header.frame_id = node->get_parameter("frame_id").as_string();
 
       // Set quaternion data
@@ -440,10 +443,22 @@ class Vectornav : public rclcpp::Node {
     
   }
 
-  rclcpp::Time getTimeStamp() {
-    // Return current ROS timestamp
+  rclcpp::Time getTimeStamp(CompositeData& cd) {
+    // Fall back to current ROS timestamp if the packet has no sensor time
     const rclcpp::Time t = now();
-    return t;
+    if (!cd.hasTimeStartup())
+      return t;
+
+    // Keep a moving average of the ROS - sensor time offset (~1000 samples)
+    const uint64_t sensorTime = cd.timeStartup();
+    const double dt = t.seconds() - sensorTime * 1e-9;
+    if (averageTimeDifference == 0)
+      averageTimeDifference = dt;
+    averageTimeDifference = averageTimeDifference * (1.0 - 0.001) + 0.001 * dt;
+
+    // Shift sensor time into ROS time
+    return rclcpp::Time(sensorTime, t.get_clock_type()) +
+           rclcpp::Duration::from_seconds(averageTimeDifference);
   }
 
   // Process vn math (4) into geometry message
@@ -900,6 +915,7 @@ class Vectornav : public rclcpp::Node {
   std::atomic_bool magCalActive{false};
   std::atomic_bool maintenanceOperation{false};
   std::recursive_mutex sensorMutex;
+  double averageTimeDifference{0};
   riptide_imu::driver::MaintenanceLease maintenanceLease;
   std::unordered_map<std::string, std::string> operationResults;
 
