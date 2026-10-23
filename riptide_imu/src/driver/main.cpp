@@ -1,5 +1,9 @@
 #include <chrono>
+#include <atomic>
+#include <mutex>
 #include <queue>
+#include <sstream>
+#include <unordered_map>
 
 #include <vn/sensors.h>
 #include <vn/compositedata.h>
@@ -23,9 +27,29 @@
 #include <riptide_msgs2/msg/imu_config.hpp>
 #include <riptide_msgs2/srv/query_imu_serial.hpp>
 
+#include "riptide_imu/driver/config_gateway.hpp"
+
 using namespace vn::sensors;
 using namespace std::placeholders;
 using namespace std::chrono_literals;
+
+namespace {
+class SensorOperationGuard {
+ public:
+  SensorOperationGuard(std::atomic_bool& monitor, std::atomic_bool& active)
+      : monitor_(monitor), active_(active) {
+    monitor_ = false;
+    active_ = true;
+  }
+  ~SensorOperationGuard() {
+    active_ = false;
+    monitor_ = true;
+  }
+ private:
+  std::atomic_bool& monitor_;
+  std::atomic_bool& active_;
+};
+}  // namespace
 
 class Vectornav : public rclcpp::Node {
   using MagCal = riptide_msgs2::action::MagCal;
@@ -38,6 +62,7 @@ class Vectornav : public rclcpp::Node {
     // Declare parameters used in constructor
     auto port = declare_parameter<std::string>("port", "/dev/ttyTHS0");
     auto baud = declare_parameter<int>("baud", 460800);
+    declare_parameter<int>("sensor_port_index", 1);
     auto reconnectMS = std::chrono::milliseconds(declare_parameter<int>("reconnect_ms", 500));
 
     // Declare parameters not used in constructor
@@ -123,6 +148,9 @@ class Vectornav : public rclcpp::Node {
       vs.reset();
     vs = std::make_shared<VnSensor>();
 
+    // Sensor startup time restarts on reset, so re-learn the offset
+    averageTimeDifference = 0;
+
     // Binary packet data callback
     vs->registerAsyncPacketReceivedHandler(this, Vectornav::asyncPacketReceivedHandler);
 
@@ -162,13 +190,6 @@ class Vectornav : public rclcpp::Node {
       return false;
     }
 
-    // Tare
-    vs->reset();
-
-    // Wait one second and make sure VN is still connected, just to be safe
-    rclcpp::Rate threadSleep(1.0);
-    threadSleep.sleep();
-
     if(!vs->verifySensorConnectivity()) {
       RCLCPP_ERROR(get_logger(), "Lost IMU connection via %s", port.c_str());
       return false;
@@ -176,6 +197,7 @@ class Vectornav : public rclcpp::Node {
 
     // Query the sensor to be ABSOLUTELY SURE it's working
     std::string mn = vs->readModelNumber();
+    set_parameter(rclcpp::Parameter("baud", static_cast<int>(vs->baudrate())));
     
     RCLCPP_INFO(get_logger(), "Connected to IMU %s at baud %d over %s", mn.c_str(), vs->baudrate(), vs->port().c_str());
 
@@ -210,7 +232,7 @@ class Vectornav : public rclcpp::Node {
       CompositeData cd = cd.parse(asyncPacket);
 
       // Parse message data
-      msg.header.stamp = node->getTimeStamp();
+      msg.header.stamp = node->getTimeStamp(cd);
       msg.header.frame_id = node->get_parameter("frame_id").as_string();
 
       // Set quaternion data
@@ -383,6 +405,7 @@ class Vectornav : public rclcpp::Node {
   }
 
   void monitorConnection() {
+    std::lock_guard<std::recursive_mutex> sensorLock(sensorMutex);
     // Don't try to reconnect during magcal
     // Doing so throws vn::timeout and crashes driver
     if (!doMonitorConnection) {
@@ -420,10 +443,22 @@ class Vectornav : public rclcpp::Node {
     
   }
 
-  rclcpp::Time getTimeStamp() {
-    // Return current ROS timestamp
+  rclcpp::Time getTimeStamp(CompositeData& cd) {
+    // Fall back to current ROS timestamp if the packet has no sensor time
     const rclcpp::Time t = now();
-    return t;
+    if (!cd.hasTimeStartup())
+      return t;
+
+    // Keep a moving average of the ROS - sensor time offset (~1000 samples)
+    const uint64_t sensorTime = cd.timeStartup();
+    const double dt = t.seconds() - sensorTime * 1e-9;
+    if (averageTimeDifference == 0)
+      averageTimeDifference = dt;
+    averageTimeDifference = averageTimeDifference * (1.0 - 0.001) + 0.001 * dt;
+
+    // Shift sensor time into ROS time
+    return rclcpp::Time(sensorTime, t.get_clock_type()) +
+           rclcpp::Duration::from_seconds(averageTimeDifference);
   }
 
   // Process vn math (4) into geometry message
@@ -486,8 +521,11 @@ class Vectornav : public rclcpp::Node {
   // Handle start magcal request
   rclcpp_action::GoalResponse handleCalGoal(const rclcpp_action::GoalUUID& uuid, 
                                             std::shared_ptr<const MagCal::Goal> goal) {
+    (void)uuid;
+    (void)goal;
     // Make sure there isn't an ongoing calibration
-    if(std::thread::id() == magCalThread.get_id() && vs->verifySensorConnectivity()) {
+    if(std::thread::id() == magCalThread.get_id() && !maintenanceOperation &&
+       vs->verifySensorConnectivity()) {
       // All good, magcal starting
       return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
     }
@@ -504,13 +542,14 @@ class Vectornav : public rclcpp::Node {
 
   void handleCalAccept(const std::shared_ptr<MagCalGH> goalHandle) {
     // Make the child thread go brrr
+    magCalActive = true;
     magCalThread = std::thread(std::bind(&Vectornav::executeMagCal, this, _1), goalHandle);
     magCalThread.detach();
   }
 
   void executeMagCal(const std::shared_ptr<MagCalGH> goalHandle) {
     // Let other async threads know that magcal is happening
-    doMonitorConnection = false;
+    SensorOperationGuard operationGuard(doMonitorConnection, magCalActive);
 
     // Setup a ros rate timer (input is hz)
     rclcpp::Rate loopRate(4.0);
@@ -667,36 +706,193 @@ class Vectornav : public rclcpp::Node {
 
     // Reconnect to IMU and let async threads know magcal is done
     vnConnect(get_parameter("port").as_string(), get_parameter("baud").as_int());
-    doMonitorConnection = true;
   }
 
-    std::string executeConfigRequest(std::string request) {
-        if(!vs->isConnected())
-            return "IMU not connected";
+  static std::vector<std::string> responseValues(const std::string& response, int id) {
+    std::string text = response;
+    if (!text.empty() && text.front() == '$') text.erase(text.begin());
+    const auto checksum = text.find('*');
+    if (checksum != std::string::npos) text.resize(checksum);
+    std::stringstream stream(text);
+    std::string field;
+    std::vector<std::string> fields;
+    while (std::getline(stream, field, ',')) fields.push_back(field);
+    if (fields.size() < 3 || fields[0] != "VNRRG" || std::stoi(fields[1]) != id)
+      throw std::runtime_error("unexpected register response");
+    return {fields.begin() + 2, fields.end()};
+  }
 
-        return vs->transaction(request);
+  std::vector<std::string> readRegisterValues(int id) {
+    return responseValues(vs->transaction("$VNRRG," + std::to_string(id)), id);
+  }
+
+  std::string storeOperationResult(const std::string& id, const std::string& result) {
+    if (!id.empty()) {
+      if (operationResults.size() >= 32) operationResults.erase(operationResults.begin());
+      operationResults[id] = result;
     }
+    return result;
+  }
 
-  void configSrvRequest(std::shared_ptr<SerialRequest::Request> request, std::shared_ptr<SerialRequest::Response> response) {
-      std::string responseStr;
-      if (request->request == "$VNWNV") {
-          try {
-              responseStr = executeConfigRequest(request->request);
-          }
-          catch (vn::timeout) {
-            doMonitorConnection = false;
-            RCLCPP_INFO(this->get_logger(), "Caught vn::timeout");
-            responseStr = "$VNWNV";
+  std::string handleBaudWrite(const std::vector<std::string>& values) {
+    if (values.empty() || values.size() > 2)
+      return riptide_imu::driver::configResponse(false, "invalid_baud", "expected one or two baud values");
+    std::vector<uint32_t> rates;
+    for (const auto& value : values) rates.push_back(static_cast<uint32_t>(std::stoul(value)));
+    const auto supported = vs->supportedBaudrates();
+    const int activePort = get_parameter("sensor_port_index").as_int();
+    std::string planError;
+    const auto plan = riptide_imu::driver::planBaudTransition(
+        supported, rates, activePort, &planError);
+    if (!plan)
+      return riptide_imu::driver::configResponse(false, "invalid_baud", planError);
+    if (plan->inactive_write)
+      vs->writeSerialBaudRate(plan->inactive_write->second,
+                              plan->inactive_write->first, true);
+    vs->writeSerialBaudRate(plan->active_baud, plan->active_port, false);
+    rclcpp::sleep_for(100ms);
+    if (vs->isConnected()) vs->disconnect();
+    if (!vnConnect(get_parameter("port").as_string(), plan->active_baud))
+      return riptide_imu::driver::configResponse(false, "baud_recovery_failed", "could not reconnect after baud change");
+    set_parameter(rclcpp::Parameter("baud", static_cast<int>(vs->baudrate())));
+    std::vector<std::string> verified;
+    if (rates.size() == 2) {
+      verified = {std::to_string(vs->readSerialBaudRate(1)),
+                  std::to_string(vs->readSerialBaudRate(2))};
+    } else {
+      verified = {std::to_string(vs->readSerialBaudRate())};
+    }
+    const bool ok = riptide_imu::driver::registerValuesMatch(values, verified);
+    return riptide_imu::driver::configResponse(
+        ok, ok ? "ok" : "readback_mismatch",
+        ok ? "baud changed and verified" : "baud readback differs",
+        {{"values", verified}, {"effective_baud", vs->baudrate()}});
+  }
 
-            rclcpp::sleep_for(5s);
-            doMonitorConnection = true;
-          }
+  std::string executeConfigEnvelope(const riptide_imu::driver::ConfigRequest& request) {
+    using riptide_imu::driver::Json;
+    using riptide_imu::driver::configResponse;
+    if (!request.operation_id.empty()) {
+      const auto cached = operationResults.find(request.operation_id);
+      if (cached != operationResults.end()) return cached->second;
+    }
+    if (request.operation == "open") {
+      if (magCalActive) return configResponse(false, "busy", "magnetometer calibration is active");
+      const std::string token = maintenanceLease.open(request.payload.value("client_id", "remote-ui"));
+      if (token.empty()) return configResponse(false, "leased", "another maintenance client is active");
+      return configResponse(true, "ok", "maintenance lease opened",
+                            {{"session", token}, {"lease_ms", 30000}});
+    }
+    if (request.operation == "renew") {
+      const bool ok = maintenanceLease.renew(request.session);
+      return configResponse(ok, ok ? "ok" : "lease_expired",
+                            ok ? "maintenance lease renewed" : "maintenance lease is not valid");
+    }
+    if (request.operation == "close") {
+      const bool ok = maintenanceLease.close(request.session);
+      return configResponse(ok, ok ? "ok" : "invalid_session",
+                            ok ? "maintenance lease closed" : "maintenance lease is not valid");
+    }
+    if (!vs || !vs->isConnected()) return configResponse(false, "disconnected", "IMU is not connected");
+    if (request.operation == "status") {
+      return configResponse(true, "ok", "driver available",
+                            {{"baud", vs->baudrate()}, {"port", vs->port()},
+                             {"maintenance", maintenanceLease.active()},
+                             {"publishing", doMonitorConnection.load()}});
+    }
+    if (request.operation == "read") {
+      const int id = request.payload.at("register").get<int>();
+      return configResponse(true, "ok", "register read", {{"register", id}, {"values", readRegisterValues(id)}});
+    }
+    if (request.operation == "write") {
+      const int id = request.payload.at("register").get<int>();
+      const auto values = request.payload.at("values").get<std::vector<std::string>>();
+      if (riptide_imu::driver::isDriverCriticalRegister(id) &&
+          !maintenanceLease.valid(request.session))
+        return configResponse(false, "maintenance_required", "driver-critical register requires maintenance mode");
+      if (id == 5) return storeOperationResult(request.operation_id, handleBaudWrite(values));
+      std::ostringstream command;
+      command << "VNWRG," << id;
+      for (const auto& value : values) command << ',' << value;
+      vs->transaction("$" + command.str());
+      const auto verified = readRegisterValues(id);
+      const bool ok = riptide_imu::driver::registerValuesMatch(values, verified);
+      return storeOperationResult(request.operation_id,
+          configResponse(ok, ok ? "ok" : "readback_mismatch",
+                         ok ? "register written and verified" : "register readback differs",
+                         {{"register", id}, {"values", verified}}));
+    }
+    if (request.operation == "tare") {
+      vs->tare(true);
+      return storeOperationResult(request.operation_id, configResponse(true, "ok", "tare complete"));
+    }
+    if (request.operation == "reset") {
+      if (!maintenanceLease.valid(request.session))
+        return configResponse(false, "maintenance_required", "reset requires maintenance mode");
+      SensorOperationGuard operationGuard(doMonitorConnection, maintenanceOperation);
+      vs->reset(false);
+      rclcpp::sleep_for(2s);
+      if (vs->isConnected()) vs->disconnect();
+      const bool connected = vnConnect(get_parameter("port").as_string(), get_parameter("baud").as_int());
+      return storeOperationResult(request.operation_id,
+          configResponse(connected, connected ? "ok" : "reconnect_failed",
+                         connected ? "sensor reset and reconnected" : "sensor did not reconnect"));
+    }
+    if (request.operation == "save_reset") {
+      if (!maintenanceLease.valid(request.session))
+        return configResponse(false, "maintenance_required", "persistent save requires maintenance mode");
+      SensorOperationGuard operationGuard(doMonitorConnection, maintenanceOperation);
+      vs->writeSettings(false);
+      rclcpp::sleep_for(3s);
+      vs->reset(false);
+      rclcpp::sleep_for(2s);
+      if (vs->isConnected()) vs->disconnect();
+      const bool connected = vnConnect(get_parameter("port").as_string(), get_parameter("baud").as_int());
+      Json actual = Json::object();
+      if (connected) {
+        for (const auto& entry : request.payload.at("expected").items()) {
+          const int id = std::stoi(entry.key());
+          actual[entry.key()] = readRegisterValues(id);
+        }
       }
-      else {
-          responseStr = executeConfigRequest(request->request);
+      const Json mismatches = connected ? riptide_imu::driver::persistentMismatches(
+          request.payload.at("expected"), actual) : Json::object();
+      const bool ok = connected && mismatches.empty();
+      return storeOperationResult(request.operation_id,
+          configResponse(ok, ok ? "ok" : connected ? "persistence_mismatch" : "reconnect_failed",
+                         ok ? "settings persisted and verified after reset" : "persistent verification failed",
+                         {{"mismatches", mismatches}, {"effective_baud", connected ? vs->baudrate() : 0}}));
+    }
+    return configResponse(false, "unknown_operation", "unsupported configuration operation");
+  }
+
+  std::string executeConfigRequest(const std::string& request) {
+    if (!vs || !vs->isConnected()) return "IMU not connected";
+    if (request == "$VNWNV" || request == "VNWNV") {
+      vs->writeSettings(false);
+      rclcpp::sleep_for(3s);
+      return "$VNWNV";
+    }
+    return vs->transaction(request.empty() || request.front() == '$' ? request : "$" + request);
+  }
+
+  void configSrvRequest(std::shared_ptr<SerialRequest::Request> request,
+                        std::shared_ptr<SerialRequest::Response> response) {
+    std::lock_guard<std::recursive_mutex> sensorLock(sensorMutex);
+    try {
+      if (!request->request.empty() && request->request.front() == '{') {
+        std::string error;
+        const auto parsed = riptide_imu::driver::parseConfigRequest(request->request, &error);
+        response->response = parsed ? executeConfigEnvelope(*parsed) :
+            riptide_imu::driver::configResponse(false, "invalid_request", error);
+      } else {
+        response->response = executeConfigRequest(request->request);
       }
-      
-      response->response = responseStr;
+    } catch (const std::exception& exception) {
+      response->response = riptide_imu::driver::configResponse(false, "sensor_error", exception.what());
+    } catch (...) {
+      response->response = riptide_imu::driver::configResponse(false, "sensor_error", "unknown sensor error");
+    }
   }
 
   //
@@ -715,7 +911,13 @@ class Vectornav : public rclcpp::Node {
   rclcpp_action::Server<MagCal>::SharedPtr magCalServer;
   std::thread magCalThread;
 
-  bool doMonitorConnection = true;
+  std::atomic_bool doMonitorConnection{true};
+  std::atomic_bool magCalActive{false};
+  std::atomic_bool maintenanceOperation{false};
+  std::recursive_mutex sensorMutex;
+  double averageTimeDifference{0};
+  riptide_imu::driver::MaintenanceLease maintenanceLease;
+  std::unordered_map<std::string, std::string> operationResults;
 
   rclcpp::Service<SerialRequest>::SharedPtr configSrv;
 };
