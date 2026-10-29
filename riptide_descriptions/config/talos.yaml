@@ -355,7 +355,7 @@ torpedoes:
   baseline: 0.035
 
 droppers:
-  pose: [0.0, 0.17200625, -0.1501, 0.0, 0.0, 0.0]
+  pose: [-0.04337956, 0.17200625, -0.1501, 0.0, 0.0, 0.0] # x: the CAD dropper tubes' centers (was 0.0, 4.3 cm ahead of them)
 
 hitch:
   pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
