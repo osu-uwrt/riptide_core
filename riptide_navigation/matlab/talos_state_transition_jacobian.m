@@ -51,7 +51,7 @@ nextNorm = norm(nextQ);
 nextQ = nextQ/nextNorm;
 Nnext = (eye(4)-nextQ*nextQ')/nextNorm;
 
-F = eye(16);
+F = eye(19);
 F(1:3,4:7) = D*N;
 F(1:3,8:10) = R*dt;
 F(1:3,14:16) = R*(0.5*dt*dt);

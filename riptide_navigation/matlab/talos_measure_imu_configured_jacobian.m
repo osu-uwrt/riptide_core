@@ -20,7 +20,7 @@ gravityCrossJacobian = [ ...
     gravityMeasurement(3), 0, -gravityMeasurement(1); ...
     -gravityMeasurement(2), gravityMeasurement(1), 0];
 
-H = zeros(9,16);
+H = zeros(9,19);
 H(1:3,4:7) = diag(mask(1:3))*gravityCrossJacobian* ...
     gravityQuaternionJacobian*normalizationJacobian;
 H(4,11) = mask(4);
@@ -31,4 +31,7 @@ H(7:9,4:7) = diag(mask(7:9))*gravityMagnitude* ...
 H(7,14) = mask(7);
 H(8,15) = mask(8);
 H(9,16) = mask(9);
+H(7,17) = mask(7);
+H(8,18) = mask(8);
+H(9,19) = mask(9);
 end

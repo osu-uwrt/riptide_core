@@ -1,6 +1,7 @@
 function next = talos_state_transition(x, dt)
 %TALOS_STATE_TRANSITION Quaternion kinematics with body-frame velocity.
-% State: [p_odom(3), q_body_to_odom(wxyz)(4), v_body(3), omega_body(3), a_body(3)].
+% State: [p_odom(3), q_body_to_odom(wxyz)(4), v_body(3), omega_body(3), a_body(3),
+% accel_bias_body(3)]. The accelerometer bias is a random walk.
 
 dt = min(max(dt, 0), 0.1);
 q = normalize_quaternion(x(4:7));
