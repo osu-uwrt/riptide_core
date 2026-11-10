@@ -4,7 +4,7 @@ from launch.actions import DeclareLaunchArgument
 from launch_ros.actions.composable_node_container import ComposableNode, ComposableNodeContainer
 
 cfg_36h11 = {
-    "image_transport": "raw",
+    "image_transport": "compressed",
     "family": "36h11",
     "size": 0.508,
     "max_hamming": 0,
@@ -31,8 +31,11 @@ def generate_launch_description():
                 name='apriltag_36h11',
                 package='apriltag_ros', plugin='AprilTagNode',
                 remappings=[
-                    ("image_rect", "ffc/zed_node/left/image_rect_color"),
-                    ("camera_info", "ffc/zed_node/left/camera_info"),
+                    ("image_rect", "ffc/zed_node/rgb/image_rect_color"),
+                    # image_transport compressed: the node subscribes to image_rect/compressed and camera_info
+                    # itself (decoding with its own OpenCV), as yolo_orientation does
+                    ("image_rect/compressed", "ffc/zed_node/rgb/image_rect_color/compressed"),
+                    ("camera_info", "ffc/zed_node/rgb/camera_info"),
                 ],
                 parameters=[cfg_36h11],
                 extra_arguments=[{'use_intra_process_comms': True}],
