@@ -1,0 +1,10 @@
+version: 1
+defaults:
+  setup: talos_navigation_setup
+  messages: []
+  github:
+    repository: osu-uwrt/riptide_core
+    release: latest
+    publish_release: models-latest
+models:
+  talos_navigation/talos_navigation.slx: {}

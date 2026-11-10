@@ -1,0 +1,15 @@
+# local validation harness, results and data
+validation/
+
+# MATLAB and Simulink build output
+matlab/slprj/
+matlab/*.autosave
+matlab/*.slxc
+matlab/*.mexa64
+models/slprj/
+models/+bus_conv_fcns/
+models/*.slxc
+models/*.autosave
+
+__pycache__/
+.pytest_cache/

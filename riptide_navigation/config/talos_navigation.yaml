@@ -1,0 +1,213 @@
+navigation:
+
+  frames:
+    # Parent frame for position, attitude, depth, odometry and TF. [frame]
+    world_frame: "odom"
+    # Child/body frame; sensors are rotated into it. [frame]
+    base_link_frame: "talos/base_link"
+    # Publish world_frame -> base_link_frame on /tf.
+    publish_tf: true
+    # Frame assumed when an IMU sample has an empty frame_id; empty rejects. [frame]
+    imu_frame_fallback: "talos/imu_link"
+    # Frame assumed when a FOG sample has an empty frame_id; empty rejects. [frame]
+    fog_frame_fallback: "talos/fog_link"
+    # Frame assumed when a DVL sample has an empty frame_id; empty rejects. [frame]
+    dvl_frame_fallback: "talos/dvl_link"
+    # How often the overseer re-reads sensor mounts from TF and republishes them. [s]
+    mount_refresh_period: 1.0
+
+
+  build:
+    # Input task rate; Subscribe keeps one message per step, so well above the fastest sensor (FOG about 475 Hz). Build-time: the build reads it, the overseer only checks it. [Hz]
+    base_rate: 1000.0
+    # Estimator task rate, a whole divisor of base_rate. Build-time. [Hz]
+    estimator_rate: 500.0
+    # How often the model reads its parameters, a whole divisor of estimator_rate. Build-time. [Hz]
+    parameter_rate: 10.0
+    # Sample sets the input task can hold while the estimator task is busy. Build-time array size. [count]
+    input_ring_capacity: 256
+    # Checkpoint ring size. Build-time array size. [count]
+    checkpoint_capacity: 128
+    # Replay input ring size. Build-time array size. [count]
+    input_history_capacity: 512
+    # Per-sensor reorder buffer size. Build-time array size. [count]
+    queue_capacity: 512
+
+
+  timing:
+    # Publication rate, rounded to a whole number of base steps. [Hz]
+    frequency: 30.0
+    # Hold queued measurements this long so out-of-order samples sort by stamp. [s]
+    reorder_delay: 0.02
+    # Runtime per-sensor reorder cap; at most queue_capacity. [samples]
+    max_queue_size: 512
+    # Count cap per step; zero means no cap. [samples]
+    max_measurements_per_cycle: 0
+    # Wall-time budget per publication period as a fraction; zero means no budget. [fraction]
+    max_processing_fraction: 0.5
+    # Samples stamped further ahead than this are rejected. [s]
+    max_stamp_lead: 1.0
+    # Replay window; later samples restore a checkpoint and replay. [s]
+    history_length: 0.5
+    # Older DVL/depth beyond history are fused now with lag added to R; older still are rejected. [s]
+    max_measurement_lag: 2.0
+    # Largest single prediction step. [s]
+    max_prediction_dt: 0.1
+    # Minimum filter time between checkpoints. [s]
+    checkpoint_stride: 0.005
+    # Max age of an accepted IMU, FOG, DVL, depth sample before diagnostics warn. [s]
+    sensor_timeouts: [0.25, 0.25, 0.5, 0.5]
+    # predict propagates the delayed estimate; queued_updates previews queued observations.
+    publication_mode: "queued_updates"
+    # Reuse a matching preview prefix instead of recomputing it.
+    reuse_preview_corrections: true
+    # Horizontal correction rate that reaches odometry; zero disables. [m/s]
+    max_position_correction_rate: 0.2
+    # Decay of the held rate and acceleration once the IMU is lost; zero disables. [s]
+    outage_motion_time_constant: 0.5
+    # Decay of the held velocity once the IMU and DVL are lost; zero disables. [s]
+    outage_velocity_time_constant: 2.0
+    # With every sensor lost, how far behind a publication the filter is committed; zero disables. [s]
+    outage_commit_lag: 1.0
+    # Publication gap beyond which the rate limit snaps to the estimate. [s]
+    position_correction_max_gap: 1.0
+
+
+  sensor_axes:
+    # VectorNav fields to fuse. 15 booleans in robot_localization order: pos XYZ, attitude RPY, lin vel XYZ, ang vel XYZ, lin accel XYZ. Unsupported fields are rejected.
+    vectornav_imu_config: [false, false, false, true, true, false, false, false, false, true, true, false, true, true, true]
+    # DVL fields to fuse. 15 booleans in robot_localization order: pos XYZ, attitude RPY, lin vel XYZ, ang vel XYZ, lin accel XYZ. Unsupported fields are rejected.
+    dvl_twist_config: [false, false, false, false, false, false, true, true, true, false, false, false, false, false, false]
+    # FOG fields to fuse. 15 booleans in robot_localization order: pos XYZ, attitude RPY, lin vel XYZ, ang vel XYZ, lin accel XYZ. Unsupported fields are rejected.
+    fog_twist_config: [false, false, false, false, false, false, false, false, false, false, false, true, false, false, false]
+    # Depth fields to fuse. 15 booleans in robot_localization order: pos XYZ, attitude RPY, lin vel XYZ, ang vel XYZ, lin accel XYZ. Unsupported fields are rejected.
+    depth_pose_config: [false, false, true, false, false, false, false, false, false, false, false, false, false, false, false]
+    # Per-axis covariance multiplier on the VN gravity-direction (roll, pitch, yaw rows). Larger weighs less.
+    imu_orientation_axis_multiplier: [1.0, 1.0, 1.0]
+    # Per-axis covariance multiplier on VN body rate X Y Z.
+    imu_angular_velocity_axis_multiplier: [1.0, 1.0, 1.0]
+    # Per-axis covariance multiplier on VN acceleration X Y Z.
+    imu_acceleration_axis_multiplier: [1.0, 1.0, 1.0]
+    # Per-axis covariance multiplier on DVL velocity X Y Z.
+    dvl_axis_multiplier: [1.0, 1.0, 1.0]
+    # Per-axis covariance multiplier on FOG rate X Y Z.
+    fog_axis_multiplier: [1.0, 1.0, 1.0]
+    # Covariance multiplier on all VN groups.
+    imu_covariance_multiplier: 1.0
+    # Extra multiplier on VN orientation covariance.
+    imu_orientation_covariance_multiplier: 1.0
+    # Extra multiplier on VN rate covariance (provisional pool weighting, not calibration).
+    imu_rate_covariance_multiplier: 0.01
+    # Extra multiplier on VN acceleration covariance.
+    imu_acceleration_covariance_multiplier: 1.0
+    # Covariance multiplier on FOG.
+    fog_covariance_multiplier: 1.0
+    # Covariance multiplier on DVL.
+    dvl_covariance_multiplier: 1.0
+    # Covariance multiplier on depth.
+    depth_covariance_multiplier: 1.0
+    # Smallest variance after conditioning.
+    covariance_floor: 1.0e-09
+    # Used when the VN orientation covariance is unspecified. [rad^2]
+    default_orientation_variance: 0.0002
+    # Used when the VN rate covariance is unspecified. [(rad/s)^2]
+    default_angular_velocity_variance: 2.0e-05
+    # Used when the VN acceleration covariance is unspecified. [(m/s^2)^2]
+    default_acceleration_variance: 0.002
+    # Used when the FOG covariance is unspecified. [(rad/s)^2]
+    default_fog_variance: 1.0e-06
+    # Used when the DVL covariance is unspecified. [(m/s)^2]
+    default_dvl_variance: 0.00025
+    # Used when the depth covariance is unspecified. [m^2]
+    default_depth_variance: 0.0025
+    # Coordinates of the VN orientation covariance.
+    imu_orientation_covariance_coordinates: "body_rotvec"
+    # Variance added to the gravity-direction covariance.
+    gravity_direction_variance_floor: 1.0e-09
+
+
+  estimator:
+    # Align gravity once at automatic startup.
+    initialize_tilt_from_imu: true
+    # Cap on VN tilt corrections; zero is every sample. [Hz]
+    vectornav_tilt_correction_frequency: 0.0
+    # consider keeps position and attitude out of the acceleration correction; joint is the original.
+    imu_acceleration_update: "consider"
+    # Local gravity used in the raw acceleration prediction. [m/s^2]
+    gravitational_acceleration: 9.8
+    # Initial accelerometer bias. [m/s^2]
+    imu_acceleration_bias: [0.0, 0.0, -0.044545]
+    # Bias random-walk density. [(m/s^2)^2/s]
+    imu_acceleration_bias_density: 1.0e-07
+    # Initial bias variance. [(m/s^2)^2]
+    imu_acceleration_bias_variance: 0.0004
+    # Extra bias decorrelation with tilt rate.
+    imu_acceleration_bias_rotation_variance: 0.0016
+    # Lever-arm angular acceleration derivative filter. [s]
+    imu_angular_acceleration_time_constant: 0.005
+    # Bound on the derivative-noise bandwidth. [Hz]
+    imu_angular_acceleration_noise_bandwidth: 40.0
+    # Continuous-time densities for position, quaternion (3 body angular, 1 unused), velocity, rate, acceleration. [per s]
+    process_noise_diag: [5.0e-05, 5.0e-05, 6.0e-05, 3.0e-05, 3.0e-05, 6.0e-05, 1.0e-06, 0.0025, 0.0025, 0.004, 0.0003, 0.0003, 0.0006, 0.0003, 0.0003, 0.00045]
+    # Variances after a reset or startup.
+    reset_covariance_diag: [1.0, 1.0, 0.25, 0.0, 0.00025, 0.00025, 0.00025, 0.25, 0.25, 0.25, 0.05, 0.05, 0.05, 0.5, 0.5, 0.5]
+    # set_pose is rejected when its quaternion norm differs from 1 by more.
+    initial_quaternion_tolerance: 0.001
+    # VN yaw rate stands in while the FOG is lost.
+    imu_yaw_rate_fallback: true
+    # Variance added to the VN yaw rate in fallback. [(rad/s)^2]
+    imu_yaw_rate_fallback_variance: 0.0001
+    # A VN quaternion off unit norm by more is rejected.
+    imu_quaternion_norm_tolerance: 0.01
+    # Use the linear scalar update when one FOG axis is enabled.
+    scalar_fog_correction: true
+
+
+  gates:
+    # Innovation gate on DVL, in standard deviations; zero disables. [sigma]
+    dvl_rejection_threshold: 5.0
+    # Innovation gate on depth; zero disables. [sigma]
+    depth_rejection_threshold: 5.0
+    # Innovation gate on VN tilt; zero disables. [sigma]
+    tilt_rejection_threshold: 10.0
+    # FOG vs VN rate gate; zero disables. [sigma]
+    fog_rejection_threshold: 0.0
+    # Allowed FOG minus VN rate error added to the gate variance. [rad/s]
+    fog_vn_rate_tolerance: 0.05
+    # Largest stamp gap for pairing a FOG sample with the VN rate. [s]
+    vn_rate_pairing_window: 0.01
+    # Rejected samples this long trigger recovery checks. [s]
+    gate_recovery_time: 0.5
+    # Agreement floors for recovery: IMU tilt, FOG, DVL, depth.
+    gate_consistency_stddev: [0.01, 0.02, 0.05, 0.02]
+    # Identical consecutive DVL samples before they are rejected; zero disables. [samples]
+    dvl_frozen_sample_limit: 4
+    # Reported sigma over the recent median that marks lock loss; zero disables. [ratio]
+    dvl_sigma_jump_ratio: 2.0
+    # Samples of sigma history needed before the jump test runs. [samples]
+    dvl_sigma_min_history: 8
+    # Widest the gate gets after an outage, as a multiple of the threshold.
+    gate_reacquire_max_scale: 4.0
+    # Window fit residual allowed per degree of freedom for samples to count as agreeing. [sigma]
+    gate_consistency_threshold: 2.5
+    # Agreeing samples needed to reacquire after an outage. [samples]
+    gate_reacquire_samples: 4
+    # Agreeing samples needed to recover after rejections. [samples]
+    gate_recovery_samples: 5
+    # Shortest window of samples compared for agreement while recovering. [s]
+    gate_min_recovery_window: 0.25
+    # Recovery time multiplier after a recent short rejection.
+    gate_flap_factor: 4.0
+
+
+  diagnostics:
+    # Heading standard deviation that raises a warning. [deg]
+    heading_std_warning: 30.0
+    # Unpublished position offset that raises a warning. [m]
+    position_offset_warning: 0.05
+    # Diagnostics publication period. [s]
+    diagnostics_period: 1.0
+    # Wall time without a diagnostics tick before the clock is reported stalled. [s]
+    clock_stall_timeout: 2.0
+    # Add queue age, filter lag, innovation and correction norms.
+    publish_debug_diagnostics: true
