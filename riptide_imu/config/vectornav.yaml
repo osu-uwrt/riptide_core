@@ -24,9 +24,11 @@
     orientation_covariance: [0.00005,  0.0,   0.0,
                             0.0,   0.00001,  0.0,
                             0.0,   0.0,   0.01]
-    angular_velocity_covariance: [0.01,  0.0,   0.0,
-                         0.0,   0.01,  0.0,
-                         0.0,   0.0,   0.01]
+    # Gyro: measured still noise ~1e-6 (rad/s)^2 (2026-10-27 bench); 1e-5 leaves margin for thruster
+    # vibration. At 0.01 the EKF all but ignored it: roll/pitch rates came out ~0.45 s late at ~0.3x.
+    angular_velocity_covariance: [0.00001,  0.0,   0.0,
+                         0.0,   0.00001,  0.0,
+                         0.0,   0.0,   0.00001]
     linear_acceleration_covariance: [0.01,  0.0,   0.0,
                          0.0,   0.01,  0.0,
                          0.0,   0.0,   0.01]
