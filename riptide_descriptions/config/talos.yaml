@@ -379,7 +379,7 @@ cameras: [
   {
     type: zed,
     name: dfc,
-    baseline: 0.045,
+    baseline: 0.050,
     # pose: [-0.145, -0.080, -0.08, 1.5707, 1.5707, 0]
     # Position: CAD (Talos 7-11-26). Orientation: straight down (CAD), bottom toward the robot's middle (port) as on
     # the robot (the CAD has it rolled 180 deg, bottom outboard), keeping the as-deployed 1.15 deg heading (roll 1.5507).

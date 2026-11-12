@@ -15,10 +15,14 @@
     sensors:
       sensors_image_sync: true
     # svo:
-    #   svo_path: "/home/ros/svos/prequal/prequal1.svo2"
+    #   svo_path: "/home/ros/svos/2026/woollett/ffc/torpedo.svo2"
+    #   use_svo_timestamps: false
+    #   svo_loop: true
     depth:
-      depth_mode: "NEURAL_PLUS" 
+      depth_mode: "NEURAL_LIGHT" 
       max_depth: 4.0
+      depth_stabilization: 0 # Forces positional tracking to start if major than 0 - Range: [0,100]
+      depth_confidence: 70
     pos_tracking:
       publish_tf: false
     debug:
