@@ -13,7 +13,9 @@
 #include <riptide_msgs2/msg/vn_vpe_status.hpp>
 
 #include <fcntl.h>
+#ifdef __linux__
 #include <linux/serial.h>
+#endif
 #include <sys/ioctl.h>
 #include <unistd.h>
 
@@ -97,6 +99,10 @@ class Vectornav : public rclcpp::Node {
 
   private:
   void optimizeSerialConnection(const std::string& port) {
+#ifndef __linux__
+    // ASYNC_LOW_LATENCY is a linux serial driver flag
+    (void)port;
+#else
     // This operation will fail if the port isn't present
     try {
       // Assumes linux OS
@@ -114,6 +120,7 @@ class Vectornav : public rclcpp::Node {
       close(portFd);
       RCLCPP_INFO(get_logger(), "Set IMU port to ASYNC_LOW_LATENCY");
     } catch (...) {}
+#endif
   }
 
   bool vnConnect(const std::string& port, const int baud) {
