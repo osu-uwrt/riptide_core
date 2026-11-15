@@ -14,7 +14,7 @@
 #define ARDUSTRING_MAX_LEN 64
 #define ARDUVECTOR_MAX_LEN 16
 
-#if __linux__
+#if __linux__ || __APPLE__
 #include <unistd.h>
 #define SLEEP(usec) usleep(usec)
 #else

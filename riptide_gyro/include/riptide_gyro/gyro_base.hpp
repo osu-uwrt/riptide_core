@@ -1,6 +1,6 @@
 #pragma once
 
-#if (__linux__ && !defined(FORCE_ARDUINO)) || defined(ENABLE_TESTING)
+#if ((__linux__ || __APPLE__) && !defined(FORCE_ARDUINO)) || defined(ENABLE_TESTING)
 #define USE_LINUX
 #endif
 
