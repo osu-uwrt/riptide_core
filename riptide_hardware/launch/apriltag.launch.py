@@ -1,10 +1,10 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions.composable_node_container import ComposableNode, ComposableNodeContainer
 
 cfg_36h11 = {
-    "image_transport": "raw",
     "family": "36h11",
     "size": 0.508,
     "max_hamming": 0,
@@ -19,6 +19,19 @@ def generate_launch_description():
         default_value="tempest",
         description="name of the robot"
     ))
+    # The robot's ZED publishes the left camera raw. The nereus simulator publishes only its rgb stream, JPEG
+    # compressed: image_transport:=compressed camera:=rgb.
+    ld.add_action(DeclareLaunchArgument(
+        name="image_transport",
+        default_value="raw",
+        description="raw, or compressed (decoded in the node from <image>/compressed)"
+    ))
+    ld.add_action(DeclareLaunchArgument(
+        name="camera",
+        default_value="left",
+        description="ffc ZED stream: left (robot) or rgb (simulator)"
+    ))
+    camera = LaunchConfiguration("camera")
 
     ld.add_action(ComposableNodeContainer(
         name='tag_container',
@@ -31,10 +44,12 @@ def generate_launch_description():
                 name='apriltag_36h11',
                 package='apriltag_ros', plugin='AprilTagNode',
                 remappings=[
-                    ("image_rect", "ffc/zed_node/left/image_rect_color"),
-                    ("camera_info", "ffc/zed_node/left/camera_info"),
+                    ("image_rect", ["ffc/zed_node/", camera, "/image_rect_color"]),
+                    # the compressed path subscribes to image_rect/compressed by name, and ROS remaps whole names
+                    ("image_rect/compressed", ["ffc/zed_node/", camera, "/image_rect_color/compressed"]),
+                    ("camera_info", ["ffc/zed_node/", camera, "/camera_info"]),
                 ],
-                parameters=[cfg_36h11],
+                parameters=[cfg_36h11, {"image_transport": LaunchConfiguration("image_transport")}],
                 extra_arguments=[{'use_intra_process_comms': True}],
             )
         ],
